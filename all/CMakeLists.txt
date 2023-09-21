@@ -10,4 +10,4 @@ include(../cmake/tools.cmake)
 # needed to generate test target
 enable_testing()
 
-add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/../standalone ${CMAKE_BINARY_DIR}/standalone)
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/../src ${CMAKE_BINARY_DIR}/src)
