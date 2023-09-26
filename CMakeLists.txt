@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.14...3.22)
 # ---- Project ----
 
 # Note: update this to your new project's name and version
-project(Greeter LANGUAGES CXX)
+project(Greeter LANGUAGES CXX CUDA)
 
 # --- Import tools ----
 
@@ -42,18 +42,12 @@ CPMAddPackage(
 # Note: globbing sources is considered bad practice as CMake's generators may not detect new files
 # automatically. Keep that in mind when changing files, or explicitly mention them here.
 file(GLOB_RECURSE headers CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/include/*.h")
-file(GLOB_RECURSE sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
-
-CPMAddPackage(
-  GITHUB_REPOSITORY jarro2783/cxxopts
-  VERSION 3.0.0
-  OPTIONS "CXXOPTS_BUILD_EXAMPLES NO" "CXXOPTS_BUILD_TESTS NO" "CXXOPTS_ENABLE_INSTALL YES"
-)
+file(GLOB_RECURSE sourcescu CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cu")
+file(GLOB_RECURSE sourcescpp CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
 
 # ---- Create standalone executable ----
 
-add_executable(${PROJECT_NAME} ${sources})
-set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 17 OUTPUT_NAME "Greeter")
-target_link_libraries(${PROJECT_NAME} cxxopts)
+add_executable(${PROJECT_NAME} ${sourcescu} ${sourcescpp})
+set_target_properties(${PROJECT_NAME} PROPERTIES CUDA_ARCHITECTURES native)
+set_target_properties(${PROJECT_NAME} PROPERTIES CUDA_SEPARABLE_COMPILATION ON OUTPUT_NAME "Greeter")
 target_link_libraries(${PROJECT_NAME} fmt::fmt)
-target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
