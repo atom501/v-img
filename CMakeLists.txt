@@ -1,9 +1,9 @@
-cmake_minimum_required(VERSION 3.14...3.22)
+cmake_minimum_required(VERSION 3.20...3.22)
 
 # ---- Project ----
 
 # Note: update this to your new project's name and version
-project(Greeter LANGUAGES CXX CUDA)
+project(v-img LANGUAGES CXX)
 
 # --- Import tools ----
 
@@ -37,17 +37,31 @@ CPMAddPackage(
   OPTIONS "FMT_INSTALL YES" # create an installable target
 )
 
+CPMAddPackage(
+  NAME glm
+  GIT_TAG 0.9.9.8
+  GITHUB_REPOSITORY g-truc/glm
+)
+
+# Source file grouping of visual studio and xcode
+CPMAddPackage(
+  NAME GroupSourcesByFolder.cmake
+  GITHUB_REPOSITORY TheLartians/GroupSourcesByFolder.cmake
+  VERSION 1.0
+)
+
 # ---- Add source files ----
 
 # Note: globbing sources is considered bad practice as CMake's generators may not detect new files
 # automatically. Keep that in mind when changing files, or explicitly mention them here.
 file(GLOB_RECURSE headers CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/include/*.h")
-file(GLOB_RECURSE sourcescu CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cu")
-file(GLOB_RECURSE sourcescpp CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
+file(GLOB_RECURSE sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
 
 # ---- Create standalone executable ----
 
-add_executable(${PROJECT_NAME} ${sourcescu} ${sourcescpp})
-set_target_properties(${PROJECT_NAME} PROPERTIES CUDA_ARCHITECTURES native)
-set_target_properties(${PROJECT_NAME} PROPERTIES CUDA_SEPARABLE_COMPILATION ON OUTPUT_NAME "Greeter")
-target_link_libraries(${PROJECT_NAME} fmt::fmt)
+add_executable(${PROJECT_NAME} ${sources})
+GroupSourcesByFolder(${PROJECT_NAME})
+
+set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 20 OUTPUT_NAME "v-img")
+target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_link_libraries(${PROJECT_NAME} fmt::fmt glm)
