@@ -43,6 +43,7 @@ std::optional<HitInfo> Sphere::hit(const Ray &r) const {
   hit.color = color;
   hit.hit_p = r.o + r.dir * t0;
   hit.hit_n = glm::normalize(hit.hit_p - center);
+  hit.mat = mat;
 
   return std::make_optional(std::move(hit));
 }
