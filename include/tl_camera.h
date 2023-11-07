@@ -20,6 +20,7 @@ private:
 
 public:
   TLCam(const glm::mat4& xform, const glm::ivec2& res, const float fov);
+  TLCam() {}
   ~TLCam() {}
 
   Ray generate_ray(const float& x, const float& y) const;
