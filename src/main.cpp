@@ -35,7 +35,7 @@ int main() {
 
   integrator_data data;
   data.resolution = glm::ivec2(width, height);
-  data.samples = 100;
+  data.samples = 30;
   data.camera = camera;
   data.depth = 10;
 

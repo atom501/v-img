@@ -2,6 +2,7 @@
 
 #include <geometry/sphere.h>
 #include <rng/lcg_rand.h>
+#include <rng/pcg_rand.h>
 #include <tl_camera.h>
 
 #include <algorithm>
@@ -43,15 +44,20 @@ template <typename F> std::vector<glm::vec3> scene_integrator(const integrator_d
           // init hash at the start of each thread
           int32_t init_hash = lcg::hash(w, assigned_h, 1);
 
+          pcg32_random_t pcg_state;
+          pcg32_srandom_r(&pcg_state, assigned_h, 0);
+
           for (int sample = 0; sample < render_data.samples; sample++) {
-            float rand_x = lcg::unitrand(init_hash);
-            float rand_y = lcg::unitrand(init_hash);
+            float rand_x
+                = static_cast<float>(pcg32_random_r(&pcg_state)) / std::numeric_limits<uint32_t>::max();
+            float rand_y
+                = static_cast<float>(pcg32_random_r(&pcg_state)) / std::numeric_limits<uint32_t>::max();
 
             // make ray with random offset
             Ray cam_ray = render_data.camera.generate_ray(w + rand_x, assigned_h + rand_y);
 
             // use set integrator to get color for a pixel
-            pixel_col_accumulator += integrator(cam_ray, s, init_hash, render_data.depth);
+            pixel_col_accumulator += integrator(cam_ray, s, pcg_state, render_data.depth);
           }
           // average final sum
           pixel_col_accumulator /= render_data.samples;
@@ -74,4 +80,5 @@ template <typename F> std::vector<glm::vec3> scene_integrator(const integrator_d
 
 glm::vec3 normal_integrator(Ray& input_ray, const Sphere& s, int32_t& hash_value, uint32_t depth);
 
-glm::vec3 material_integrator(Ray& input_ray, const Sphere& s, int32_t& hash_value, uint32_t depth);
+glm::vec3 material_integrator(Ray& input_ray, const Sphere& s, pcg32_random_t& hash_state,
+                              uint32_t depth);

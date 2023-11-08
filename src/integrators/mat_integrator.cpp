@@ -8,7 +8,7 @@
 
 // returns color produced by a ray from the camera. color value is [0,1]
 // TODO currently works with same sky as normal integrator. need to cater for lights
-glm::vec3 material_integrator(Ray& input_ray, const Sphere& s, int32_t& hash_value,
+glm::vec3 material_integrator(Ray& input_ray, const Sphere& s, pcg32_random_t& hash_state,
                               uint32_t depth) {
   auto test_ray = input_ray;
   glm::vec3 throughput = glm::vec3(1.0f);
@@ -20,9 +20,15 @@ glm::vec3 material_integrator(Ray& input_ray, const Sphere& s, int32_t& hash_val
     // if ray hits the scene
     if (hit.has_value()) {
       // get information on scattered ray from material
+      float rand_x
+          = static_cast<float>(pcg32_random_r(&hash_state)) / std::numeric_limits<uint32_t>::max();
+      float rand_y
+          = static_cast<float>(pcg32_random_r(&hash_state)) / std::numeric_limits<uint32_t>::max();
+      float rand_z
+          = static_cast<float>(pcg32_random_r(&hash_state)) / std::numeric_limits<uint32_t>::max();
+
       std::optional<ScatterInfo> scattered_ray
-          = hit.value().mat->sample_mat(test_ray.dir, hit.value(), lcg::unitrand(hash_value),
-                                        lcg::unitrand(hash_value), lcg::unitrand(hash_value));
+          = hit.value().mat->sample_mat(test_ray.dir, hit.value(), rand_x, rand_y, rand_z);
 
       // get color from material (sample the material)
       if (scattered_ray.has_value()) {
