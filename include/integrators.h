@@ -36,13 +36,14 @@ template <typename F> std::vector<glm::vec3> scene_integrator(const integrator_d
 
     for (int j = 0; j < run_threads; j++) {
       unsigned int assigned_h = h - j;
-      // std::cout << "height " << assigned_h << std::endl;
+
       workers.push_back(std::thread([&, assigned_h]() {
         for (unsigned int w = 0; w < image_width; ++w) {
           glm::vec3 pixel_col_accumulator = glm::vec3(0.0f);
+          // init hash at the start of each thread
+          int32_t init_hash = lcg::hash(w, assigned_h, 1);
 
           for (int sample = 0; sample < render_data.samples; sample++) {
-            int32_t init_hash = lcg::hash(w, assigned_h, j);
             float rand_x = lcg::unitrand(init_hash);
             float rand_y = lcg::unitrand(init_hash);
 
@@ -51,7 +52,6 @@ template <typename F> std::vector<glm::vec3> scene_integrator(const integrator_d
 
             // use set integrator to get color for a pixel
             pixel_col_accumulator += integrator(cam_ray, s, init_hash, render_data.depth);
-            // std::cout << "sample " << sample << std::endl;
           }
           // average final sum
           pixel_col_accumulator /= render_data.samples;
