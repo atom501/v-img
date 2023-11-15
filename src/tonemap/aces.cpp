@@ -11,7 +11,5 @@ void aces_approx(std::vector<glm::vec3>& input_col) {
     float d = 0.59f;
     float e = 0.14f;
     pixel = glm::clamp((pixel * (a * pixel + b)) / (pixel * (c * pixel + d) + e), 0.0f, 1.0f);
-
-    pixel = glm::sqrt(pixel);
   }
 }

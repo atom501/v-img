@@ -1,5 +1,6 @@
 #pragma once
 #include <hit_utils.h>
+#include <ray.h>
 
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
@@ -36,4 +37,11 @@ public:
   virtual float pdf(const glm::vec3& wi, const glm::vec3& wo, const HitInfo& hit) const {
     return 1.0f;
   }
+
+  // light emitted
+  virtual glm::vec3 emitted(const Ray& ray, const HitInfo& hit) const {
+    return glm::vec3(0.0f, 0.0f, 0.0f);
+  }
+
+  virtual bool is_emissive() const { return false; }
 };

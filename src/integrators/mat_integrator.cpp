@@ -13,12 +13,13 @@ glm::vec3 material_integrator(Ray& input_ray, const Sphere& s, pcg32_random_t& h
   auto test_ray = input_ray;
   glm::vec3 throughput = glm::vec3(1.0f);
 
-  for (size_t i = 0; i < depth; i++) {
+  for (size_t i = 0; i <= depth; i++) {
     // perform scene-ray hit test
     std::optional<HitInfo> hit = s.hit(test_ray);
 
     // if ray hits the scene
     if (hit.has_value()) {
+      glm::vec3 emitted_col = hit.value().mat->emitted(test_ray, hit.value());
       // get information on scattered ray from material
       float rand_x
           = static_cast<float>(pcg32_random_r(&hash_state)) / std::numeric_limits<uint32_t>::max();
@@ -33,13 +34,15 @@ glm::vec3 material_integrator(Ray& input_ray, const Sphere& s, pcg32_random_t& h
       // get color from material (sample the material)
       if (scattered_ray.has_value()) {
         // change in throughput
-        throughput *= hit.value().mat->eval(test_ray.dir, scattered_ray.value().wo, hit.value())
-                      / hit.value().mat->pdf(test_ray.dir, scattered_ray.value().wo, hit.value());
+        throughput
+            *= emitted_col
+               + (hit.value().mat->eval(test_ray.dir, scattered_ray.value().wo, hit.value())
+                  / hit.value().mat->pdf(test_ray.dir, scattered_ray.value().wo, hit.value()));
 
         // update the ray
         test_ray = Ray(hit.value().hit_p, scattered_ray.value().wo);
       } else {
-        return glm::vec3(0.0f);
+        return throughput * emitted_col;
       }
     } else {
       // Else set gradient
