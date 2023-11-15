@@ -54,7 +54,7 @@ int main() {
             << std::endl;
 
   // TODO apply tone mapper
-  // aces_approx(acc_image);
+  simple_gamma_correction(acc_image);
 
   uint8_t* pixels = new uint8_t[width * height * CHANNEL_NUM];
 
