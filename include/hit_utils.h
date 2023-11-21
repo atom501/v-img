@@ -2,6 +2,8 @@
 
 #include <material/material.h>
 
+#include <cstdint>
+
 #include "glm/glm.hpp"
 #include "glm/vec3.hpp"
 
@@ -34,3 +36,35 @@ inline ONB init_onb(const glm::vec3& normal_vec) {
 
   return {u, v, unit_n};
 }
+
+// Axis-aligned bounding box
+class AABB {
+public:
+  glm::vec3 box_min;
+  glm::vec3 box_max;
+
+public:
+  AABB(){};
+  AABB(glm::vec3 box_min, glm::vec3 box_max) : box_min(box_min), box_max(box_max) {}
+
+  ~AABB(){};
+
+  uint32_t largest_axis() const {
+    auto d = box_max - box_min;
+    uint32_t axis = 0;
+    if (d[axis] < d[1]) axis = 1;
+    if (d[axis] < d[2]) axis = 2;
+    return axis;
+  }
+
+  void extend(const AABB& box) {
+    box_min = glm::min(box_min, box.box_min);
+    box_max = glm::max(box_max, box.box_max);
+  }
+
+  // half of surface area
+  float half_SA() {
+    auto d = box_max - box_min;
+    return d[0] * d[1] + d[0] * d[2] + d[1] * d[2];
+  }
+};
