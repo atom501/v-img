@@ -1,7 +1,7 @@
 #include <geometry/sphere.h>
 
-static void solveQuadratic(const float &discriminant, const float &a, const float &b_prime,
-                           const float &c, float &x0, float &x1) {
+static inline void solveQuadratic(const float &discriminant, const float &a, const float &b_prime,
+                                  const float &c, float &x0, float &x1) {
   float sign = (b_prime > 0) ? 1.0f : -1.0f;
   auto q = b_prime + sign * (sqrt(a * discriminant));
 

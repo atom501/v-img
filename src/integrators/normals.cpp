@@ -6,7 +6,8 @@
 #include <optional>
 
 // returns color produced by a ray from the camera. color value is [0,1]
-glm::vec3 normal_integrator(Ray& input_ray, const Sphere& s, uint32_t depth) {
+glm::vec3 normal_integrator(Ray& input_ray, const Sphere& s, pcg32_random_t& hash_state,
+                            uint32_t depth) {
   // perform hit test
   std::optional<HitInfo> hit = s.hit(input_ray);
 
