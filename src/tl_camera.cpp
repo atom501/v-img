@@ -19,8 +19,14 @@ TLCam::TLCam(const glm::mat4& xform, const glm::ivec2& res, const float fov) {
 
 Ray TLCam::generate_ray(const float& x, const float& y) const {
   Ray new_ray;
+  /* lerp is slow
   new_ray.dir = glm::vec3(std::lerp(-p_size[0] / 2, p_size[0] / 2, x / resolution[0]),
                           std::lerp(-p_size[1] / 2, +p_size[1] / 2, y / resolution[1]), -1.0f);
+   */
+  float x_dir = (p_size[0] * (x / resolution[0])) - (p_size[0] / 2.0f);
+  float y_dir = (p_size[1] * (y / resolution[1])) - (p_size[1] / 2.0f);
+
+  new_ray.dir = glm::vec3(x_dir, y_dir, -1.0f);
 
   // Transforms from camera to world coords
   new_ray.xform_ray(camToWorld_xform);
