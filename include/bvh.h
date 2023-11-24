@@ -43,5 +43,6 @@ public:
   ~BVH(){};
 
   // input is list of bounding boxes of primitives and their centers
-  static BVH build(const std::vector<AABB>& bboxes, const std::vector<glm::vec3>& centers);
+  static BVH build(const std::vector<AABB>& bboxes, const std::vector<glm::vec3>& centers,
+                   const size_t num_bins);
 };
