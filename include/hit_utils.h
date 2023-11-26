@@ -2,7 +2,9 @@
 
 #include <material/material.h>
 
+#include <cmath>
 #include <cstdint>
+#include <optional>
 
 #include "glm/glm.hpp"
 #include "glm/vec3.hpp"
@@ -41,7 +43,14 @@ inline ONB init_onb(const glm::vec3& normal_vec) {
 class AABB {
 public:
   glm::vec3 box_min;
-  glm::vec3 box_max;
+  glm::vec3 box_min;
+  union {
+    glm::vec3 bboxes[2];
+    struct {
+      glm::vec3 box_min;
+      glm::vec3 box_max;
+    };
+  };
 
 public:
   AABB(){};
@@ -63,8 +72,31 @@ public:
   }
 
   // half of surface area
-  float half_SA() {
+  float half_SA() const {
     auto d = box_max - box_min;
     return d[0] * d[1] + d[0] * d[2] + d[1] * d[2];
+  }
+
+  std::optional<float> intersect(const Ray& ray) const {
+    float tmin = ray.minT, tmax = ray.maxT;
+    std::optional<float> t = std::nullopt;
+
+    for (int d = 0; d < 3; ++d) {
+      // sign of ray dir
+      bool sign = std::signbit(ray.dir[d]);
+
+      const float& bmin = this->bboxes[sign][d];
+      const float& bmax = this->bboxes[!sign][d];
+
+      float dmin = (bmin - ray.o[d]) / ray.dir[d];
+      float dmax = (bmax - ray.o[d]) / ray.dir[d];
+
+      tmin = std::max(dmin, tmin);
+      tmax = std::min(dmax, tmax);
+    }
+
+    if (tmin <= tmax) t = tmin;
+
+    return t;
   }
 };

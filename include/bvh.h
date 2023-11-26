@@ -1,3 +1,4 @@
+#include <geometry/sphere.h>
 #include <hit_utils.h>
 
 #include <cstdint>
@@ -45,4 +46,6 @@ public:
   // input is list of bounding boxes of primitives and their centers
   static BVH build(const std::vector<AABB>& bboxes, const std::vector<glm::vec3>& centers,
                    const size_t num_bins);
+
+  std::optional<size_t> hit(Ray& ray, const std::vector<Sphere>& prims) const;
 };

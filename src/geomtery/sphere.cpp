@@ -15,7 +15,7 @@ static inline void solveQuadratic(const float &discriminant, const float &a, con
 }
 
 // intersection test from ray tracing gems 1, chapter 7
-std::optional<HitInfo> Sphere::hit(const Ray &r) const {
+std::optional<HitInfo> Sphere::hit(Ray &r) const {
   float t0, t1;
   float radius_squared = radius * radius;
 
@@ -36,6 +36,9 @@ std::optional<HitInfo> Sphere::hit(const Ray &r) const {
     t0 = t1;
     if (t0 < r.minT || t0 > r.maxT) return std::nullopt;
   }
+
+  // if hit update the maxT for the ray
+  r.maxT = t0;
 
   HitInfo hit;
 

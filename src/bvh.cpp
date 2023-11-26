@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <numeric>
+#include <stack>
 
 static size_t bin_index(uint8_t axis, const AABB& bbox, const glm::vec3& center,
                         const size_t num_bins) {
@@ -160,4 +161,57 @@ BVH BVH::build(const std::vector<AABB>& bboxes, const std::vector<glm::vec3>& ce
   bvh.nodes.resize(node_count);
 
   return bvh;
+}
+
+std::optional<size_t> BVH::hit(Ray& ray, const std::vector<Sphere>& prims) const {
+  std::optional<size_t> hit_index = std::nullopt;
+  std::optional<float> bb_hit1;
+  std::optional<float> bb_hit2;
+
+  /*
+   * check root node first. Since children are always hit checked before being pushed onto the
+   * stack, no need to perform hit test again when popping the node (except root node)
+   */
+  auto& root_node = nodes[0];
+  if (!root_node.aabb.intersect(ray)) return hit_index;
+
+  std::stack<size_t> stack;
+  stack.push(0);
+
+  while (!stack.empty()) {
+    auto& node = nodes[stack.top()];
+    stack.pop();
+
+    // if leaf check all primitives in the leaf
+    if (node.is_leaf()) {
+      for (size_t i = 0; i < node.obj_count; ++i) {
+        auto prim_index = obj_indices[node.first_index + i];
+
+        // ray's tmax value will be changed if hit
+        if (prims[prim_index].hit(ray)) hit_index = prim_index;
+      }
+    } else {
+      // intersect with both children and push further bbox first
+      size_t first_child = node.first_index;
+      size_t sec_child = node.first_index + 1;
+
+      bb_hit1 = nodes[first_child].aabb.intersect(ray);
+      bb_hit2 = nodes[sec_child].aabb.intersect(ray);
+
+      if (bb_hit2) {
+        if (bb_hit1) {
+          // both intersect. swap according to dist. push more distant bbox first
+          if (bb_hit2.value() > bb_hit1.value()) {
+            std::swap(first_child, sec_child);
+          }
+          stack.push(first_child);
+        }
+        stack.push(sec_child);
+      } else if (bb_hit1) {
+        stack.push(first_child);
+      }  // else don't push any child node
+    }
+  }
+
+  return hit_index;
 }
