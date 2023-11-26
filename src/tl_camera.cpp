@@ -1,12 +1,11 @@
 #include <tl_camera.h>
 
 #include <cmath>
-#include <numbers>
 
 TLCam::TLCam(const glm::mat4& xform, const glm::ivec2& res, const float fov) {
   camToWorld_xform = xform;
   resolution = res;
-  vfov = fov * (std::numbers::pi / 180.0f);
+  vfov = fov * (M_PI / 180.0f);
 
   // set Physical size of the image plane
   float ratio = (float)resolution[0] / resolution[1];

@@ -22,9 +22,9 @@ std::optional<ScatterInfo> Lambertian::sample_mat(const glm::vec3& wi, const Hit
  * hit: hit information about ray object intersection point
  */
 glm::vec3 Lambertian::eval(const glm::vec3& wi, const glm::vec3& wo, const HitInfo& hit) const {
-  return albedo * static_cast<float>(std::max(0.0f, glm::dot(wo, hit.hit_n)) / std::numbers::pi);
+  return albedo * static_cast<float>(std::max(0.0f, glm::dot(wo, hit.hit_n)) / M_PI);
 }
 
 float Lambertian::pdf(const glm::vec3& wi, const glm::vec3& wo, const HitInfo& hit) const {
-  return static_cast<float>(std::max(0.0f, glm::dot(wo, hit.hit_n)) / std::numbers::pi);
+  return static_cast<float>(std::max(0.0f, glm::dot(wo, hit.hit_n)) / M_PI);
 }

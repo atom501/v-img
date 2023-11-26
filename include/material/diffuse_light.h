@@ -1,3 +1,5 @@
+#pragma once
+
 #include <material/material.h>
 
 #include <glm/vec3.hpp>
