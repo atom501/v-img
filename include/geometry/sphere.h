@@ -20,7 +20,7 @@ public:
       : center(center), color(color), radius(r), mat(mat_ptr) {}
 
   // void transform(const glm::mat4 &xform);
-  std::optional<HitInfo> hit(const Ray& r) const;
+  std::optional<HitInfo> hit(Ray& r) const;
 
   ~Sphere(){};
 };
