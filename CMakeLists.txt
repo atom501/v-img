@@ -43,6 +43,19 @@ CPMAddPackage(
   GITHUB_REPOSITORY g-truc/glm
 )
 
+CPMAddPackage(
+  NAME nlohmann_json
+  VERSION 3.11.2
+  # the git repo is incredibly large, so we download the archived include directory
+  URL https://github.com/nlohmann/json/releases/download/v3.11.2/include.zip
+  URL_HASH SHA256=e5c7a9f49a16814be27e4ed0ee900ecd0092bfb7dbfca65b5a421b774dccaaed
+)
+
+if (nlohmann_json_ADDED)
+  add_library(nlohmann_json INTERFACE IMPORTED)
+  target_include_directories(nlohmann_json INTERFACE ${nlohmann_json_SOURCE_DIR}/include)
+endif()
+
 # Source file grouping of visual studio and xcode
 CPMAddPackage(
   NAME GroupSourcesByFolder.cmake
@@ -64,4 +77,4 @@ GroupSourcesByFolder(${PROJECT_NAME})
 
 set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 20 OUTPUT_NAME "v-img")
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_link_libraries(${PROJECT_NAME} fmt::fmt glm)
+target_link_libraries(${PROJECT_NAME} fmt::fmt glm nlohmann_json)

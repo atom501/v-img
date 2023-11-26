@@ -1,6 +1,7 @@
 #pragma once
 
 #include <material/material.h>
+#include <ray.h>
 
 #include <cmath>
 #include <cstdint>
@@ -42,8 +43,6 @@ inline ONB init_onb(const glm::vec3& normal_vec) {
 // Axis-aligned bounding box
 class AABB {
 public:
-  glm::vec3 box_min;
-  glm::vec3 box_min;
   union {
     glm::vec3 bboxes[2];
     struct {
