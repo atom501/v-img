@@ -1,4 +1,5 @@
 #pragma once
+
 #include <cstdint>
 
 struct pcg_state_setseq_64 {  // Internals are *Private*.

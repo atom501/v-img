@@ -9,7 +9,6 @@
 #include <cstdint>
 #include <functional>
 #include <glm/glm.hpp>
-#include <iostream>
 #include <thread>
 #include <utility>
 #include <vector>

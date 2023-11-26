@@ -5,7 +5,6 @@
 
 #include <algorithm>
 #include <cmath>
-#include <numbers>
 
 class Lambertian : public Material {
 private:
