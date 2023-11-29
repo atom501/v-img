@@ -13,11 +13,12 @@
 class Material;
 
 struct HitInfo {
-  glm::vec3 hit_p;  // point where hit in world coords
-  glm::vec3 hit_n;  // normal where hit in world coords
-  glm::vec3 color;
-  float t;  // value of t of ray
   Material* mat = nullptr;
+  glm::vec3 hit_p;  // point where hit in world coords
+  glm::vec3 hit_n;  // normal where hit in world coords. Always faces towards the ray
+  glm::vec3 color;
+  float t;          // value of t of ray
+  bool front_face;  // tell if hit front face or not
 };
 
 // ONB for transforming ray directions
@@ -53,7 +54,7 @@ public:
 
 public:
   AABB(){};
-  AABB(glm::vec3 box_min, glm::vec3 box_max) : box_min(box_min), box_max(box_max) {}
+  AABB(const glm::vec3& box_min, const glm::vec3& box_max) : box_min(box_min), box_max(box_max) {}
 
   ~AABB(){};
 
