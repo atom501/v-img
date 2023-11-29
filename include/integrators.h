@@ -58,12 +58,12 @@ template <typename F> std::vector<glm::vec3> scene_integrator(const integrator_d
         const auto& bottom_y = curr_work.first[1];
         const auto& top_y = curr_work.second[1];
 
-        // init hash at the start of each work
-        pcg32_srandom_r(&pcg_state, c, 0);
-
         for (size_t y = bottom_y; y <= top_y; y++) {
           for (size_t x = bottom_x; x <= top_x; x++) {
             pixel_col_accumulator = glm::vec3(0.0f);
+            // init hash at the start of each work
+            size_t image_index = x + ((image_height - 1 - y) * image_width);
+            pcg32_srandom_r(&pcg_state, image_index, 0);
 
             for (int sample = 0; sample < render_data.samples; sample++) {
               float rand_x = static_cast<float>(pcg32_random_r(&pcg_state))
@@ -80,7 +80,7 @@ template <typename F> std::vector<glm::vec3> scene_integrator(const integrator_d
             // average final sum
             pixel_col_accumulator /= render_data.samples;
 
-            image_accumulated[x + ((image_height - 1 - y) * image_width)] = pixel_col_accumulator;
+            image_accumulated[image_index] = pixel_col_accumulator;
           }
         }
       }
