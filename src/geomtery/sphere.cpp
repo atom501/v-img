@@ -42,10 +42,13 @@ std::optional<HitInfo> Sphere::hit(Ray &r) const {
 
   HitInfo hit;
 
+  glm::vec3 normal = glm::normalize(hit.hit_p - center);
+
   hit.t = t0;
   hit.color = color;
   hit.hit_p = r.o + r.dir * t0;
-  hit.hit_n = glm::normalize(hit.hit_p - center);
+  hit.front_face = glm::dot(r.dir, normal) < 0;
+  hit.hit_n = hit.front_face ? normal : -normal;
   hit.mat = mat;
 
   return std::make_optional(std::move(hit));
@@ -62,4 +65,13 @@ void Sphere::transform(const glm::mat4 &xform) {
   rad_dir = glm::vec3(xform * glm::vec4(rad_dir, 0.0f));
 
   radius = glm::length(rad_dir);
+}
+
+AABB Sphere::bounds() const {
+  glm ::vec3 moving_diagonal = glm::vec3(radius, radius, -radius);
+
+  glm::vec3 min_box = center - moving_diagonal;
+  glm::vec3 max_box = center + moving_diagonal;
+
+  return AABB(min_box, max_box);
 }

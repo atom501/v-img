@@ -23,6 +23,6 @@ public:
   ~Surface(){};
 
   virtual std::optional<HitInfo> hit(Ray& r) const = 0;
-  virtual void transform(const glm::mat4& xform);
+  virtual void transform(const glm::mat4& xform) = 0;
   virtual AABB bounds() const = 0;
 };
