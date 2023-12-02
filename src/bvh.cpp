@@ -163,8 +163,9 @@ BVH BVH::build(const std::vector<AABB>& bboxes, const std::vector<glm::vec3>& ce
   return bvh;
 }
 
-std::optional<size_t> BVH::hit(Ray& ray, const std::vector<Sphere>& prims) const {
-  std::optional<size_t> hit_index = std::nullopt;
+std::optional<HitInfo> BVH::hit(Ray& ray, const std::vector<Surface*>& prims) const {
+  std::optional<HitInfo> hit_final = std::nullopt;
+  std::optional<HitInfo> hit_temp = std::nullopt;
   std::optional<float> bb_hit1;
   std::optional<float> bb_hit2;
 
@@ -173,7 +174,8 @@ std::optional<size_t> BVH::hit(Ray& ray, const std::vector<Sphere>& prims) const
    * stack, no need to perform hit test again when popping the node (except root node)
    */
   auto& root_node = nodes[0];
-  if (!root_node.aabb.intersect(ray)) return hit_index;
+
+  if (!root_node.aabb.intersect(ray)) return std::nullopt;
 
   std::stack<size_t> stack;
   stack.push(0);
@@ -188,7 +190,9 @@ std::optional<size_t> BVH::hit(Ray& ray, const std::vector<Sphere>& prims) const
         auto prim_index = obj_indices[node.first_index + i];
 
         // ray's tmax value will be changed if hit
-        if (prims[prim_index].hit(ray)) hit_index = prim_index;
+        hit_temp = prims[prim_index]->hit(ray);
+        // if ray hit the object replace the last hit_final
+        if (hit_temp.has_value()) hit_final = hit_temp;
       }
     } else {
       // intersect with both children and push further bbox first
@@ -213,5 +217,5 @@ std::optional<size_t> BVH::hit(Ray& ray, const std::vector<Sphere>& prims) const
     }
   }
 
-  return hit_index;
+  return hit_final;
 }

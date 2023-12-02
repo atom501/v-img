@@ -25,4 +25,5 @@ public:
   virtual std::optional<HitInfo> hit(Ray& r) const = 0;
   virtual void transform(const glm::mat4& xform) = 0;
   virtual AABB bounds() const = 0;
+  virtual glm::vec3 get_center() const = 0;
 };

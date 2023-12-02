@@ -74,3 +74,8 @@ void Quad::transform(const glm::mat4& xform) {
   u = glm::vec3(xform * glm::vec4(u, 0.0f));
   v = glm::vec3(xform * glm::vec4(v, 0.0f));
 }
+
+glm::vec3 Quad::get_center() const {
+  const glm::vec3 opposite_corner = l_corner + u + v;
+  return (opposite_corner + l_corner) / 2.0f;
+}

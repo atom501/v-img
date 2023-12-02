@@ -29,6 +29,7 @@ public:
   void transform(const glm::mat4& xform) override;
   std::optional<HitInfo> hit(Ray& r) const override;
   AABB bounds() const override;
+  glm::vec3 get_center() const override;
 
   ~Quad(){};
 };
