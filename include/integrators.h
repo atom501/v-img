@@ -1,6 +1,7 @@
 #pragma once
 
-#include <geometry/sphere.h>
+#include <bvh.h>
+#include <geometry/surface.h>
 #include <rng/lcg_rand.h>
 #include <rng/pcg_rand.h>
 #include <tl_camera.h>
@@ -20,8 +21,9 @@ struct integrator_data {
   TLCam camera;
 };
 
-template <typename F> std::vector<glm::vec3> scene_integrator(const integrator_data& render_data,
-                                                              const Sphere& s, F integrator) {
+template <typename F>
+std::vector<glm::vec3> scene_integrator(const integrator_data& render_data, const BVH& bvh,
+                                        const std::vector<Surface*>& prims, F integrator) {
   const uint32_t image_width = render_data.resolution[0];
   const uint32_t image_height = render_data.resolution[1];
 
@@ -75,7 +77,8 @@ template <typename F> std::vector<glm::vec3> scene_integrator(const integrator_d
               Ray cam_ray = render_data.camera.generate_ray(x + rand_x, y + rand_y);
 
               // use set integrator to get color for a pixel
-              pixel_col_accumulator += integrator(cam_ray, s, pcg_state, render_data.depth);
+              pixel_col_accumulator
+                  += integrator(cam_ray, bvh, prims, pcg_state, render_data.depth);
             }
             // average final sum
             pixel_col_accumulator /= render_data.samples;
@@ -94,8 +97,8 @@ template <typename F> std::vector<glm::vec3> scene_integrator(const integrator_d
   return image_accumulated;
 }
 
-glm::vec3 normal_integrator(Ray& input_ray, const Sphere& s, pcg32_random_t& hash_state,
-                            uint32_t depth);
+glm::vec3 normal_integrator(Ray& input_ray, const BVH& bvh, const std::vector<Surface*>& prims,
+                            pcg32_random_t& hash_state, uint32_t depth);
 
-glm::vec3 material_integrator(Ray& input_ray, const Sphere& s, pcg32_random_t& hash_state,
-                              uint32_t depth);
+glm::vec3 material_integrator(Ray& input_ray, const BVH& bvh, const std::vector<Surface*>& prims,
+                              pcg32_random_t& hash_state, uint32_t depth);

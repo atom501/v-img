@@ -15,12 +15,14 @@ private:
   float radius = 1.0f;
 
 public:
-  Sphere(const glm::vec3& color, float r, Material* mat_ptr, const glm::mat4x4& xform)
-      : color(color), radius(r), Surface(mat_ptr, xform) {}
+  Sphere(const glm::vec3& center, const glm::vec3& color, float r, Material* mat_ptr,
+         const glm::mat4x4& xform)
+      : color(color), center(center), radius(r), Surface(mat_ptr, xform) {}
 
   void transform(const glm::mat4& xform) override;
   std::optional<HitInfo> hit(Ray& r) const override;
   AABB bounds() const override;
+  glm::vec3 get_center() const override;
 
   ~Sphere(){};
 };

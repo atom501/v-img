@@ -69,10 +69,12 @@ void Sphere::transform(const glm::mat4 &xform) {
 }
 
 AABB Sphere::bounds() const {
-  glm ::vec3 moving_diagonal = glm::vec3(radius, radius, -radius);
+  glm ::vec3 moving_diagonal = glm::vec3(radius, radius, radius);
 
   glm::vec3 min_box = center - moving_diagonal;
   glm::vec3 max_box = center + moving_diagonal;
 
   return AABB(min_box, max_box);
 }
+
+glm::vec3 Sphere::get_center() const { return center; }
