@@ -7,7 +7,6 @@
 #include <optional>
 
 // returns color produced by a ray from the camera. color value is [0,1]
-// TODO currently works with same sky as normal integrator. need to cater for lights
 glm::vec3 material_integrator(Ray& input_ray, const BVH& bvh, const std::vector<Surface*>& prims,
                               pcg32_random_t& hash_state, uint32_t depth) {
   auto test_ray = input_ray;
@@ -45,12 +44,8 @@ glm::vec3 material_integrator(Ray& input_ray, const BVH& bvh, const std::vector<
         return throughput * emitted_col;
       }
     } else {
-      // Else set gradient
-      glm::vec3 unit_dir = glm::normalize(input_ray.dir);
-      float a = 0.5 * (unit_dir[1] + 1.0);
-      glm::vec3 col = (1.0f - a) * glm::vec3(1.0, 1.0, 1.0) + a * glm::vec3(0.5, 0.7, 1.0);
-
-      return throughput * col;
+      // TODO set background color
+      return glm::vec3(0.0f);
     }
   }
 

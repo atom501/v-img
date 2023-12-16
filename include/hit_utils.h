@@ -16,8 +16,6 @@ struct HitInfo {
   Material* mat = nullptr;
   glm::vec3 hit_p;  // point where hit in world coords
   glm::vec3 hit_n;  // normal where hit in world coords. Always faces towards the ray
-  glm::vec3 color;
-  float t;          // value of t of ray
   bool front_face;  // tell if hit front face or not
 };
 
