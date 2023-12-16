@@ -42,8 +42,6 @@ std::optional<HitInfo> Sphere::hit(Ray &r) const {
 
   HitInfo hit;
 
-  hit.t = t0;
-  hit.color = color;
   hit.hit_p = r.o + r.dir * t0;
 
   const glm::vec3 normal = glm::normalize(hit.hit_p - center);
