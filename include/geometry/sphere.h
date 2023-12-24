@@ -14,8 +14,7 @@ private:
   float radius = 1.0f;
 
 public:
-  Sphere(const glm::vec3& center, const glm::vec3& color, float r, Material* mat_ptr,
-         const glm::mat4x4& xform)
+  Sphere(const glm::vec3& center, float r, Material* mat_ptr, const glm::mat4x4& xform)
       : center(center), radius(r), Surface(mat_ptr, xform) {}
 
   void transform(const glm::mat4& xform) override;

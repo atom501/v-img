@@ -42,8 +42,8 @@ std::vector<glm::vec3> scene_integrator(const integrator_data& render_data, cons
   for (size_t x = 0; x < image_width; x += 8) {
     for (size_t y = 0; y < image_height; y += 8) {
       auto bottom_pixel = glm::u16vec2(x, y);
-      auto top_pixel = glm::u16vec2(std::min(x + 7, static_cast<size_t>(image_width)),
-                                    std::min(y + 7, static_cast<size_t>(image_height)));
+      auto top_pixel = glm::u16vec2(std::min(x + 7, static_cast<size_t>(image_width - 1)),
+                                    std::min(y + 7, static_cast<size_t>(image_height - 1)));
 
       work_list.push_back(std::make_pair(bottom_pixel, top_pixel));
     }
