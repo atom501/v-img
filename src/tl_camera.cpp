@@ -2,14 +2,15 @@
 
 #include <cmath>
 
-TLCam::TLCam(const glm::mat4& xform, const glm::ivec2& res, const float fov) {
+TLCam::TLCam(const glm::mat4& xform, const glm::ivec2& res, const float ver_fov) {
   camToWorld_xform = xform;
   resolution = res;
-  vfov = fov * (M_PI / 180.0f);
+  vfov = ver_fov;
+  float theta = (ver_fov * M_PI) / 180.0;  // degrees to radians
 
   // set Physical size of the image plane
   float ratio = (float)resolution[0] / resolution[1];
-  float img_height = 2.0f * (tan(vfov / 2.0f));
+  float img_height = 2.0f * (tan(theta / 2.0f));
   float img_width = ratio * img_height;
 
   p_size[0] = img_width;

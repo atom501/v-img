@@ -14,10 +14,14 @@
 #include <utility>
 #include <vector>
 
+enum class integrator_func { normal, material };
+
 struct integrator_data {
+  integrator_func func;
   glm::ivec2 resolution;
   uint32_t samples;
   uint32_t depth;
+  glm::vec3 background_col;
   TLCam camera;
 };
 

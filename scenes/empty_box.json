@@ -1,0 +1,39 @@
+{
+    "camera": {
+        "transform": {
+            "from": [
+                278,
+                278,
+                -800
+            ],
+            "at": [
+                278,
+                278,
+                0
+            ],
+            "up": [
+                0,
+                1,
+                0
+            ]
+        },
+        "vfov": 40.0,
+        "resolution": [
+            500,
+            500
+        ]
+    },
+    "sampler": {
+        "type": "independent",
+        "samples": 64,
+        "depth": 50
+    },
+    "background": [
+        0,
+        0,
+        0
+    ],
+    "integrator": {
+        "type": "material"
+    }
+}
