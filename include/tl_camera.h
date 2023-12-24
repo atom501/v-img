@@ -19,7 +19,7 @@ private:
   // float focal_dist = 1.f;                        // Distance to image plane along cam z axis
 
 public:
-  TLCam(const glm::mat4& xform, const glm::ivec2& res, const float fov);
+  TLCam(const glm::mat4& xform, const glm::ivec2& res, const float ver_fov);
   TLCam() {}
   ~TLCam() {}
 
