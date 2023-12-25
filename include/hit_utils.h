@@ -78,16 +78,18 @@ public:
   std::optional<float> intersect(const Ray& ray) const {
     float tmin = ray.minT, tmax = ray.maxT;
     std::optional<float> t = std::nullopt;
+    float inv_dir = 0;
 
     for (int d = 0; d < 3; ++d) {
       // sign of ray dir
       bool sign = std::signbit(ray.dir[d]);
+      inv_dir = 1 / ray.dir[d];
 
       const float& bmin = this->bboxes[sign][d];
       const float& bmax = this->bboxes[!sign][d];
 
-      float dmin = (bmin - ray.o[d]) / ray.dir[d];
-      float dmax = (bmax - ray.o[d]) / ray.dir[d];
+      float dmin = (bmin - ray.o[d]) * inv_dir;
+      float dmax = (bmax - ray.o[d]) * inv_dir;
 
       tmin = std::max(dmin, tmin);
       tmax = std::min(dmax, tmax);

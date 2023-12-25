@@ -29,6 +29,9 @@ std::optional<HitInfo> Quad::hit(Ray& r) const {
 
   if (!is_interior(alpha, beta)) return std::nullopt;
 
+  // if hit update the maxT for the ray
+  r.maxT = t;
+
   // Ray hits the 2D shape; set the rest of the hit record,
   HitInfo hit;
   hit.hit_p = intersection;
