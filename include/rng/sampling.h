@@ -1,12 +1,12 @@
 #pragma once
 
+#include <cmath>
 #include <glm/vec3.hpp>
-#include <numbers>
 
 // give two random numbers [0,1] as input and return a point on hemisphere.
 // where pole of hemisphere is (0,0,1)
 inline glm::vec3 sample_hemisphere(const float& rand1, const float& rand2) {
-  float phi = 2 * std::numbers::pi * rand1;
+  float phi = 2 * M_PI * rand1;
   float cos_theta = rand2;
   float sin_theta = std::sqrt(1 - cos_theta * cos_theta);
 
@@ -20,7 +20,7 @@ inline glm::vec3 sample_hemisphere(const float& rand1, const float& rand2) {
 /// input two random numbers and return Cosine-weighted point on the hemisphere
 /// where pole of hemisphere is (0,0,1)
 inline glm::vec3 sample_hemisphere_cosine(const float& rand1, const float& rand2) {
-  float phi = 2 * std::numbers::pi * rand1;
+  float phi = 2 * M_PI * rand1;
   float cos_theta = std::sqrt(rand2);
   float sin_theta = std::sqrt(1 - cos_theta * cos_theta);
 
