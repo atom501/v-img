@@ -27,7 +27,8 @@ struct integrator_data {
 
 template <typename F>
 std::vector<glm::vec3> scene_integrator(const integrator_data& render_data, const BVH& bvh,
-                                        const std::vector<Surface*>& prims, F integrator) {
+                                        const std::vector<std::unique_ptr<Surface>>& prims,
+                                        F integrator) {
   const uint32_t image_width = render_data.resolution[0];
   const uint32_t image_height = render_data.resolution[1];
 
@@ -101,8 +102,10 @@ std::vector<glm::vec3> scene_integrator(const integrator_data& render_data, cons
   return image_accumulated;
 }
 
-glm::vec3 normal_integrator(Ray& input_ray, const BVH& bvh, const std::vector<Surface*>& prims,
+glm::vec3 normal_integrator(Ray& input_ray, const BVH& bvh,
+                            const std::vector<std::unique_ptr<Surface>>& prims,
                             pcg32_random_t& hash_state, uint32_t depth);
 
-glm::vec3 material_integrator(Ray& input_ray, const BVH& bvh, const std::vector<Surface*>& prims,
+glm::vec3 material_integrator(Ray& input_ray, const BVH& bvh,
+                              const std::vector<std::unique_ptr<Surface>>& prims,
                               pcg32_random_t& hash_state, uint32_t depth);
