@@ -163,7 +163,8 @@ BVH BVH::build(const std::vector<AABB>& bboxes, const std::vector<glm::vec3>& ce
   return bvh;
 }
 
-std::optional<HitInfo> BVH::hit(Ray& ray, const std::vector<Surface*>& prims) const {
+std::optional<HitInfo> BVH::hit(Ray& ray,
+                                const std::vector<std::unique_ptr<Surface>>& prims) const {
   std::optional<HitInfo> hit_final = std::nullopt;
   std::optional<HitInfo> hit_temp = std::nullopt;
   std::optional<float> bb_hit1;

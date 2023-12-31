@@ -18,22 +18,99 @@
             ]
         },
         "vfov": 40.0,
-        "resolution": [
-            500,
-            500
-        ]
+        "resolution": [500, 500]
     },
     "sampler": {
         "type": "independent",
         "samples": 64,
         "depth": 50
     },
-    "background": [
-        0,
-        0,
-        0
-    ],
+    "background": [0, 0, 0],
     "integrator": {
         "type": "material"
-    }
+    },
+    "materials": [
+        {
+            "type": "lambertian",
+            "name": "white",
+            "albedo": [0.73, 0.73, 0.73]
+        },
+        {
+            "type": "lambertian",
+            "name": "red",
+            "albedo": [0.65, 0.05, 0.05]
+        },
+        {
+            "type": "lambertian",
+            "name": "green",
+            "albedo": [0.12, 0.45, 0.15]
+        },
+        {
+            "type": "diffuse_light",
+            "name": "light",
+            "albedo": [15, 15, 15]
+        }
+    ],
+    "surfaces": [
+        {
+            "type": "quad",
+            "l_corner": [555, 0, 0],
+            "u": [0, 0, 555],
+            "v": [0, 555, 0],
+            "mat_name": "green"
+        },
+        {
+            "type": "quad",
+            "l_corner": [0, 0, 555],
+            "u": [0, 0, -555],
+            "v": [0, 555, 0],
+            "mat_name": "red"
+        },
+        {
+            "type": "quad",
+            "l_corner": [0, 555, 0],
+            "u": [555, 0, 0],
+            "v": [0, 0, 555],
+            "mat_name": "white"
+        },
+        {
+            "type": "quad",
+            "l_corner": [0, 0, 555],
+            "u": [555, 0, 0],
+            "v": [0, 0, -555],
+            "mat_name": "white"
+        },
+        {
+            "type": "quad",
+            "l_corner": [555, 0, 555],
+            "u": [-555, 0, 0],
+            "v": [0, 555, 0],
+            "mat_name": "white"
+        },
+        {
+            "type": "quad",
+            "l_corner": [213, 554, 227],
+            "u": [130, 0, 0],
+            "v": [0, 0, 105],
+            "mat_name": "light"
+        },
+        {
+            "type": "sphere",
+            "center": [190, 90, 190],
+            "radius": 90,
+            "mat_name": "red"
+        },
+        {
+            "type": "sphere",
+            "center": [400, 90, 300],
+            "radius": 90,
+            "mat_name": "green"
+        },
+        {
+            "type": "sphere",
+            "center": [300, 300, 250],
+            "radius": 90,
+            "mat_name": "white"
+        }
+    ]
 }

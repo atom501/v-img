@@ -7,7 +7,8 @@
 #include <optional>
 
 // returns color produced by a ray from the camera. color value is [0,1]
-glm::vec3 material_integrator(Ray& input_ray, const BVH& bvh, const std::vector<Surface*>& prims,
+glm::vec3 material_integrator(Ray& input_ray, const BVH& bvh,
+                              const std::vector<std::unique_ptr<Surface>>& prims,
                               pcg32_random_t& hash_state, uint32_t depth) {
   auto test_ray = input_ray;
   glm::vec3 throughput = glm::vec3(1.0f);
