@@ -1,8 +1,11 @@
-#include <geometry/sphere.h>
+#pragma once
+
+#include <geometry/surface.h>
 #include <hit_utils.h>
 
 #include <cstdint>
 #include <glm/vec3.hpp>
+#include <memory>
 #include <vector>
 
 struct BVHNode {
@@ -47,5 +50,5 @@ public:
   static BVH build(const std::vector<AABB>& bboxes, const std::vector<glm::vec3>& centers,
                    const size_t num_bins);
 
-  std::optional<size_t> hit(Ray& ray, const std::vector<Sphere>& prims) const;
+  std::optional<HitInfo> hit(Ray& ray, const std::vector<std::unique_ptr<Surface>>& prims) const;
 };

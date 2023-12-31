@@ -1,74 +1,110 @@
 #include <chrono>
-#include <cstdint>
-#include <iostream>
-#include <vector>
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
-#include <geometry/sphere.h>
+#include <bvh.h>
+#include <fmt/chrono.h>
+#include <fmt/core.h>
+#include <geometry/surface.h>
 #include <integrators.h>
-#include <material/lambertian.h>
+#include <json_scene.h>
 #include <material/material.h>
 #include <stb_image_write.h>
 #include <tl_camera.h>
 #include <tonemapper.h>
 
-#include <glm/gtc/matrix_transform.hpp>
+#include <algorithm>
+#include <glm/glm.hpp>
 
-#include "glm/glm.hpp"
+void setup_for_bvh(const std::vector<std::unique_ptr<Surface>>& list_objects,
+                   std::vector<AABB>& bboxes, std::vector<glm::vec3>& centers) {
+  for (auto const& obj : list_objects) {
+    // get AABB
+    bboxes.push_back(obj->bounds());
+    // get center
+    centers.push_back(obj->get_center());
+  }
+}
 
-int main() {
-  const int width = 1000;
-  const int height = 1000;
-#define CHANNEL_NUM 3
+int main(int argc, char* argv[]) {
+  // if CHANNEL_NUM is 4, you can use alpha channel in png
+  constexpr uint8_t CHANNEL_NUM = 3;
+  constexpr uint32_t NUM_BINS = 16;
+  std::string json_file_path;
+  integrator_data rendering_settings;
 
-  glm::mat4 look = camToWorld(glm::vec3(0.0f, 0.0f, 3.0f), glm::vec3(0.0f, 0.0f, 0.0f),
-                              glm::vec3(0.0f, 1.0f, 0.0f));
-  TLCam camera(look, glm::ivec2(width, height), 90.0f);
+  std::vector<std::unique_ptr<Material>> mat_list;
+  std::vector<std::unique_ptr<Surface>> list_objects;
 
-  Lambertian lam_material = Lambertian(glm::vec3(0.7f, 0.0f, 0.0f));
+  std::vector<AABB> list_bboxes;
+  std::vector<glm::vec3> list_centers;
 
-  Sphere s(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f), 1.0f, &lam_material);
+  if (argc <= 1) {
+    fmt::println("Scene file path argument was not given");
+    return 0;
+  }
 
-  /*** NOTICE!! You have to use uint8_t array to pass in stb function  ***/
-  // Because the size of color is normally 255, 8bit.
-  // If you don't use this one, you will get a weird image.
+  json_file_path = argv[1];
 
-  integrator_data data;
-  data.resolution = glm::ivec2(width, height);
-  data.samples = 30;
-  data.camera = camera;
-  data.depth = 10;
+  /*
+    parse the file, load objects and materials
+    list_objects and mat_list will be constant after this. ptr_to_objects especially depends on
+    this
+  */
+  bool scene_load_check
+      = set_scene_from_json(json_file_path, rendering_settings, list_objects, mat_list);
+
+  if (!scene_load_check) {
+    fmt::println("Scene was not loaded");
+    return 0;
+  }
+
+  // take a list of Surfaces and make a vector of AABBs and centers
+  setup_for_bvh(list_objects, list_bboxes, list_centers);
+
+  // make bvh
+  const BVH bvh = BVH::build(list_bboxes, list_centers, NUM_BINS);
 
   auto begin_time = std::chrono::steady_clock::now();
+  std::vector<glm::vec3> acc_image;
 
-  std::vector<glm::vec3> acc_image = scene_integrator(data, s, material_integrator);
+  // run integrator
+  switch (rendering_settings.func) {
+    case integrator_func::normal:
+      acc_image = scene_integrator(rendering_settings, bvh, list_objects, normal_integrator);
+      break;
+
+    case integrator_func::material:
+      acc_image = scene_integrator(rendering_settings, bvh, list_objects, material_integrator);
+      break;
+  }
 
   auto end_time = std::chrono::steady_clock::now();
   auto duration_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - begin_time);
 
-  auto duration_secs = duration_cast<std::chrono::seconds>(duration_ms);
-  duration_ms -= duration_cast<std::chrono::milliseconds>(duration_secs);
-  auto duration_mins = duration_cast<std::chrono::minutes>(duration_secs);
+  auto duration_secs = std::chrono::duration_cast<std::chrono::seconds>(duration_ms);
+  duration_ms -= std::chrono::duration_cast<std::chrono::milliseconds>(duration_secs);
+  auto duration_mins = std::chrono::duration_cast<std::chrono::minutes>(duration_secs);
+  duration_secs -= std::chrono::duration_cast<std::chrono::seconds>(duration_mins);
 
-  std::cout << "Render time: " << duration_mins << " " << duration_secs << " " << duration_ms
-            << std::endl;
+  fmt::print("Render time: {} {} {}\n", duration_mins, duration_secs, duration_ms);
 
   // TODO apply tone mapper
   simple_gamma_correction(acc_image);
 
-  uint8_t* pixels = new uint8_t[width * height * CHANNEL_NUM];
+  // buffer for image writing
+  uint8_t* pixels = new uint8_t[rendering_settings.resolution.x * rendering_settings.resolution.y
+                                * CHANNEL_NUM];
 
-  // convert from [0,1] to [0,256]
+  // clamp pixel values to [0,255] before writing to png
   int index = 0;
-
   for (size_t i = 0; i < acc_image.size(); i++) {
-    pixels[index++] = static_cast<int>(255.99 * acc_image[i][0]);
-    pixels[index++] = static_cast<int>(255.99 * acc_image[i][1]);
-    pixels[index++] = static_cast<int>(255.99 * acc_image[i][2]);
+    pixels[index++] = std::clamp(static_cast<int>(255.99 * acc_image[i][0]), 0, 255);
+    pixels[index++] = std::clamp(static_cast<int>(255.99 * acc_image[i][1]), 0, 255);
+    pixels[index++] = std::clamp(static_cast<int>(255.99 * acc_image[i][2]), 0, 255);
   }
 
-  // if CHANNEL_NUM is 4, you can use alpha channel in png
-  stbi_write_png("v_img.png", width, height, CHANNEL_NUM, pixels, width * CHANNEL_NUM);
+  stbi_write_png("v_img.png", rendering_settings.resolution.x, rendering_settings.resolution.y,
+                 CHANNEL_NUM, pixels, rendering_settings.resolution.x * CHANNEL_NUM);
 
   delete[] pixels;
 

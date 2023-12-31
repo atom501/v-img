@@ -1,6 +1,7 @@
 #pragma once
 
-#include <geometry/sphere.h>
+#include <bvh.h>
+#include <geometry/surface.h>
 #include <rng/lcg_rand.h>
 #include <rng/pcg_rand.h>
 #include <tl_camera.h>
@@ -9,20 +10,25 @@
 #include <cstdint>
 #include <functional>
 #include <glm/glm.hpp>
-#include <iostream>
 #include <thread>
 #include <utility>
 #include <vector>
 
+enum class integrator_func { normal, material };
+
 struct integrator_data {
+  integrator_func func;
   glm::ivec2 resolution;
   uint32_t samples;
   uint32_t depth;
+  glm::vec3 background_col;
   TLCam camera;
 };
 
-template <typename F> std::vector<glm::vec3> scene_integrator(const integrator_data& render_data,
-                                                              const Sphere& s, F integrator) {
+template <typename F>
+std::vector<glm::vec3> scene_integrator(const integrator_data& render_data, const BVH& bvh,
+                                        const std::vector<std::unique_ptr<Surface>>& prims,
+                                        F integrator) {
   const uint32_t image_width = render_data.resolution[0];
   const uint32_t image_height = render_data.resolution[1];
 
@@ -37,8 +43,8 @@ template <typename F> std::vector<glm::vec3> scene_integrator(const integrator_d
   for (size_t x = 0; x < image_width; x += 8) {
     for (size_t y = 0; y < image_height; y += 8) {
       auto bottom_pixel = glm::u16vec2(x, y);
-      auto top_pixel = glm::u16vec2(std::min(x + 7, static_cast<size_t>(image_width)),
-                                    std::min(y + 7, static_cast<size_t>(image_height)));
+      auto top_pixel = glm::u16vec2(std::min(x + 7, static_cast<size_t>(image_width - 1)),
+                                    std::min(y + 7, static_cast<size_t>(image_height - 1)));
 
       work_list.push_back(std::make_pair(bottom_pixel, top_pixel));
     }
@@ -59,12 +65,12 @@ template <typename F> std::vector<glm::vec3> scene_integrator(const integrator_d
         const auto& bottom_y = curr_work.first[1];
         const auto& top_y = curr_work.second[1];
 
-        // init hash at the start of each work
-        pcg32_srandom_r(&pcg_state, c, 0);
-
         for (size_t y = bottom_y; y <= top_y; y++) {
           for (size_t x = bottom_x; x <= top_x; x++) {
             pixel_col_accumulator = glm::vec3(0.0f);
+            // init hash at the start of each work
+            size_t image_index = x + ((image_height - 1 - y) * image_width);
+            pcg32_srandom_r(&pcg_state, image_index, 0);
 
             for (int sample = 0; sample < render_data.samples; sample++) {
               float rand_x = static_cast<float>(pcg32_random_r(&pcg_state))
@@ -76,12 +82,13 @@ template <typename F> std::vector<glm::vec3> scene_integrator(const integrator_d
               Ray cam_ray = render_data.camera.generate_ray(x + rand_x, y + rand_y);
 
               // use set integrator to get color for a pixel
-              pixel_col_accumulator += integrator(cam_ray, s, pcg_state, render_data.depth);
+              pixel_col_accumulator
+                  += integrator(cam_ray, bvh, prims, pcg_state, render_data.depth);
             }
             // average final sum
             pixel_col_accumulator /= render_data.samples;
 
-            image_accumulated[x + ((image_height - 1 - y) * image_width)] = pixel_col_accumulator;
+            image_accumulated[image_index] = pixel_col_accumulator;
           }
         }
       }
@@ -95,8 +102,10 @@ template <typename F> std::vector<glm::vec3> scene_integrator(const integrator_d
   return image_accumulated;
 }
 
-glm::vec3 normal_integrator(Ray& input_ray, const Sphere& s, pcg32_random_t& hash_state,
-                            uint32_t depth);
+glm::vec3 normal_integrator(Ray& input_ray, const BVH& bvh,
+                            const std::vector<std::unique_ptr<Surface>>& prims,
+                            pcg32_random_t& hash_state, uint32_t depth);
 
-glm::vec3 material_integrator(Ray& input_ray, const Sphere& s, pcg32_random_t& hash_state,
-                              uint32_t depth);
+glm::vec3 material_integrator(Ray& input_ray, const BVH& bvh,
+                              const std::vector<std::unique_ptr<Surface>>& prims,
+                              pcg32_random_t& hash_state, uint32_t depth);

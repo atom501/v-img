@@ -7,15 +7,16 @@
 #include <optional>
 
 // returns color produced by a ray from the camera. color value is [0,1]
-// TODO currently works with same sky as normal integrator. need to cater for lights
-glm::vec3 material_integrator(Ray& input_ray, const Sphere& s, pcg32_random_t& hash_state,
-                              uint32_t depth) {
+glm::vec3 material_integrator(Ray& input_ray, const BVH& bvh,
+                              const std::vector<std::unique_ptr<Surface>>& prims,
+                              pcg32_random_t& hash_state, uint32_t depth) {
   auto test_ray = input_ray;
   glm::vec3 throughput = glm::vec3(1.0f);
+  constexpr uint32_t roulette_threshold = 5;
 
-  for (size_t i = 0; i <= depth; i++) {
+  for (size_t d = 0; d <= depth; d++) {
     // perform scene-ray hit test
-    std::optional<HitInfo> hit = s.hit(test_ray);
+    std::optional<HitInfo> hit = bvh.hit(test_ray, prims);
 
     // if ray hits the scene
     if (hit.has_value()) {
@@ -39,18 +40,29 @@ glm::vec3 material_integrator(Ray& input_ray, const Sphere& s, pcg32_random_t& h
                + (hit.value().mat->eval(test_ray.dir, scattered_ray.value().wo, hit.value())
                   / hit.value().mat->pdf(test_ray.dir, scattered_ray.value().wo, hit.value()));
 
+        // perform russian roulette
+        static_assert(sizeof(float) == sizeof(uint32_t));
+        if (d > roulette_threshold) {
+          // random [0,1) float
+          float rand_float = static_cast<float>(pcg32_random_r(&hash_state))
+                             / std::numeric_limits<uint32_t>::max();
+
+          float max_val = std::max(std::max(throughput.x, throughput.y), throughput.z);
+
+          if (rand_float > max_val) {
+            break;
+          }
+          throughput /= max_val;
+        }
+
         // update the ray
         test_ray = Ray(hit.value().hit_p, scattered_ray.value().wo);
       } else {
         return throughput * emitted_col;
       }
     } else {
-      // Else set gradient
-      glm::vec3 unit_dir = glm::normalize(input_ray.dir);
-      float a = 0.5 * (unit_dir[1] + 1.0);
-      glm::vec3 col = (1.0f - a) * glm::vec3(1.0, 1.0, 1.0) + a * glm::vec3(0.5, 0.7, 1.0);
-
-      return throughput * col;
+      // TODO set background color
+      return glm::vec3(0.0f);
     }
   }
 
