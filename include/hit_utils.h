@@ -1,6 +1,5 @@
 #pragma once
 
-#include <material/material.h>
 #include <ray.h>
 
 #include <cmath>
@@ -11,12 +10,20 @@
 #include "glm/vec3.hpp"
 
 class Material;
+class Surface;
 
 struct HitInfo {
   Material* mat = nullptr;
+  const Surface* obj = nullptr;
   glm::vec3 hit_p;  // point where hit in world coords
   glm::vec3 hit_n;  // normal where hit in world coords. Always faces towards the ray
   bool front_face;  // tell if hit front face or not
+};
+
+struct EmitterInfo {
+  glm::vec3 wi;  // direction vector from look_from to point on surface
+  float pdf;     // solid angle density wrt look_from
+  HitInfo hit;   // point on surface information
 };
 
 // ONB for transforming ray directions

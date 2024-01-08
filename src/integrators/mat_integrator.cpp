@@ -1,15 +1,10 @@
-#include <hit_utils.h>
 #include <integrators.h>
-#include <material/material.h>
-#include <rng/lcg_rand.h>
-
-#include <cstdint>
-#include <optional>
 
 // returns color produced by a ray from the camera. color value is [0,1]
 glm::vec3 material_integrator(Ray& input_ray, const BVH& bvh,
                               const std::vector<std::unique_ptr<Surface>>& prims,
-                              pcg32_random_t& hash_state, uint32_t depth) {
+                              const GroupOfEmitters& lights, pcg32_random_t& hash_state,
+                              uint32_t depth) {
   auto test_ray = input_ray;
   glm::vec3 throughput = glm::vec3(1.0f);
   constexpr uint32_t roulette_threshold = 5;
@@ -41,7 +36,6 @@ glm::vec3 material_integrator(Ray& input_ray, const BVH& bvh,
                   / hit.value().mat->pdf(test_ray.dir, scattered_ray.value().wo, hit.value()));
 
         // perform russian roulette
-        static_assert(sizeof(float) == sizeof(uint32_t));
         if (d > roulette_threshold) {
           // random [0,1) float
           float rand_float = static_cast<float>(pcg32_random_r(&hash_state))

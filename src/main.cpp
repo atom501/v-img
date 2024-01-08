@@ -4,6 +4,7 @@
 #include <bvh.h>
 #include <fmt/chrono.h>
 #include <fmt/core.h>
+#include <geometry/group_emitters.h>
 #include <geometry/surface.h>
 #include <integrators.h>
 #include <json_scene.h>
@@ -34,6 +35,7 @@ int main(int argc, char* argv[]) {
 
   std::vector<std::unique_ptr<Material>> mat_list;
   std::vector<std::unique_ptr<Surface>> list_objects;
+  std::vector<Surface*> list_lights;
 
   std::vector<AABB> list_bboxes;
   std::vector<glm::vec3> list_centers;
@@ -50,13 +52,17 @@ int main(int argc, char* argv[]) {
     list_objects and mat_list will be constant after this. ptr_to_objects especially depends on
     this
   */
-  bool scene_load_check
-      = set_scene_from_json(json_file_path, rendering_settings, list_objects, mat_list);
+  bool scene_load_check = set_scene_from_json(json_file_path, rendering_settings, list_objects,
+                                              mat_list, list_lights);
 
   if (!scene_load_check) {
     fmt::println("Scene was not loaded");
     return 0;
   }
+
+  GroupOfEmitters lights = GroupOfEmitters(list_lights);
+
+  fmt::println("Number of lights {}", lights.num_lights());
 
   // take a list of Surfaces and make a vector of AABBs and centers
   setup_for_bvh(list_objects, list_bboxes, list_centers);
@@ -70,11 +76,16 @@ int main(int argc, char* argv[]) {
   // run integrator
   switch (rendering_settings.func) {
     case integrator_func::normal:
-      acc_image = scene_integrator(rendering_settings, bvh, list_objects, normal_integrator);
+      acc_image
+          = scene_integrator(rendering_settings, bvh, list_objects, lights, normal_integrator);
       break;
 
     case integrator_func::material:
-      acc_image = scene_integrator(rendering_settings, bvh, list_objects, material_integrator);
+      acc_image
+          = scene_integrator(rendering_settings, bvh, list_objects, lights, material_integrator);
+      break;
+    case integrator_func::mis:
+      acc_image = scene_integrator(rendering_settings, bvh, list_objects, lights, mis_integrator);
       break;
   }
 

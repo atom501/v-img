@@ -1,8 +1,8 @@
 #pragma once
 
 #include <bvh.h>
+#include <geometry/group_emitters.h>
 #include <geometry/surface.h>
-#include <rng/lcg_rand.h>
 #include <rng/pcg_rand.h>
 #include <tl_camera.h>
 
@@ -14,7 +14,7 @@
 #include <utility>
 #include <vector>
 
-enum class integrator_func { normal, material };
+enum class integrator_func { normal, material, mis };
 
 struct integrator_data {
   integrator_func func;
@@ -28,7 +28,7 @@ struct integrator_data {
 template <typename F>
 std::vector<glm::vec3> scene_integrator(const integrator_data& render_data, const BVH& bvh,
                                         const std::vector<std::unique_ptr<Surface>>& prims,
-                                        F integrator) {
+                                        const GroupOfEmitters& lights, F integrator) {
   const uint32_t image_width = render_data.resolution[0];
   const uint32_t image_height = render_data.resolution[1];
 
@@ -83,7 +83,7 @@ std::vector<glm::vec3> scene_integrator(const integrator_data& render_data, cons
 
               // use set integrator to get color for a pixel
               pixel_col_accumulator
-                  += integrator(cam_ray, bvh, prims, pcg_state, render_data.depth);
+                  += integrator(cam_ray, bvh, prims, lights, pcg_state, render_data.depth);
             }
             // average final sum
             pixel_col_accumulator /= render_data.samples;
@@ -104,8 +104,14 @@ std::vector<glm::vec3> scene_integrator(const integrator_data& render_data, cons
 
 glm::vec3 normal_integrator(Ray& input_ray, const BVH& bvh,
                             const std::vector<std::unique_ptr<Surface>>& prims,
-                            pcg32_random_t& hash_state, uint32_t depth);
+                            const GroupOfEmitters& lights, pcg32_random_t& hash_state,
+                            uint32_t depth);
 
 glm::vec3 material_integrator(Ray& input_ray, const BVH& bvh,
                               const std::vector<std::unique_ptr<Surface>>& prims,
-                              pcg32_random_t& hash_state, uint32_t depth);
+                              const GroupOfEmitters& lights, pcg32_random_t& hash_state,
+                              uint32_t depth);
+
+glm::vec3 mis_integrator(Ray& input_ray, const BVH& bvh,
+                         const std::vector<std::unique_ptr<Surface>>& prims,
+                         const GroupOfEmitters& lights, pcg32_random_t& hash_state, uint32_t depth);

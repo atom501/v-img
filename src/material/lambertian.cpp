@@ -8,7 +8,7 @@ std::optional<ScatterInfo> Lambertian::sample_mat(const glm::vec3& wi, const Hit
 
   glm::vec3 dir = xform_with_onb(onb, sample_hemisphere_cosine(rand1, rand2));
 
-  if (glm::dot(dir, hit.hit_n) > 0) {
+  if (hit.front_face) {
     ScatterInfo ret_inf = {Lambertian::albedo, dir};
     return std::make_optional(std::move(ret_inf));
   } else {
