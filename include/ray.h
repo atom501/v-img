@@ -14,7 +14,7 @@ public:
   float maxT = std::numeric_limits<float>::infinity();
 
 public:
-  Ray(glm::vec3& o, glm::vec3& d) : dir(d), o(o) {}
+  Ray(const glm::vec3& o, const glm::vec3& d) : dir(d), o(o) {}
   Ray() {}
   ~Ray() {}
 

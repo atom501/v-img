@@ -104,6 +104,8 @@ bool set_integrator_data(const nlohmann::json& json_settings, integrator_data& i
 
     samples = sampler_json.value("samples", samples);
     depth = sampler_json.value("depth", depth);
+
+    fmt::println("Samples {} and max depth {}", samples, depth);
   } else {
     fmt::println("Sampler not given. Default 30 samples and 30 depth set");
   }
@@ -132,6 +134,9 @@ bool set_integrator_data(const nlohmann::json& json_settings, integrator_data& i
     } else if (integrator_string == "material") {
       func = integrator_func::material;
       fmt::println("Material integrator set");
+    } else if (integrator_string == "mis") {
+      func = integrator_func::mis;
+      fmt::println("MIS integrator set");
     }
   } else {
     fmt::println("Integrator function not given. Default normal integrator set");
@@ -175,6 +180,7 @@ bool set_list_of_materials(const nlohmann::json& json_settings,
 bool set_list_of_objects(const nlohmann::json& json_settings,
                          std::vector<std::unique_ptr<Surface>>& list_surfaces,
                          std::vector<std::unique_ptr<Material>>& list_materials,
+                         std::vector<Surface*>& list_lights,
                          const std::unordered_map<std::string, size_t>& name_to_index) {
   if (json_settings.contains("surfaces")) {
     auto json_surface_list = json_settings["surfaces"];
@@ -203,6 +209,11 @@ bool set_list_of_objects(const nlohmann::json& json_settings,
         Material* mat_ptr = list_materials[name_to_index.at(mat_name)].get();
         auto quad = Quad(l_corner, u, v, mat_ptr, surf_transform);
         list_surfaces.push_back(std::make_unique<Quad>(quad));
+
+        if (mat_ptr->is_emissive()) {
+          Surface* s_ptr = list_surfaces[list_surfaces.size() - 1].get();
+          list_lights.push_back(s_ptr);
+        }
       } else if (surf_data["type"] == "sphere") {
         glm::mat4 surf_transform = glm::mat4(1.0f);
 
@@ -218,6 +229,11 @@ bool set_list_of_objects(const nlohmann::json& json_settings,
         Material* mat_ptr = list_materials[name_to_index.at(mat_name)].get();
         auto sphere = Sphere(center, radius, mat_ptr, surf_transform);
         list_surfaces.push_back(std::make_unique<Sphere>(sphere));
+
+        if (mat_ptr->is_emissive()) {
+          Surface* s_ptr = list_surfaces[list_surfaces.size() - 1].get();
+          list_lights.push_back(s_ptr);
+        }
       } else {
         std::string surf_name = surf_data["type"];
         fmt::println("Unknown surface {}", surf_name);
@@ -231,7 +247,8 @@ bool set_list_of_objects(const nlohmann::json& json_settings,
 
 bool set_scene_from_json(const std::string& path_file, integrator_data& integrator_data,
                          std::vector<std::unique_ptr<Surface>>& list_surfaces,
-                         std::vector<std::unique_ptr<Material>>& list_materials) {
+                         std::vector<std::unique_ptr<Material>>& list_materials,
+                         std::vector<Surface*>& list_lights) {
   // parse json at path_file
   const auto json_string = read_file(path_file);
   const nlohmann::json json_settings = nlohmann::json::parse(json_string);
@@ -254,7 +271,7 @@ bool set_scene_from_json(const std::string& path_file, integrator_data& integrat
   }
 
   // initialise objects and add to list. If it has emissive material add it's pointer to light list
-  if (set_list_of_objects(json_settings, list_surfaces, list_materials, name_to_mat)) {
+  if (set_list_of_objects(json_settings, list_surfaces, list_materials, list_lights, name_to_mat)) {
     fmt::println("List of surfaces loaded");
   } else {
     fmt::println("Surface loading failed");

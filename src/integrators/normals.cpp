@@ -1,14 +1,10 @@
-#include <hit_utils.h>
 #include <integrators.h>
-#include <rng/lcg_rand.h>
-
-#include <cstdint>
-#include <optional>
 
 // returns color produced by a ray from the camera. color value is [0,1]
 glm::vec3 normal_integrator(Ray& input_ray, const BVH& bvh,
                             const std::vector<std::unique_ptr<Surface>>& prims,
-                            pcg32_random_t& hash_state, uint32_t depth) {
+                            const GroupOfEmitters& lights, pcg32_random_t& hash_state,
+                            uint32_t depth) {
   // perform hit test
   std::optional<HitInfo> hit = bvh.hit(input_ray, prims);
 

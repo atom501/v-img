@@ -20,9 +20,6 @@ public:
 
   /* wi: ray direction towards surface
    *  hit: information of point of hit
-   *  srec: information about the new outgoing ray from surface
-   *  rv: 2 random numbers
-   *  rv1: 1 random number
    */
   virtual std::optional<ScatterInfo> sample_mat(const glm::vec3& wi, const HitInfo& hit,
                                                 const float& rand1, const float& rand2,
