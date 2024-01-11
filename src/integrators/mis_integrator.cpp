@@ -65,33 +65,46 @@ glm::vec3 mis_integrator(Ray& input_ray, const BVH& bvh,
       throughput
           *= hit.value().mat->eval(test_ray.dir, scattered_mat.value().wo, hit.value()) / mat_pdf;
 
-      // check if next bounce is a emitter
-      if (hit_next_bounce.has_value() && hit_next_bounce.value().mat->is_emissive()) {
-        light_pdf = hit_next_bounce.value().obj->pdf(
-                        hit.value().hit_p, hit_next_bounce.value().hit_p, scattered_mat.value().wo)
-                    / lights.num_lights();
-
-        float mis_weight = mat_pdf / (light_pdf + mat_pdf);
-
-        bounce_result
-            += throughput * mis_weight
-               * hit_next_bounce.value().mat->emitted(direct_light_ray, hit_next_bounce.value());
-
-        // stop bounce since emit encountered
-        return bounce_result;
-      }
-
-      // TODO perform russian roulette
-
-      // set information for the next bounce
+      // if next ray hits an object
       if (hit_next_bounce.has_value()) {
-        hit = hit_next_bounce;
-        test_ray = direct_light_ray;
+        // ray hits a light
+        if (hit_next_bounce.value().mat->is_emissive()) {
+          light_pdf
+              = hit_next_bounce.value().obj->pdf(hit.value().hit_p, hit_next_bounce.value().hit_p,
+                                                 scattered_mat.value().wo)
+                / lights.num_lights();
+
+          float mis_weight = mat_pdf / (light_pdf + mat_pdf);
+
+          bounce_result
+              += throughput * mis_weight
+                 * hit_next_bounce.value().mat->emitted(direct_light_ray, hit_next_bounce.value());
+
+          // stop bounce since emit encountered
+          return bounce_result;
+        } else {
+          // perform russian roulette
+          if (d > roulette_threshold) {
+            // random [0,1) float
+            float rand_float = static_cast<float>(pcg32_random_r(&hash_state))
+                               / std::numeric_limits<uint32_t>::max();
+
+            float max_val = std::max(std::max(throughput.x, throughput.y), throughput.z);
+
+            if (rand_float > max_val) {
+              break;
+            }
+            throughput /= max_val;
+          }
+
+          // set information for the next bounce
+          hit = hit_next_bounce;
+          test_ray = direct_light_ray;
+        }
       } else {
         // missed scene
         return bounce_result;
       }
-
     } else {
       return glm::vec3(0.0f);
     }
