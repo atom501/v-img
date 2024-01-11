@@ -93,6 +93,24 @@
             "u": [130, 0, 0],
             "v": [0, 0, 105],
             "mat_name": "light"
+        },
+        {
+            "type": "sphere",
+            "center": [190, 90, 190],
+            "radius": 90,
+            "mat_name": "red"
+        },
+        {
+            "type": "sphere",
+            "center": [400, 90, 300],
+            "radius": 90,
+            "mat_name": "green"
+        },
+        {
+            "type": "sphere",
+            "center": [300, 300, 250],
+            "radius": 90,
+            "mat_name": "white"
         }
     ]
 }
