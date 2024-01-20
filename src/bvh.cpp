@@ -7,8 +7,8 @@
 
 static size_t bin_index(uint8_t axis, const AABB& bbox, const glm::vec3& center,
                         const size_t num_bins) {
-  int index = (center[axis] - bbox.box_min[axis])
-              * (num_bins / (bbox.box_max[axis] - bbox.box_min[axis]));
+  int index = (center[axis] - bbox.bboxes[0][axis])
+              * (num_bins / (bbox.bboxes[1][axis] - bbox.bboxes[0][axis]));
   return std::min(num_bins - 1, static_cast<size_t>(std::max(0, index)));
 }
 
