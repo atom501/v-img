@@ -14,8 +14,8 @@ private:
   float radius = 1.0f;
 
 public:
-  Sphere(const glm::vec3& center, float r, Material* mat_ptr, const glm::mat4x4& xform)
-      : center(center), radius(r), Surface(mat_ptr, xform) {}
+  Sphere(const glm::vec3& center, float r, Material* mat_ptr)
+      : center(center), radius(r), Surface(mat_ptr) {}
 
   void transform(const glm::mat4& xform) override;
   std::optional<HitInfo> hit(Ray& r) const override;

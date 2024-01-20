@@ -17,9 +17,8 @@ private:
   double D;     // D in eq Ax+By+Cz=D
 
 public:
-  Quad(const glm::vec3& l_corner, const glm::vec3& u, const glm::vec3& v, Material* mat_ptr,
-       const glm::mat4x4& xform)
-      : l_corner(l_corner), u(u), v(v), Surface(mat_ptr, xform) {
+  Quad(const glm::vec3& l_corner, const glm::vec3& u, const glm::vec3& v, Material* mat_ptr)
+      : l_corner(l_corner), u(u), v(v), Surface(mat_ptr) {
     auto n = cross(u, v);
     normal = glm::normalize(n);
     D = glm::dot(normal, l_corner);
