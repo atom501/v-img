@@ -15,7 +15,8 @@
 bool set_scene_from_json(const std::string& path_file, integrator_data& integrator_data,
                          std::vector<std::unique_ptr<Surface>>& list_surfaces,
                          std::vector<std::unique_ptr<Material>>& list_materials,
-                         std::vector<Surface*>& list_lights);
+                         std::vector<Surface*>& list_lights,
+                         std::vector<std::unique_ptr<Mesh>>& list_meshes);
 
 // set integrator_data from json parsed
 bool set_integrator_data(const nlohmann::json& json_settings, integrator_data& integrator_data);
@@ -28,21 +29,5 @@ bool set_list_of_objects(const nlohmann::json& json_settings,
                          std::vector<std::unique_ptr<Surface>>& list_surfaces,
                          std::vector<std::unique_ptr<Material>>& list_materials,
                          std::vector<Surface*>& list_lights,
-                         const std::unordered_map<std::string, size_t>& name_to_index);
-
-namespace glm {
-
-  void from_json(const nlohmann::json& j, vec3& vec) {
-    j[0].get_to(vec.x);
-    j[1].get_to(vec.y);
-    j[2].get_to(vec.z);
-  }
-
-  void from_json(const nlohmann::json& j, quat& q) {
-    j[0].get_to(q.x);
-    j[1].get_to(q.y);
-    j[2].get_to(q.z);
-    j[3].get_to(q.w);
-  }
-
-}  // namespace glm
+                         const std::unordered_map<std::string, size_t>& name_to_index,
+                         std::vector<std::unique_ptr<Mesh>>& list_meshes);

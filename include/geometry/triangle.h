@@ -1,10 +1,11 @@
 #pragma once
 
-#include <geometry/mesh.h>
 #include <geometry/surface.h>
 #include <hit_utils.h>
 
 #include <cstdint>
+
+class Mesh;
 
 class Triangle : public Surface {
 public:
