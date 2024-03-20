@@ -5,6 +5,7 @@
 #include <fmt/chrono.h>
 #include <fmt/core.h>
 #include <geometry/group_emitters.h>
+#include <geometry/mesh.h>
 #include <geometry/surface.h>
 #include <integrators.h>
 #include <json_scene.h>
@@ -36,6 +37,7 @@ int main(int argc, char* argv[]) {
   std::vector<std::unique_ptr<Material>> mat_list;
   std::vector<std::unique_ptr<Surface>> list_objects;
   std::vector<Surface*> list_lights;
+  std::vector<std::unique_ptr<Mesh>> list_meshes;
 
   std::vector<AABB> list_bboxes;
   std::vector<glm::vec3> list_centers;
@@ -53,7 +55,7 @@ int main(int argc, char* argv[]) {
     this
   */
   bool scene_load_check = set_scene_from_json(json_file_path, rendering_settings, list_objects,
-                                              mat_list, list_lights);
+                                              mat_list, list_lights, list_meshes);
 
   if (!scene_load_check) {
     fmt::println("Scene was not loaded");
@@ -69,6 +71,7 @@ int main(int argc, char* argv[]) {
 
   // make bvh
   const BVH bvh = BVH::build(list_bboxes, list_centers, NUM_BINS);
+  fmt::println("scene BVH built");
 
   auto begin_time = std::chrono::steady_clock::now();
   std::vector<glm::vec3> acc_image;

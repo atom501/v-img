@@ -84,22 +84,6 @@ AABB Quad::bounds() const {
   return bbox;
 }
 
-void Quad::transform(const glm::mat4& xform) {
-  // transform point
-  glm::vec4 temp_o = xform * glm::vec4(l_corner, 1.0f);
-  temp_o /= temp_o[3];
-  l_corner = temp_o;
-
-  // transform vectors starting from l_corner
-  u = glm::vec3(xform * glm::vec4(u, 0.0f));
-  v = glm::vec3(xform * glm::vec4(v, 0.0f));
-
-  auto n = cross(u, v);
-  normal = glm::normalize(n);
-  D = glm::dot(normal, l_corner);
-  w = n / glm::dot(n, n);
-}
-
 glm::vec3 Quad::get_center() const {
   const glm::vec3 opposite_corner = l_corner + u + v;
   return (opposite_corner + l_corner) / 2.0f;
