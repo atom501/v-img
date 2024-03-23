@@ -76,6 +76,8 @@ int main(int argc, char* argv[]) {
   auto begin_time = std::chrono::steady_clock::now();
   std::vector<glm::vec3> acc_image;
 
+  fmt::println("Start render");
+
   // run integrator
   switch (rendering_settings.func) {
     case integrator_func::normal:
