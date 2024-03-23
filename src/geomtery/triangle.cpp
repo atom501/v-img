@@ -14,9 +14,9 @@ std::optional<HitInfo> Triangle::hit(Ray& ray) const {
             p1 = vertices_list[tri_vertex_list[3 * tri_index + 1]],
             p2 = vertices_list[tri_vertex_list[3 * tri_index + 2]];
 
-  // glm::vec3 n0 = normal_list[tri_normal_list[3 * tri_index]],
-  //           n1 = normal_list[tri_normal_list[3 * tri_index + 1]],
-  //           n2 = normal_list[tri_normal_list[3 * tri_index] + 2];
+  glm::vec3 n0 = normal_list[tri_normal_list[3 * tri_index]],
+            n1 = normal_list[tri_normal_list[3 * tri_index + 1]],
+            n2 = normal_list[tri_normal_list[3 * tri_index + 2]];
 
   auto edge1 = p1 - p0;
   auto edge2 = p2 - p0;
@@ -43,7 +43,9 @@ std::optional<HitInfo> Triangle::hit(Ray& ray) const {
 
   float t = glm::dot(qvec, edge2) * invDet;
 
-  glm::vec3 normal = glm::normalize(glm::cross(edge1, edge2));
+  if (t < ray.minT || t > ray.maxT) return std::nullopt;
+
+  glm::vec3 normal = glm::normalize(u * n0 + v * n1 + (1 - u - v) * n2);
 
   // change maxT
   ray.maxT = t;
@@ -52,7 +54,7 @@ std::optional<HitInfo> Triangle::hit(Ray& ray) const {
 
   hit.mat = mat;
   hit.obj = this;
-  hit.hit_p = ray.at(t);
+  hit.hit_p = u * p0 + v * p1 + (1 - u - v) * p2;
   hit.front_face = glm::dot(ray.dir, normal) < 0 ? true : false;
   hit.hit_n = hit.front_face ? normal : -normal;
 
@@ -104,7 +106,7 @@ glm::vec3 Triangle::sample(const glm::vec3& look_from, EmitterInfo& emit_info, f
 
   glm::vec3 n0 = normal_list[tri_normal_list[3 * tri_index]],
             n1 = normal_list[tri_normal_list[3 * tri_index + 1]],
-            n2 = normal_list[tri_normal_list[3 * tri_index] + 2];
+            n2 = normal_list[tri_normal_list[3 * tri_index + 2]];
 
   const auto edge1 = p1 - p0;
   const auto edge2 = p2 - p0;
