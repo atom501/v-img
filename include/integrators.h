@@ -3,10 +3,13 @@
 #include <bvh.h>
 #include <geometry/group_emitters.h>
 #include <geometry/surface.h>
+#include <progress_print.h>
 #include <rng/pcg_rand.h>
 #include <tl_camera.h>
 
 #include <algorithm>
+#include <atomic>
+#include <chrono>
 #include <cstdint>
 #include <functional>
 #include <glm/glm.hpp>
@@ -32,9 +35,12 @@ std::vector<glm::vec3> scene_integrator(const integrator_data& render_data, cons
   const uint32_t image_width = render_data.resolution[0];
   const uint32_t image_height = render_data.resolution[1];
 
+  std::atomic_uint pixels_done = 0;
+  const unsigned int total_pixels = image_width * image_height;
+
   const unsigned int num_cores = std::thread::hardware_concurrency();
 
-  std::vector<glm::vec3> image_accumulated(image_width * image_height);
+  std::vector<glm::vec3> image_accumulated(total_pixels);
   std::vector<std::thread> workers;
   std::vector<std::pair<glm::u16vec2, glm::u16vec2>> work_list;
 
@@ -51,6 +57,29 @@ std::vector<glm::vec3> scene_integrator(const integrator_data& render_data, cons
   }
 
   const unsigned int work_list_len = work_list.size();
+
+  timer_killer progress_bar;
+
+  // thread to print progress
+  std::thread print_progress([&, total_pixels]() {
+    unsigned int pixels_done_copy = 0;
+    float progress = 0;
+
+    fmt::print("\r0 % done");
+    fflush(stdout);
+
+    while (progress_bar.wait_for(std::chrono::milliseconds(800))) {
+      pixels_done_copy = pixels_done.load();
+      progress = (static_cast<float>(pixels_done_copy) / total_pixels) * 100.0f;
+
+      fmt::print("\r{:.2f} % done", progress);
+      fflush(stdout);
+    }
+    fmt::print("\n");
+    fmt::println("done");
+    fflush(stdout);
+    fmt::print("\n");
+  });
 
   for (unsigned int c = 0; c < num_cores; c++) {
     workers.push_back(std::thread([&, c, work_list_len]() {
@@ -70,7 +99,7 @@ std::vector<glm::vec3> scene_integrator(const integrator_data& render_data, cons
             pixel_col_accumulator = glm::vec3(0.0f);
             // init hash at the start of each work
             size_t image_index = x + ((image_height - 1 - y) * image_width);
-            pcg32_srandom_r(&pcg_state, image_index, 0);
+            pcg32_srandom_r(&pcg_state, image_index, c);
 
             for (int sample = 0; sample < render_data.samples; sample++) {
               float rand_x = static_cast<float>(pcg32_random_r(&pcg_state))
@@ -89,6 +118,7 @@ std::vector<glm::vec3> scene_integrator(const integrator_data& render_data, cons
             pixel_col_accumulator /= render_data.samples;
 
             image_accumulated[image_index] = pixel_col_accumulator;
+            ++pixels_done;
           }
         }
       }
@@ -98,6 +128,9 @@ std::vector<glm::vec3> scene_integrator(const integrator_data& render_data, cons
   for (std::thread& thread : workers) {
     thread.join();
   }
+
+  progress_bar.kill();
+  print_progress.join();
 
   return image_accumulated;
 }
