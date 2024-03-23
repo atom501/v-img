@@ -360,9 +360,28 @@ bool set_list_of_objects(const nlohmann::json& json_settings,
                 glm::max(vertices[tri_vertex[3 * i + 1]], vertices[tri_vertex[(3 * i) + 2]]));
 
             // get index for each vertex normal
-            tri_normal.push_back(indices[3 * i].normal_index);
-            tri_normal.push_back(indices[3 * i + 1].normal_index);
-            tri_normal.push_back(indices[3 * i + 2].normal_index);
+
+            // if one of the vertex normals don't exist use face normal
+            if (indices[3 * i].normal_index == -1 || indices[3 * i + 1].normal_index == -1
+                || indices[3 * i + 2].normal_index == -1) {
+              glm::vec3 p0 = vertices[tri_vertex[3 * i]], p1 = vertices[tri_vertex[3 * i + 1]],
+                        p2 = vertices[tri_vertex[3 * i + 2]];
+              auto edge1 = p1 - p0;
+              auto edge2 = p2 - p0;
+
+              glm::vec3 face_normal = glm::normalize(glm::cross(edge1, edge2));
+
+              normals.push_back(face_normal);
+
+              // calculate face normal and assign it to all normal index for triangle
+              tri_normal.push_back(normals.size() - 1);
+              tri_normal.push_back(normals.size() - 1);
+              tri_normal.push_back(normals.size() - 1);
+            } else {
+              tri_normal.push_back(indices[3 * i].normal_index);
+              tri_normal.push_back(indices[3 * i + 1].normal_index);
+              tri_normal.push_back(indices[3 * i + 2].normal_index);
+            }
 
             bbox.bboxes[0] = tri_min_point;
             bbox.bboxes[1] = tri_max_point;
