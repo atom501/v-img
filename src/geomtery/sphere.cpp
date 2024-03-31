@@ -57,19 +57,6 @@ std::optional<HitInfo> Sphere::hit(Ray &r) const {
   return std::make_optional(std::move(hit));
 }
 
-// move the center and scale radius
-void Sphere::transform(const glm::mat4 &xform) {
-  glm::vec4 temp_o = xform * glm::vec4(center, 1.0f);
-  temp_o /= temp_o[3];
-  center = temp_o;
-
-  // to get transformed radius
-  glm::vec3 rad_dir = glm::vec3(radius, 0.0f, 0.0f);
-  rad_dir = glm::vec3(xform * glm::vec4(rad_dir, 0.0f));
-
-  radius = glm::length(rad_dir);
-}
-
 AABB Sphere::bounds() const {
   glm ::vec3 moving_diagonal = glm::vec3(radius, radius, radius);
 
