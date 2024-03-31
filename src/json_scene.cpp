@@ -1,13 +1,34 @@
 #include <fmt/core.h>
+#include <geometry/mesh.h>
 #include <geometry/quads.h>
 #include <geometry/sphere.h>
+#include <geometry/triangle.h>
 #include <json_scene.h>
 #include <material/diffuse_light.h>
 #include <material/lambertian.h>
+#define TINYOBJLOADER_IMPLEMENTATION
+#include <tiny_obj_loader.h>
 
 #include <filesystem>
 #include <fstream>
-#include <string>
+#include <glm/gtx/transform.hpp>
+
+namespace glm {
+
+  void from_json(const nlohmann::json& j, vec3& vec) {
+    j[0].get_to(vec.x);
+    j[1].get_to(vec.y);
+    j[2].get_to(vec.z);
+  }
+
+  void from_json(const nlohmann::json& j, quat& q) {
+    j[0].get_to(q.x);
+    j[1].get_to(q.y);
+    j[2].get_to(q.z);
+    j[3].get_to(q.w);
+  }
+
+}  // namespace glm
 
 static std::string read_file(std::filesystem::path path) {
   // Open the stream to 'lock' the file.
@@ -23,6 +44,44 @@ static std::string read_file(std::filesystem::path path) {
   f.read(json_string.data(), file_size);
 
   return json_string;
+}
+
+static glm::mat4 get_transform(const nlohmann::json& json_xform) {
+  glm::mat4 xform = glm::mat4(1.0f);
+
+  if (!json_xform.contains("transform")) {
+    return xform;
+  }
+
+  const auto& json_array = json_xform["transform"];
+
+  // loop over and apply transforms to xform
+  for (auto& transform_entry : json_array) {
+    fmt::println("Transform entry {}", transform_entry.dump());
+
+    if (transform_entry.contains("scale")) {
+      if (transform_entry["scale"].is_array()) {
+        glm::vec3 scale = transform_entry["scale"].template get<glm::vec3>();
+        xform = glm::scale(scale) * xform;
+      } else {
+        float scale = transform_entry["scale"];
+        xform = glm::scale(glm::vec3(scale)) * xform;
+      }
+
+    } else if (transform_entry.contains("rotate")) {
+      glm::quat rotate_quat = transform_entry["rotate"].template get<glm::quat>();
+      xform = glm::toMat4(rotate_quat) * xform;
+
+    } else if (transform_entry.contains("translate")) {
+      glm::vec3 translate = transform_entry["translate"].template get<glm::vec3>();
+      xform = glm::translate(translate) * xform;
+
+    } else {
+      fmt::println("Unknown transformation type when reading json. {}", transform_entry.dump());
+    }
+  }
+
+  return xform;
 }
 
 static glm::mat4 look_from_json(const nlohmann::json& json_cam_xform) {
@@ -181,7 +240,8 @@ bool set_list_of_objects(const nlohmann::json& json_settings,
                          std::vector<std::unique_ptr<Surface>>& list_surfaces,
                          std::vector<std::unique_ptr<Material>>& list_materials,
                          std::vector<Surface*>& list_lights,
-                         const std::unordered_map<std::string, size_t>& name_to_index) {
+                         const std::unordered_map<std::string, size_t>& name_to_index,
+                         std::vector<std::unique_ptr<Mesh>>& list_meshes) {
   if (json_settings.contains("surfaces")) {
     auto json_surface_list = json_settings["surfaces"];
 
@@ -205,9 +265,9 @@ bool set_list_of_objects(const nlohmann::json& json_settings,
         v[2] = surf_data["v"][2];
 
         std::string mat_name = surf_data["mat_name"];
-
         Material* mat_ptr = list_materials[name_to_index.at(mat_name)].get();
-        auto quad = Quad(l_corner, u, v, mat_ptr, surf_transform);
+
+        auto quad = Quad(l_corner, u, v, mat_ptr);
         list_surfaces.push_back(std::make_unique<Quad>(quad));
 
         if (mat_ptr->is_emissive()) {
@@ -224,15 +284,130 @@ bool set_list_of_objects(const nlohmann::json& json_settings,
         center[2] = surf_data["center"][2];
 
         float radius = surf_data.value("radius", 1.0f);
-        std::string mat_name = surf_data["mat_name"];
 
+        std::string mat_name = surf_data["mat_name"];
         Material* mat_ptr = list_materials[name_to_index.at(mat_name)].get();
-        auto sphere = Sphere(center, radius, mat_ptr, surf_transform);
+
+        auto sphere = Sphere(center, radius, mat_ptr);
         list_surfaces.push_back(std::make_unique<Sphere>(sphere));
 
         if (mat_ptr->is_emissive()) {
           Surface* s_ptr = list_surfaces[list_surfaces.size() - 1].get();
           list_lights.push_back(s_ptr);
+        }
+      } else if (surf_data["type"] == "mesh") {
+        tinyobj::attrib_t attrib;
+        std::vector<tinyobj::shape_t> shapes;
+        std::vector<tinyobj::material_t> materials;
+        std::string warnings;
+        std::string errors;
+
+        std::string model_filename = surf_data["filename"];
+
+        if (tinyobj::LoadObj(&attrib, &shapes, &materials, &warnings, &errors,
+                             model_filename.c_str())
+            == false) {
+          fmt::println("Tinyobj failed to load the mesh \n {}", errors);
+          return false;
+        }
+
+        // data for mesh object
+        std::vector<glm::vec3> vertices;
+        std::vector<glm::vec3> normals;
+        std::vector<uint32_t> tri_vertex;
+        std::vector<uint32_t> tri_normal;
+        AABB bbox = AABB(+glm::vec3(std::numeric_limits<float>::max()),
+                         -glm::vec3(std::numeric_limits<float>::max()));
+
+        glm::mat4 surf_xform = get_transform(surf_data);
+        // read vertices and normals, also transform them
+        for (size_t i = 0; i < attrib.vertices.size(); i += 3) {
+          auto vec = glm::vec3(attrib.vertices[i], attrib.vertices[i + 1], attrib.vertices[i + 2]);
+          glm::vec4 result = surf_xform * glm::vec4(vec, 1);
+          result /= result.w;
+          vertices.push_back(glm::vec3(result));
+        }
+
+        const glm::mat4 normal_xform = glm::transpose(glm::inverse(surf_xform));
+        for (size_t i = 0; i < attrib.normals.size(); i += 3) {
+          auto norm = glm::vec3(attrib.normals[i], attrib.normals[i + 1], attrib.normals[i + 2]);
+          glm::vec4 result = normal_xform * glm::vec4(norm, 0);
+          normals.push_back(glm::vec3(result));
+        }
+
+        vertices.shrink_to_fit();
+        normals.shrink_to_fit();
+
+        for (const auto& shape : shapes) {
+          const std::vector<tinyobj::index_t>& indices = shape.mesh.indices;
+          const std::vector<int>& material_ids = shape.mesh.material_ids;
+
+          // for each triangle get the index in vector of vertices for a vertex
+          for (size_t i = 0; i < material_ids.size(); i++) {
+            // for ith triangle
+
+            // get index for each vertex
+            tri_vertex.push_back(indices[3 * i].vertex_index);
+            tri_vertex.push_back(indices[3 * i + 1].vertex_index);
+            tri_vertex.push_back(indices[3 * i + 2].vertex_index);
+
+            auto tri_min_point = glm::min(
+                vertices[tri_vertex[3 * i]],
+                glm::min(vertices[tri_vertex[3 * i + 1]], vertices[tri_vertex[(3 * i) + 2]]));
+
+            auto tri_max_point = glm::max(
+                vertices[tri_vertex[3 * i]],
+                glm::max(vertices[tri_vertex[3 * i + 1]], vertices[tri_vertex[(3 * i) + 2]]));
+
+            // get index for each vertex normal
+
+            // if one of the vertex normals don't exist use face normal
+            if (indices[3 * i].normal_index == -1 || indices[3 * i + 1].normal_index == -1
+                || indices[3 * i + 2].normal_index == -1) {
+              glm::vec3 p0 = vertices[tri_vertex[3 * i]], p1 = vertices[tri_vertex[3 * i + 1]],
+                        p2 = vertices[tri_vertex[3 * i + 2]];
+              auto edge1 = p1 - p0;
+              auto edge2 = p2 - p0;
+
+              glm::vec3 face_normal = glm::normalize(glm::cross(edge1, edge2));
+
+              normals.push_back(face_normal);
+
+              // calculate face normal and assign it to all normal index for triangle
+              tri_normal.push_back(normals.size() - 1);
+              tri_normal.push_back(normals.size() - 1);
+              tri_normal.push_back(normals.size() - 1);
+            } else {
+              tri_normal.push_back(indices[3 * i].normal_index);
+              tri_normal.push_back(indices[3 * i + 1].normal_index);
+              tri_normal.push_back(indices[3 * i + 2].normal_index);
+            }
+
+            bbox.bboxes[0] = tri_min_point;
+            bbox.bboxes[1] = tri_max_point;
+          }
+        }
+
+        std::string mat_name = surf_data["mat_name"];
+        Material* mat_ptr = list_materials[name_to_index.at(mat_name)].get();
+
+        auto tri_mesh = Mesh(vertices, tri_vertex, normals, tri_normal, mat_ptr);
+        list_meshes.push_back(std::make_unique<Mesh>(tri_mesh));
+
+        // add to list of surfaces
+        for (size_t i = 0; i < tri_vertex.size() / 3; i++) {
+          auto tri = Triangle(list_meshes[list_meshes.size() - 1].get(), i, mat_ptr);
+          list_surfaces.push_back(std::make_unique<Triangle>(tri));
+        }
+
+        // add to list of lights if needed
+        size_t rev_count_index = list_surfaces.size() - 1;
+
+        if (mat_ptr->is_emissive()) {
+          for (size_t i = 0; i < tri_vertex.size(); i++, rev_count_index--) {
+            Surface* s_ptr = list_surfaces[rev_count_index].get();
+            list_lights.push_back(s_ptr);
+          }
         }
       } else {
         std::string surf_name = surf_data["type"];
@@ -248,7 +423,8 @@ bool set_list_of_objects(const nlohmann::json& json_settings,
 bool set_scene_from_json(const std::string& path_file, integrator_data& integrator_data,
                          std::vector<std::unique_ptr<Surface>>& list_surfaces,
                          std::vector<std::unique_ptr<Material>>& list_materials,
-                         std::vector<Surface*>& list_lights) {
+                         std::vector<Surface*>& list_lights,
+                         std::vector<std::unique_ptr<Mesh>>& list_meshes) {
   // parse json at path_file
   const auto json_string = read_file(path_file);
   const nlohmann::json json_settings = nlohmann::json::parse(json_string);
@@ -270,8 +446,10 @@ bool set_scene_from_json(const std::string& path_file, integrator_data& integrat
     return false;
   }
 
-  // initialise objects and add to list. If it has emissive material add it's pointer to light list
-  if (set_list_of_objects(json_settings, list_surfaces, list_materials, list_lights, name_to_mat)) {
+  // initialise objects and add to list. If it has emissive material add it's pointer to light
+  // list
+  if (set_list_of_objects(json_settings, list_surfaces, list_materials, list_lights, name_to_mat,
+                          list_meshes)) {
     fmt::println("List of surfaces loaded");
   } else {
     fmt::println("Surface loading failed");

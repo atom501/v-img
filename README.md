@@ -10,7 +10,6 @@ A toy ray tracer written in C++. For now only uses the CPU. The project was setu
 - Scene loading. Currently from JSON files in scenes folder
 
 ## Future Features
-- Triangle meshes
 - More sampling options 
 - Support more materials
 - Moving to GPU

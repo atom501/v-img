@@ -17,7 +17,7 @@ struct HitInfo {
   const Surface* obj = nullptr;
   glm::vec3 hit_p;  // point where hit in world coords
   glm::vec3 hit_n;  // normal where hit in world coords. Always faces towards the ray
-  bool front_face;  // tell if hit front face or not
+  bool front_face;  // tell if hit front face or not. normal flipped if false
 };
 
 struct EmitterInfo {
@@ -49,22 +49,19 @@ inline ONB init_onb(const glm::vec3& normal_vec) {
 // Axis-aligned bounding box
 class AABB {
 public:
-  union {
-    glm::vec3 bboxes[2];
-    struct {
-      glm::vec3 box_min;
-      glm::vec3 box_max;
-    };
-  };
+  glm::vec3 bboxes[2];  // 0 index min bounding box. 1 index max bounding box
 
 public:
   AABB(){};
-  AABB(const glm::vec3& box_min, const glm::vec3& box_max) : box_min(box_min), box_max(box_max) {}
+  AABB(const glm::vec3& box_min, const glm::vec3& box_max) {
+    bboxes[0] = box_min;
+    bboxes[1] = box_max;
+  }
 
   ~AABB(){};
 
   uint32_t largest_axis() const {
-    auto d = box_max - box_min;
+    auto d = bboxes[1] - bboxes[0];
     uint32_t axis = 0;
     if (d[axis] < d[1]) axis = 1;
     if (d[axis] < d[2]) axis = 2;
@@ -72,13 +69,13 @@ public:
   }
 
   void extend(const AABB& box) {
-    box_min = glm::min(box_min, box.box_min);
-    box_max = glm::max(box_max, box.box_max);
+    bboxes[0] = glm::min(bboxes[0], box.bboxes[0]);
+    bboxes[1] = glm::max(bboxes[1], box.bboxes[1]);
   }
 
   // half of surface area
   float half_SA() const {
-    auto d = box_max - box_min;
+    auto d = bboxes[1] - bboxes[0];
     return d[0] * d[1] + d[0] * d[2] + d[1] * d[2];
   }
 

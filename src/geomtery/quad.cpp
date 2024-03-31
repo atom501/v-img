@@ -66,38 +66,22 @@ AABB Quad::bounds() const {
 
   constexpr float delta = 0.0001;
 
-  if (std::fabs(bbox.box_min.x - bbox.box_max.x) >= delta) {
-    bbox.box_min.x -= delta / 2;
-    bbox.box_max.x += delta / 2;
+  if (std::fabs(bbox.bboxes[0].x - bbox.bboxes[1].x) >= delta) {
+    bbox.bboxes[0].x -= delta / 2;
+    bbox.bboxes[1].x += delta / 2;
   }
 
-  if (std::fabs(bbox.box_min.y - bbox.box_max.y) >= delta) {
-    bbox.box_min.y -= delta / 2;
-    bbox.box_max.y += delta / 2;
+  if (std::fabs(bbox.bboxes[0].y - bbox.bboxes[1].y) >= delta) {
+    bbox.bboxes[0].y -= delta / 2;
+    bbox.bboxes[1].y += delta / 2;
   }
 
-  if (std::fabs(bbox.box_min.z - bbox.box_max.z) >= delta) {
-    bbox.box_min.z -= delta / 2;
-    bbox.box_max.z += delta / 2;
+  if (std::fabs(bbox.bboxes[0].z - bbox.bboxes[1].z) >= delta) {
+    bbox.bboxes[0].z -= delta / 2;
+    bbox.bboxes[1].z += delta / 2;
   }
 
   return bbox;
-}
-
-void Quad::transform(const glm::mat4& xform) {
-  // transform point
-  glm::vec4 temp_o = xform * glm::vec4(l_corner, 1.0f);
-  temp_o /= temp_o[3];
-  l_corner = temp_o;
-
-  // transform vectors starting from l_corner
-  u = glm::vec3(xform * glm::vec4(u, 0.0f));
-  v = glm::vec3(xform * glm::vec4(v, 0.0f));
-
-  auto n = cross(u, v);
-  normal = glm::normalize(n);
-  D = glm::dot(normal, l_corner);
-  w = n / glm::dot(n, n);
 }
 
 glm::vec3 Quad::get_center() const {
