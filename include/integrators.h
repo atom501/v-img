@@ -5,6 +5,7 @@
 #include <geometry/surface.h>
 #include <progress_print.h>
 #include <rng/pcg_rand.h>
+#include <rng/sampling.h>
 #include <tl_camera.h>
 
 #include <algorithm>
@@ -81,8 +82,12 @@ std::vector<glm::vec3> scene_integrator(const integrator_data& render_data, cons
     fmt::print("\n");
   });
 
+  const uint32_t sqrt_sample = std::floorf(std::sqrtf(static_cast<float>(render_data.samples)));
+  const uint32_t sample_remaining = render_data.samples - (sqrt_sample * sqrt_sample);
+  const float inv_sqrt_sample = 1 / static_cast<float>(sqrt_sample);
+
   for (unsigned int c = 0; c < num_cores; c++) {
-    workers.push_back(std::thread([&, c, work_list_len]() {
+    workers.push_back(std::thread([&, c]() {
       pcg32_random_t pcg_state;
       glm::vec3 pixel_col_accumulator;
 
@@ -101,11 +106,25 @@ std::vector<glm::vec3> scene_integrator(const integrator_data& render_data, cons
             size_t image_index = x + ((image_height - 1 - y) * image_width);
             pcg32_srandom_r(&pcg_state, image_index, c);
 
-            for (int sample = 0; sample < render_data.samples; sample++) {
-              float rand_x = static_cast<float>(pcg32_random_r(&pcg_state))
-                             / std::numeric_limits<uint32_t>::max();
-              float rand_y = static_cast<float>(pcg32_random_r(&pcg_state))
-                             / std::numeric_limits<uint32_t>::max();
+            // stratified samples
+            for (size_t x_sample = 0; x_sample < sqrt_sample; x_sample++) {
+              for (size_t y_sample = 0; y_sample < sqrt_sample; y_sample++) {
+                float rand_x = inv_sqrt_sample * (x_sample + rand_float(pcg_state));
+                float rand_y = inv_sqrt_sample * (y_sample + rand_float(pcg_state));
+
+                // make ray with random offset
+                Ray cam_ray = render_data.camera.generate_ray(x + rand_x, y + rand_y);
+
+                // use set integrator to get color for a pixel
+                pixel_col_accumulator
+                    += integrator(cam_ray, bvh, prims, lights, pcg_state, render_data.depth);
+              }
+            }
+
+            // take remaining samples regularly
+            for (size_t sample = 0; sample < sample_remaining; sample++) {
+              float rand_x = rand_float(pcg_state);
+              float rand_y = rand_float(pcg_state);
 
               // make ray with random offset
               Ray cam_ray = render_data.camera.generate_ray(x + rand_x, y + rand_y);
@@ -114,6 +133,7 @@ std::vector<glm::vec3> scene_integrator(const integrator_data& render_data, cons
               pixel_col_accumulator
                   += integrator(cam_ray, bvh, prims, lights, pcg_state, render_data.depth);
             }
+
             // average final sum
             pixel_col_accumulator /= render_data.samples;
 

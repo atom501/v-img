@@ -1,5 +1,7 @@
 #pragma once
 
+#include <rng/pcg_rand.h>
+
 #include <cmath>
 #include <glm/vec3.hpp>
 
@@ -60,4 +62,9 @@ inline glm::vec3 sample_hemisphere_cosine(const float& rand1, const float& rand2
   float z = cos_theta;
 
   return glm::vec3(x, y, z);
+}
+
+// get a random float of value [0,1)
+inline float rand_float(pcg32_random_t& pcg_state) {
+  return ldexp(static_cast<float>(pcg32_random_r(&pcg_state)), -32);
 }

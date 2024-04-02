@@ -17,12 +17,9 @@ glm::vec3 material_integrator(Ray& input_ray, const BVH& bvh,
     if (hit.has_value()) {
       glm::vec3 emitted_col = hit.value().mat->emitted(test_ray, hit.value());
       // get information on scattered ray from material
-      float rand_x
-          = static_cast<float>(pcg32_random_r(&hash_state)) / std::numeric_limits<uint32_t>::max();
-      float rand_y
-          = static_cast<float>(pcg32_random_r(&hash_state)) / std::numeric_limits<uint32_t>::max();
-      float rand_z
-          = static_cast<float>(pcg32_random_r(&hash_state)) / std::numeric_limits<uint32_t>::max();
+      float rand_x = rand_float(hash_state);
+      float rand_y = rand_float(hash_state);
+      float rand_z = rand_float(hash_state);
 
       std::optional<ScatterInfo> scattered_ray
           = hit.value().mat->sample_mat(test_ray.dir, hit.value(), rand_x, rand_y, rand_z);
