@@ -21,7 +21,6 @@
         "resolution": [800, 800]
     },
     "sampler": {
-        "type": "independent",
         "samples": 100,
         "depth": 64
     },

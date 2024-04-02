@@ -25,10 +25,8 @@ glm::vec3 mis_integrator(Ray& input_ray, const BVH& bvh,
 
   // If first hit then get color using normal
   for (d = 0; d <= depth; d++) {
-    float rand1
-        = static_cast<float>(pcg32_random_r(&hash_state)) / std::numeric_limits<uint32_t>::max();
-    float rand2
-        = static_cast<float>(pcg32_random_r(&hash_state)) / std::numeric_limits<uint32_t>::max();
+    float rand1 = rand_float(hash_state);
+    float rand2 = rand_float(hash_state);
 
     // light sampling
     EmitterInfo l_sample_info;
@@ -46,11 +44,10 @@ glm::vec3 mis_integrator(Ray& input_ray, const BVH& bvh,
                        * mis_weight * light_col / l_sample_info.pdf;
     }
 
-    rand1 = static_cast<float>(pcg32_random_r(&hash_state)) / std::numeric_limits<uint32_t>::max();
-    rand2 = static_cast<float>(pcg32_random_r(&hash_state)) / std::numeric_limits<uint32_t>::max();
+    rand1 = rand_float(hash_state);
+    rand2 = rand_float(hash_state);
 
-    float rand3
-        = static_cast<float>(pcg32_random_r(&hash_state)) / std::numeric_limits<uint32_t>::max();
+    float rand3 = rand_float(hash_state);
 
     // material sampling. Info for next bounce
     std::optional<ScatterInfo> scattered_mat
