@@ -23,6 +23,7 @@ public:
   TLCam() {}
   ~TLCam() {}
 
+  // generate ray with direction normalized
   Ray generate_ray(const float& x, const float& y) const;
 };
 /*

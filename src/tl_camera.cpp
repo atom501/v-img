@@ -30,6 +30,7 @@ Ray TLCam::generate_ray(const float& x, const float& y) const {
 
   // Transforms from camera to world coords
   new_ray.xform_ray(camToWorld_xform);
+  new_ray.dir = glm::normalize(new_ray.dir);
   return new_ray;
 }
 
