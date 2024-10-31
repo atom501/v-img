@@ -14,7 +14,7 @@ private:
   glm::vec3 u, v;                        // vectors starting from l_corner
   glm::vec3 normal;
   glm::vec3 w;  // constant for the plane's basis frame
-  double D;     // D in eq Ax+By+Cz=D
+  float D;      // D in eq Ax+By+Cz=D
 
 public:
   Quad(const glm::vec3& l_corner, const glm::vec3& u, const glm::vec3& v, Material* mat_ptr)
@@ -35,5 +35,5 @@ public:
   float pdf(const glm::vec3& look_from, const glm::vec3& look_at,
             const glm::vec3& dir) const override;
 
-  ~Quad(){};
+  ~Quad() {};
 };
