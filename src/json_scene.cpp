@@ -4,6 +4,7 @@
 #include <geometry/sphere.h>
 #include <geometry/triangle.h>
 #include <json_scene.h>
+#include <material/dielectric.h>
 #include <material/diffuse_light.h>
 #include <material/lambertian.h>
 #define TINYOBJLOADER_IMPLEMENTATION
@@ -225,6 +226,12 @@ bool set_list_of_materials(const nlohmann::json& json_settings,
         // add material to list and associate a name with the index
         list_materials.push_back(std::make_unique<DiffuseLight>(temp_light));
         name_to_index[mat_data["name"]] = list_materials.size() - 1;
+      } else if (mat_data["type"] == "dielectric") {
+        auto temp_dielectric = Dielectric(mat_data);
+
+        // add material to list and associate a name with the index
+        list_materials.push_back(std::make_unique<Dielectric>(temp_dielectric));
+        name_to_index[mat_data["name"]] = list_materials.size() - 1;
       } else {
         std::string surf_name = mat_data["type"];
         fmt::println("Unknown material {}", surf_name);
@@ -247,8 +254,8 @@ bool set_list_of_objects(const nlohmann::json& json_settings,
 
     for (auto& surf_data : json_surface_list) {
       if (surf_data["type"] == "quad") {
-        // TODO add transformation init from json
-        glm::mat4 surf_transform = glm::mat4(1.0f);
+        glm::mat4 surf_xform = get_transform(surf_data);
+
         glm::vec3 l_corner;
         l_corner[0] = surf_data["l_corner"][0];
         l_corner[1] = surf_data["l_corner"][1];
@@ -263,6 +270,14 @@ bool set_list_of_objects(const nlohmann::json& json_settings,
         v[0] = surf_data["v"][0];
         v[1] = surf_data["v"][1];
         v[2] = surf_data["v"][2];
+
+        // transform the quad
+        glm::vec4 temp_o = surf_xform * glm::vec4(l_corner, 1.0f);
+        temp_o /= temp_o[3];
+        l_corner = temp_o;
+
+        u = glm::vec3(surf_xform * glm::vec4(u, 0.0f));
+        v = glm::vec3(surf_xform * glm::vec4(v, 0.0f));
 
         std::string mat_name = surf_data["mat_name"];
         Material* mat_ptr = list_materials[name_to_index.at(mat_name)].get();

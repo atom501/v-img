@@ -1,5 +1,26 @@
 #include <material/dielectric.h>
 
+// return reflected direction. Assumption is that hit_n is normalized
+static inline glm::vec3 reflect_dir(const glm::vec3& wi, const glm::vec3& hit_p,
+                                    const glm::vec3& hit_n) {
+  return wi - 2.f * (glm::dot(wi, hit_n)) * hit_n;
+}
+
+static inline float schlick_apprx(const float cosine, const float in_ior, const float out_ior) {
+  auto r0 = (in_ior - out_ior) / (in_ior + out_ior);
+  r0 = r0 * r0;
+  return r0 + (1.f - r0) * std::powf((1.f - cosine), 5.f);
+}
+
+// return refracted direction. Assumption is that hit_n is normalized
+static inline glm::vec3 refract_dir(const glm::vec3& wi, const glm::vec3& hit_p,
+                                    const glm::vec3& hit_n, const float iIndex_over_oIndex,
+                                    const float cos_thetaI, const float sin_thetaT_square) {
+  const auto normal_mul = (iIndex_over_oIndex * cos_thetaI) - std::sqrtf(1.f - sin_thetaT_square);
+
+  return (iIndex_over_oIndex * wi) + (normal_mul * hit_n);
+}
+
 // how ray will scatter after hitting dielectric material
 std::optional<ScatterInfo> Dielectric::sample_mat(const glm::vec3& wi, const HitInfo& hit,
                                                   const float& rand1, const float& rand2,
@@ -34,6 +55,9 @@ std::optional<ScatterInfo> Dielectric::sample_mat(const glm::vec3& wi, const Hit
       wo = refract_dir(wi, hit.hit_p, hit.hit_n, iIndex_over_oIndex, cos_thetaI, sin_thetaT_square);
     }
   }
+
+  ScatterInfo ret_inf = {glm::vec3(1.f), wo};
+  return std::make_optional(std::move(ret_inf));
 }
 
 // has no color of its own
@@ -44,25 +68,4 @@ glm::vec3 Dielectric::eval(const glm::vec3& wi, const glm::vec3& wo, const HitIn
 // since ray only goes in one direction
 float Dielectric::pdf(const glm::vec3& wi, const glm::vec3& wo, const HitInfo& hit) const {
   return 0.f;
-}
-
-// return reflected direction. Assumption is that hit_n is normalized
-static inline glm::vec3 reflect_dir(const glm::vec3& wi, const glm::vec3& hit_p,
-                                    const glm::vec3& hit_n) {
-  return wi - 2.f * (glm::dot(wi, hit_n)) * hit_n;
-}
-
-static inline float schlick_apprx(const float cosine, const float in_ior, const float out_ior) {
-  auto r0 = (in_ior - out_ior) / (in_ior + out_ior);
-  r0 = r0 * r0;
-  return r0 + (1.f - r0) * std::powf((1.f - cosine), 5.f);
-}
-
-// return refracted direction. Assumption is that hit_n is normalized
-static inline glm::vec3 refract_dir(const glm::vec3& wi, const glm::vec3& hit_p,
-                                    const glm::vec3& hit_n, const float iIndex_over_oIndex,
-                                    const float cos_thetaI, const float sin_thetaT_square) {
-  const auto normal_mul = (iIndex_over_oIndex * cos_thetaI) - std::sqrtf(1.f - sin_thetaT_square);
-
-  return (iIndex_over_oIndex * wi) + (normal_mul * hit_n);
 }
