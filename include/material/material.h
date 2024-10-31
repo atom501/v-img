@@ -10,13 +10,13 @@ struct HitInfo;
 
 struct ScatterInfo {
   glm::vec3 attenuation;
-  glm::vec3 wo;  // outgoing direction from hit point on material
+  glm::vec3 wo;  // outgoing direction from hit point on material. Always normalized
 };
 
 class Material {
 public:
-  Material(){};
-  ~Material(){};
+  Material() {};
+  ~Material() {};
 
   /* wi: ray direction towards surface
    *  hit: information of point of hit

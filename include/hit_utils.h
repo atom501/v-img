@@ -16,7 +16,8 @@ struct HitInfo {
   Material* mat = nullptr;
   const Surface* obj = nullptr;
   glm::vec3 hit_p;  // point where hit in world coords
-  glm::vec3 hit_n;  // normal where hit in world coords. Always faces towards the ray
+  glm::vec3 hit_n;  // Normal where hit in world coords.
+                    // Always faces towards the incoming ray, always normalized
   bool front_face;  // tell if hit front face or not. normal flipped if false
 };
 
@@ -26,24 +27,26 @@ struct EmitterInfo {
   HitInfo hit;   // point on surface information
 };
 
-// ONB for transforming ray directions
+// ONB for transforming ray directions. All are unit vectors
 struct ONB {
   glm::vec3 u;  // tangent vector
   glm::vec3 v;  // bi-tangent vector
   glm::vec3 w;  // normal vector
 };
 
+// ray_dir should be unit vector
 inline glm::vec3 xform_with_onb(const ONB& onb, const glm::vec3& ray_dir) {
   return (onb.u * ray_dir[0] + onb.v * ray_dir[1] + onb.w * ray_dir[2]);
 }
 
+// normal_vec must already be normalized
 inline ONB init_onb(const glm::vec3& normal_vec) {
-  glm::vec3 unit_n = glm::normalize(normal_vec);
+  glm::vec3 unit_n = normal_vec;
   glm::vec3 a = (fabs(unit_n[0]) > 0.9) ? glm::vec3(0, 1, 0) : glm::vec3(1, 0, 0);
   glm::vec3 v = glm::normalize(glm::cross(unit_n, a));
-  glm::vec3 u = glm::cross(unit_n, v);
+  glm::vec3 u = glm::cross(unit_n, v);  // already a unit vector as unit_n and v are perpendicular
 
-  return {u, v, unit_n};
+  return ONB{u, v, unit_n};
 }
 
 // Axis-aligned bounding box
@@ -52,13 +55,13 @@ public:
   glm::vec3 bboxes[2];  // 0 index min bounding box. 1 index max bounding box
 
 public:
-  AABB(){};
+  AABB() {};
   AABB(const glm::vec3& box_min, const glm::vec3& box_max) {
     bboxes[0] = box_min;
     bboxes[1] = box_max;
   }
 
-  ~AABB(){};
+  ~AABB() {};
 
   uint32_t largest_axis() const {
     auto d = bboxes[1] - bboxes[0];
