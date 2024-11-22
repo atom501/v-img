@@ -163,7 +163,7 @@ BVH BVH::build(const std::vector<AABB>& bboxes, const std::vector<glm::vec3>& ce
   return bvh;
 }
 
-std::optional<HitInfo> BVH::hit(Ray& ray,
+std::optional<HitInfo> BVH::hit(Ray& ray, std::vector<size_t>& thread_stack,
                                 const std::vector<std::unique_ptr<Surface>>& prims) const {
   std::optional<HitInfo> hit_final = std::nullopt;
   std::optional<HitInfo> hit_temp = std::nullopt;
@@ -178,12 +178,15 @@ std::optional<HitInfo> BVH::hit(Ray& ray,
 
   if (!root_node.aabb.intersect(ray)) return std::nullopt;
 
-  std::stack<size_t> stack;
-  stack.push(0);
+  /*std::stack<size_t> stack;
+  stack.push(0);*/
+  thread_stack.push_back(0);
 
-  while (!stack.empty()) {
-    auto& node = nodes[stack.top()];
-    stack.pop();
+  while (!thread_stack.empty()) {
+    // auto& node = nodes[stack.top()];
+    auto& node = nodes[thread_stack.back()];
+    // stack.pop();
+    thread_stack.pop_back();
 
     // if leaf check all primitives in the leaf
     if (node.is_leaf()) {
@@ -209,11 +212,14 @@ std::optional<HitInfo> BVH::hit(Ray& ray,
           if (bb_hit2.value() > bb_hit1.value()) {
             std::swap(first_child, sec_child);
           }
-          stack.push(first_child);
+          // stack.push(first_child);
+          thread_stack.push_back(first_child);
         }
-        stack.push(sec_child);
+        // stack.push(sec_child);
+        thread_stack.push_back(sec_child);
       } else if (bb_hit1) {
-        stack.push(first_child);
+        // stack.push(first_child);
+        thread_stack.push_back(first_child);
       }  // else don't push any child node
     }
   }

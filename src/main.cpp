@@ -70,7 +70,9 @@ int main(int argc, char* argv[]) {
   setup_for_bvh(list_objects, list_bboxes, list_centers);
 
   // make bvh
-  const BVH bvh = BVH::build(list_bboxes, list_centers, NUM_BINS);
+  BVH bvh = BVH::build(list_bboxes, list_centers, NUM_BINS);
+  // bvh.stack.reserve(64);
+
   fmt::println("scene BVH built");
 
   auto begin_time = std::chrono::steady_clock::now();
