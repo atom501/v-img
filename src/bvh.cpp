@@ -176,7 +176,12 @@ std::optional<HitInfo> BVH::hit(Ray& ray, std::vector<size_t>& thread_stack,
    */
   auto& root_node = nodes[0];
 
-  if (!root_node.aabb.intersect(ray)) return std::nullopt;
+  glm::vec3 ray_inv_dir;
+  ray_inv_dir[0] = 1.0f / ray.dir[0];
+  ray_inv_dir[1] = 1.0f / ray.dir[1];
+  ray_inv_dir[2] = 1.0f / ray.dir[2];
+
+  if (!root_node.aabb.intersect(ray, ray_inv_dir)) return std::nullopt;
 
   /*std::stack<size_t> stack;
   stack.push(0);*/
@@ -203,8 +208,8 @@ std::optional<HitInfo> BVH::hit(Ray& ray, std::vector<size_t>& thread_stack,
       size_t first_child = node.first_index;
       size_t sec_child = node.first_index + 1;
 
-      bb_hit1 = nodes[first_child].aabb.intersect(ray);
-      bb_hit2 = nodes[sec_child].aabb.intersect(ray);
+      bb_hit1 = nodes[first_child].aabb.intersect(ray, ray_inv_dir);
+      bb_hit2 = nodes[sec_child].aabb.intersect(ray, ray_inv_dir);
 
       if (bb_hit2) {
         if (bb_hit1) {
