@@ -15,6 +15,7 @@
 #include <tonemapper.h>
 
 #include <algorithm>
+#include <filesystem>
 #include <glm/glm.hpp>
 
 void setup_for_bvh(const std::vector<std::unique_ptr<Surface>>& list_objects,
@@ -31,7 +32,6 @@ int main(int argc, char* argv[]) {
   // if CHANNEL_NUM is 4, you can use alpha channel in png
   constexpr uint8_t CHANNEL_NUM = 3;
   constexpr uint32_t NUM_BINS = 16;
-  std::string json_file_path;
   integrator_data rendering_settings;
 
   std::vector<std::unique_ptr<Material>> mat_list;
@@ -47,14 +47,14 @@ int main(int argc, char* argv[]) {
     return 0;
   }
 
-  json_file_path = argv[1];
+  std::filesystem::path scene_file_path = argv[1];
 
   /*
     parse the file, load objects and materials
     list_objects and mat_list will be constant after this. ptr_to_objects especially depends on
     this
   */
-  bool scene_load_check = set_scene_from_json(json_file_path, rendering_settings, list_objects,
+  bool scene_load_check = set_scene_from_json(scene_file_path, rendering_settings, list_objects,
                                               mat_list, list_lights, list_meshes);
 
   if (!scene_load_check) {
