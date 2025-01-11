@@ -317,10 +317,13 @@ bool set_list_of_objects(const nlohmann::json& json_settings,
         std::string warnings;
         std::string errors;
 
-        std::string model_filename = surf_data["filename"];
+        std::filesystem::path model_filename = surf_data["filename"];
+        std::filesystem::path scene_filename = json_settings["scene_file_path"];
+
+        const auto model_path_rel_file = scene_filename.remove_filename() / model_filename;
 
         if (tinyobj::LoadObj(&attrib, &shapes, &materials, &warnings, &errors,
-                             model_filename.c_str())
+                             model_path_rel_file.string().c_str())
             == false) {
           fmt::println("Tinyobj failed to load the mesh \n {}", errors);
           return false;
@@ -435,14 +438,16 @@ bool set_list_of_objects(const nlohmann::json& json_settings,
     return false;
 }
 
-bool set_scene_from_json(const std::string& path_file, integrator_data& integrator_data,
+bool set_scene_from_json(const std::filesystem::path& path_file, integrator_data& integrator_data,
                          std::vector<std::unique_ptr<Surface>>& list_surfaces,
                          std::vector<std::unique_ptr<Material>>& list_materials,
                          std::vector<Surface*>& list_lights,
                          std::vector<std::unique_ptr<Mesh>>& list_meshes) {
   // parse json at path_file
   const auto json_string = read_file(path_file);
-  const nlohmann::json json_settings = nlohmann::json::parse(json_string);
+  nlohmann::json json_settings = nlohmann::json::parse(json_string);
+
+  json_settings["scene_file_path"] = path_file;
 
   // set integrator data
   if (set_integrator_data(json_settings, integrator_data)) {
