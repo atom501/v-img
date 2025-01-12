@@ -31,7 +31,12 @@ namespace glm {
 
 }  // namespace glm
 
-static std::string read_file(std::filesystem::path path) {
+static std::optional<std::string> read_file(std::filesystem::path path) {
+  if (!std::filesystem::exists(path)) {
+    fmt::println("Json scene file does not exists");
+    return std::nullopt;
+  }
+
   // Open the stream to 'lock' the file.
   std::ifstream f(path, std::ios::in | std::ios::binary);
 
@@ -444,7 +449,15 @@ bool set_scene_from_json(const std::filesystem::path& path_file, integrator_data
                          std::vector<Surface*>& list_lights,
                          std::vector<std::unique_ptr<Mesh>>& list_meshes) {
   // parse json at path_file
-  const auto json_string = read_file(path_file);
+  const auto json_string_opt = read_file(path_file);
+  std::string json_string;
+
+  if (!json_string_opt.has_value()) {
+    return false;
+  } else {
+    json_string = json_string_opt.value();
+  }
+
   nlohmann::json json_settings = nlohmann::json::parse(json_string);
 
   json_settings["scene_file_path"] = path_file;
