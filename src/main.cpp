@@ -15,6 +15,7 @@
 #include <tonemapper.h>
 
 #include <algorithm>
+#include <args.hxx>
 #include <filesystem>
 #include <glm/glm.hpp>
 
@@ -42,12 +43,32 @@ int main(int argc, char* argv[]) {
   std::vector<AABB> list_bboxes;
   std::vector<glm::vec3> list_centers;
 
-  if (argc <= 1) {
-    fmt::println("Scene file path argument was not given");
+  // parsing CLI arguments
+  args::ArgumentParser parser("CPU raytracer", "");
+  args::HelpFlag help(parser, "help", "Display this help menu", {'h', "help"});
+  args::ValueFlag<std::string> filename(parser, "file", "Scene filename", {'f'});
+
+  try {
+    parser.ParseCLI(argc, argv);
+  } catch (args::Help) {
+    std::cout << parser;
+    return 0;
+  } catch (args::ParseError e) {
+    std::cerr << e.what() << std::endl;
+    std::cerr << parser;
+    return 1;
+  } catch (args::ValidationError e) {
+    std::cerr << e.what() << std::endl;
+    std::cerr << parser;
+    return 1;
+  }
+
+  if (!filename) {
+    fmt::println("Scene file path argument (-f) was not given");
     return 0;
   }
 
-  std::filesystem::path scene_file_path = argv[1];
+  std::filesystem::path scene_file_path = args::get(filename);
 
   /*
     parse the file, load objects and materials
