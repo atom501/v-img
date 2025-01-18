@@ -1,5 +1,6 @@
 #include <geometry/quads.h>
 
+#include <algorithm>
 #include <glm/gtx/norm.hpp>
 #include <optional>
 

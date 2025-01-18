@@ -1,6 +1,6 @@
 #include <integrators.h>
 
-glm::vec3 mis_integrator(Ray& input_ray, std::vector<size_t>& thread_stack, BVH& bvh,
+glm::vec3 mis_integrator(Ray& input_ray, std::vector<size_t>& thread_stack, const BVH& bvh,
                          const std::vector<std::unique_ptr<Surface>>& prims,
                          const GroupOfEmitters& lights, pcg32_random_t& hash_state,
                          uint32_t depth) {
@@ -49,8 +49,8 @@ glm::vec3 mis_integrator(Ray& input_ray, std::vector<size_t>& thread_stack, BVH&
       EmitterInfo l_sample_info;
       auto light_col = lights.sample(hit.value().hit_p, l_sample_info, rand1, rand2);
 
-      std::optional<HitInfo> l_visibility_check
-          = bvh.hit(Ray(hit.value().hit_p, l_sample_info.wi), thread_stack, prims);
+      Ray shadow_ray = Ray(hit.value().hit_p, l_sample_info.wi);
+      std::optional<HitInfo> l_visibility_check = bvh.hit(shadow_ray, thread_stack, prims);
 
       // if light visible from point
       if (l_visibility_check.has_value()
