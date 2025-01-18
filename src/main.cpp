@@ -35,6 +35,8 @@ int main(int argc, char* argv[]) {
   constexpr uint32_t NUM_BINS = 16;
   integrator_data rendering_settings;
 
+  int heatmap_max = -1;
+
   std::vector<std::unique_ptr<Material>> mat_list;
   std::vector<std::unique_ptr<Surface>> list_objects;
   std::vector<Surface*> list_lights;
@@ -47,6 +49,10 @@ int main(int argc, char* argv[]) {
   args::ArgumentParser parser("CPU raytracer", "");
   args::HelpFlag help(parser, "help", "Display this help menu", {'h', "help"});
   args::ValueFlag<std::string> filename(parser, "file", "Scene filename", {'f'});
+  args::ValueFlag<int> heatmap(
+      parser, "heatmap",
+      "Enable heatmap mode. Number of primitives to set as the max. 0 uses maximum from scene",
+      {'m'});
 
   try {
     parser.ParseCLI(argc, argv);
@@ -66,6 +72,10 @@ int main(int argc, char* argv[]) {
   if (!filename) {
     fmt::println("Scene file path argument (-f) was not given");
     return 0;
+  }
+
+  if (heatmap) {
+    heatmap_max = args::get(heatmap);
   }
 
   std::filesystem::path scene_file_path = args::get(filename);
@@ -101,20 +111,25 @@ int main(int argc, char* argv[]) {
 
   fmt::println("Start render");
 
-  // run integrator
-  switch (rendering_settings.func) {
-    case integrator_func::normal:
-      acc_image
-          = scene_integrator(rendering_settings, bvh, list_objects, lights, normal_integrator);
-      break;
+  if (heatmap_max < 0) {
+    // run integrator
+    switch (rendering_settings.func) {
+      case integrator_func::normal:
+        acc_image
+            = scene_integrator(rendering_settings, bvh, list_objects, lights, normal_integrator);
+        break;
 
-    case integrator_func::material:
-      acc_image
-          = scene_integrator(rendering_settings, bvh, list_objects, lights, material_integrator);
-      break;
-    case integrator_func::mis:
-      acc_image = scene_integrator(rendering_settings, bvh, list_objects, lights, mis_integrator);
-      break;
+      case integrator_func::material:
+        acc_image
+            = scene_integrator(rendering_settings, bvh, list_objects, lights, material_integrator);
+        break;
+      case integrator_func::mis:
+        acc_image = scene_integrator(rendering_settings, bvh, list_objects, lights, mis_integrator);
+        break;
+    }
+  } else {
+    fmt::println("Heatmap mode");
+    acc_image = heatmap_img(rendering_settings, bvh, list_objects, heatmap_max);
   }
 
   auto end_time = std::chrono::steady_clock::now();

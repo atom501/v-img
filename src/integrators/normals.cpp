@@ -1,7 +1,7 @@
 #include <integrators.h>
 
 // returns color produced by a ray from the camera. color value is [0,1]
-glm::vec3 normal_integrator(Ray& input_ray, std::vector<size_t>& thread_stack, BVH& bvh,
+glm::vec3 normal_integrator(Ray& input_ray, std::vector<size_t>& thread_stack, const BVH& bvh,
                             const std::vector<std::unique_ptr<Surface>>& prims,
                             const GroupOfEmitters& lights, pcg32_random_t& hash_state,
                             uint32_t depth) {

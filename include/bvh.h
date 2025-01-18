@@ -52,4 +52,7 @@ public:
 
   std::optional<HitInfo> hit(Ray& ray, std::vector<size_t>& thread_stack,
                              const std::vector<std::unique_ptr<Surface>>& prims) const;
+
+  uint32_t hit_heatmap(Ray& ray, std::vector<size_t>& thread_stack,
+                       const std::vector<std::unique_ptr<Surface>>& prims) const;
 };
