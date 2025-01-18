@@ -1,11 +1,13 @@
 #pragma once
 
 #include <bvh.h>
+#include <fmt/core.h>
 #include <geometry/group_emitters.h>
 #include <geometry/surface.h>
 #include <progress_print.h>
 #include <rng/pcg_rand.h>
 #include <rng/sampling.h>
+#include <stdio.h>
 #include <tl_camera.h>
 
 #include <algorithm>
@@ -30,7 +32,7 @@ struct integrator_data {
 };
 
 template <typename F>
-std::vector<glm::vec3> scene_integrator(const integrator_data& render_data, const BVH& bvh,
+std::vector<glm::vec3> scene_integrator(const integrator_data& render_data, BVH& bvh,
                                         const std::vector<std::unique_ptr<Surface>>& prims,
                                         const GroupOfEmitters& lights, F integrator) {
   const uint32_t image_width = render_data.resolution[0];
@@ -77,7 +79,7 @@ std::vector<glm::vec3> scene_integrator(const integrator_data& render_data, cons
       fflush(stdout);
     }
     fmt::print("\n");
-    fmt::println("done");
+    fmt::println("Render Completed");
     fflush(stdout);
     fmt::print("\n");
   });
@@ -90,6 +92,10 @@ std::vector<glm::vec3> scene_integrator(const integrator_data& render_data, cons
     workers.push_back(std::thread([&, c]() {
       pcg32_random_t pcg_state;
       glm::vec3 pixel_col_accumulator;
+
+      // make a stack for each core. instead of one for each bvh hit call
+      std::vector<size_t> thread_stack;
+      thread_stack.reserve(64);
 
       for (size_t i = c; i < work_list_len; i += num_cores) {
         std::pair<glm::u16vec2, glm::u16vec2>& curr_work = work_list[i];
@@ -116,8 +122,8 @@ std::vector<glm::vec3> scene_integrator(const integrator_data& render_data, cons
                 Ray cam_ray = render_data.camera.generate_ray(x + rand_x, y + rand_y);
 
                 // use set integrator to get color for a pixel
-                pixel_col_accumulator
-                    += integrator(cam_ray, bvh, prims, lights, pcg_state, render_data.depth);
+                pixel_col_accumulator += integrator(cam_ray, thread_stack, bvh, prims, lights,
+                                                    pcg_state, render_data.depth);
               }
             }
 
@@ -130,8 +136,8 @@ std::vector<glm::vec3> scene_integrator(const integrator_data& render_data, cons
               Ray cam_ray = render_data.camera.generate_ray(x + rand_x, y + rand_y);
 
               // use set integrator to get color for a pixel
-              pixel_col_accumulator
-                  += integrator(cam_ray, bvh, prims, lights, pcg_state, render_data.depth);
+              pixel_col_accumulator += integrator(cam_ray, thread_stack, bvh, prims, lights,
+                                                  pcg_state, render_data.depth);
             }
 
             // average final sum
@@ -155,16 +161,20 @@ std::vector<glm::vec3> scene_integrator(const integrator_data& render_data, cons
   return image_accumulated;
 }
 
-glm::vec3 normal_integrator(Ray& input_ray, const BVH& bvh,
+glm::vec3 normal_integrator(Ray& input_ray, std::vector<size_t>& thread_stack, const BVH& bvh,
                             const std::vector<std::unique_ptr<Surface>>& prims,
                             const GroupOfEmitters& lights, pcg32_random_t& hash_state,
                             uint32_t depth);
 
-glm::vec3 material_integrator(Ray& input_ray, const BVH& bvh,
+glm::vec3 material_integrator(Ray& input_ray, std::vector<size_t>& thread_stack, const BVH& bvh,
                               const std::vector<std::unique_ptr<Surface>>& prims,
                               const GroupOfEmitters& lights, pcg32_random_t& hash_state,
                               uint32_t depth);
 
-glm::vec3 mis_integrator(Ray& input_ray, const BVH& bvh,
+glm::vec3 mis_integrator(Ray& input_ray, std::vector<size_t>& thread_stack, const BVH& bvh,
                          const std::vector<std::unique_ptr<Surface>>& prims,
                          const GroupOfEmitters& lights, pcg32_random_t& hash_state, uint32_t depth);
+
+std::vector<glm::vec3> heatmap_img(const integrator_data& render_data, const BVH& bvh,
+                                   const std::vector<std::unique_ptr<Surface>>& prims,
+                                   const int max_count);

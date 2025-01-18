@@ -12,7 +12,7 @@
     takes file path as input and sets the scene. Returns true if parsed,
     else returns false and print error
 */
-bool set_scene_from_json(const std::string& path_file, integrator_data& integrator_data,
+bool set_scene_from_json(const std::filesystem::path& path_file, integrator_data& integrator_data,
                          std::vector<std::unique_ptr<Surface>>& list_surfaces,
                          std::vector<std::unique_ptr<Material>>& list_materials,
                          std::vector<Surface*>& list_lights,

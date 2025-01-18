@@ -23,10 +23,10 @@ public:
   size_t obj_count;
 
 public:
-  Bin(){};
+  Bin() {};
   Bin(size_t obj_count, AABB aabb) : obj_count(obj_count), aabb(aabb) {}
 
-  ~Bin(){};
+  ~Bin() {};
 
   float cost() { return aabb.half_SA() * obj_count; }
 };
@@ -43,12 +43,16 @@ public:
   std::vector<size_t> obj_indices;  // indices pointing to original object list
 
 public:
-  BVH(){};
-  ~BVH(){};
+  BVH() {};
+  ~BVH() {};
 
   // input is list of bounding boxes of primitives and their centers
   static BVH build(const std::vector<AABB>& bboxes, const std::vector<glm::vec3>& centers,
                    const size_t num_bins);
 
-  std::optional<HitInfo> hit(Ray& ray, const std::vector<std::unique_ptr<Surface>>& prims) const;
+  std::optional<HitInfo> hit(Ray& ray, std::vector<size_t>& thread_stack,
+                             const std::vector<std::unique_ptr<Surface>>& prims) const;
+
+  uint32_t hit_heatmap(Ray& ray, std::vector<size_t>& thread_stack,
+                       const std::vector<std::unique_ptr<Surface>>& prims) const;
 };

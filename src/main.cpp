@@ -15,6 +15,8 @@
 #include <tonemapper.h>
 
 #include <algorithm>
+#include <args.hxx>
+#include <filesystem>
 #include <glm/glm.hpp>
 
 void setup_for_bvh(const std::vector<std::unique_ptr<Surface>>& list_objects,
@@ -31,8 +33,9 @@ int main(int argc, char* argv[]) {
   // if CHANNEL_NUM is 4, you can use alpha channel in png
   constexpr uint8_t CHANNEL_NUM = 3;
   constexpr uint32_t NUM_BINS = 16;
-  std::string json_file_path;
   integrator_data rendering_settings;
+
+  int heatmap_max = -1;
 
   std::vector<std::unique_ptr<Material>> mat_list;
   std::vector<std::unique_ptr<Surface>> list_objects;
@@ -42,19 +45,47 @@ int main(int argc, char* argv[]) {
   std::vector<AABB> list_bboxes;
   std::vector<glm::vec3> list_centers;
 
-  if (argc <= 1) {
-    fmt::println("Scene file path argument was not given");
+  // parsing CLI arguments
+  args::ArgumentParser parser("CPU raytracer", "");
+  args::HelpFlag help(parser, "help", "Display this help menu", {'h', "help"});
+  args::ValueFlag<std::string> filename(parser, "file", "Scene filename", {'f'});
+  args::ValueFlag<int> heatmap(
+      parser, "heatmap",
+      "Enable heatmap mode. Number of primitives to set as the max. 0 uses maximum from scene",
+      {'m'});
+
+  try {
+    parser.ParseCLI(argc, argv);
+  } catch (args::Help) {
+    std::cout << parser;
+    return 0;
+  } catch (args::ParseError e) {
+    std::cerr << e.what() << std::endl;
+    std::cerr << parser;
+    return 1;
+  } catch (args::ValidationError e) {
+    std::cerr << e.what() << std::endl;
+    std::cerr << parser;
+    return 1;
+  }
+
+  if (!filename) {
+    fmt::println("Scene file path argument (-f) was not given");
     return 0;
   }
 
-  json_file_path = argv[1];
+  if (heatmap) {
+    heatmap_max = args::get(heatmap);
+  }
+
+  std::filesystem::path scene_file_path = args::get(filename);
 
   /*
     parse the file, load objects and materials
     list_objects and mat_list will be constant after this. ptr_to_objects especially depends on
     this
   */
-  bool scene_load_check = set_scene_from_json(json_file_path, rendering_settings, list_objects,
+  bool scene_load_check = set_scene_from_json(scene_file_path, rendering_settings, list_objects,
                                               mat_list, list_lights, list_meshes);
 
   if (!scene_load_check) {
@@ -70,7 +101,9 @@ int main(int argc, char* argv[]) {
   setup_for_bvh(list_objects, list_bboxes, list_centers);
 
   // make bvh
-  const BVH bvh = BVH::build(list_bboxes, list_centers, NUM_BINS);
+  BVH bvh = BVH::build(list_bboxes, list_centers, NUM_BINS);
+  // bvh.stack.reserve(64);
+
   fmt::println("scene BVH built");
 
   auto begin_time = std::chrono::steady_clock::now();
@@ -78,20 +111,25 @@ int main(int argc, char* argv[]) {
 
   fmt::println("Start render");
 
-  // run integrator
-  switch (rendering_settings.func) {
-    case integrator_func::normal:
-      acc_image
-          = scene_integrator(rendering_settings, bvh, list_objects, lights, normal_integrator);
-      break;
+  if (heatmap_max < 0) {
+    // run integrator
+    switch (rendering_settings.func) {
+      case integrator_func::normal:
+        acc_image
+            = scene_integrator(rendering_settings, bvh, list_objects, lights, normal_integrator);
+        break;
 
-    case integrator_func::material:
-      acc_image
-          = scene_integrator(rendering_settings, bvh, list_objects, lights, material_integrator);
-      break;
-    case integrator_func::mis:
-      acc_image = scene_integrator(rendering_settings, bvh, list_objects, lights, mis_integrator);
-      break;
+      case integrator_func::material:
+        acc_image
+            = scene_integrator(rendering_settings, bvh, list_objects, lights, material_integrator);
+        break;
+      case integrator_func::mis:
+        acc_image = scene_integrator(rendering_settings, bvh, list_objects, lights, mis_integrator);
+        break;
+    }
+  } else {
+    fmt::println("Heatmap mode");
+    acc_image = heatmap_img(rendering_settings, bvh, list_objects, heatmap_max);
   }
 
   auto end_time = std::chrono::steady_clock::now();
