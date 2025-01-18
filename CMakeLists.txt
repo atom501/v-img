@@ -56,6 +56,12 @@ if (nlohmann_json_ADDED)
   target_include_directories(nlohmann_json INTERFACE ${nlohmann_json_SOURCE_DIR}/include)
 endif()
 
+CPMAddPackage(
+  NAME args
+  GIT_TAG 6.4.6
+  GITHUB_REPOSITORY Taywee/args
+)
+
 # Source file grouping of visual studio and xcode
 CPMAddPackage(
   NAME GroupSourcesByFolder.cmake
@@ -81,4 +87,4 @@ endif()
 
 set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 17 OUTPUT_NAME "v-img")
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_link_libraries(${PROJECT_NAME} fmt::fmt glm nlohmann_json)
+target_link_libraries(${PROJECT_NAME} fmt::fmt glm nlohmann_json args)
