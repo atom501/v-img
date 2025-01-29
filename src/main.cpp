@@ -152,9 +152,17 @@ int main(int argc, char* argv[]) {
   // clamp pixel values to [0,255] before writing to png
   int index = 0;
   for (size_t i = 0; i < acc_image.size(); i++) {
-    pixels[index++] = std::clamp(static_cast<int>(255.99 * acc_image[i][0]), 0, 255);
-    pixels[index++] = std::clamp(static_cast<int>(255.99 * acc_image[i][1]), 0, 255);
-    pixels[index++] = std::clamp(static_cast<int>(255.99 * acc_image[i][2]), 0, 255);
+    // if NaN, write magenta
+    if (std::isnan(acc_image[i][0]) || std::isnan(acc_image[i][1]) || std::isnan(acc_image[i][2])) {
+      pixels[index++] = 255;
+      pixels[index++] = 0;
+      pixels[index++] = 255;
+    } else {
+      // multiply by 255.999 so rounding occurs correctly
+      pixels[index++] = std::clamp(static_cast<int>(255.999 * acc_image[i][0]), 0, 255);
+      pixels[index++] = std::clamp(static_cast<int>(255.999 * acc_image[i][1]), 0, 255);
+      pixels[index++] = std::clamp(static_cast<int>(255.999 * acc_image[i][2]), 0, 255);
+    }
   }
 
   stbi_write_png("v_img.png", rendering_settings.resolution.x, rendering_settings.resolution.y,
