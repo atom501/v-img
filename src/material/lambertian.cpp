@@ -1,8 +1,10 @@
 #include <material/lambertian.h>
 
 std::optional<ScatterInfo> Lambertian::sample_mat(const glm::vec3& wi, const HitInfo& hit,
-                                                  const float& rand1, const float& rand2,
-                                                  float rand3) const {
+                                                  pcg32_random_t& pcg_rng) const {
+  float rand1 = rand_float(pcg_rng);
+  float rand2 = rand_float(pcg_rng);
+
   // transform dir according to hit.sn
   ONB onb = init_onb(hit.hit_n);
 

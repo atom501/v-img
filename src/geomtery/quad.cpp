@@ -1,4 +1,5 @@
 #include <geometry/quads.h>
+#include <rng/sampling.h>
 
 #include <algorithm>
 #include <glm/gtx/norm.hpp>
@@ -90,8 +91,11 @@ glm::vec3 Quad::get_center() const {
   return (opposite_corner + l_corner) / 2.0f;
 }
 
-glm::vec3 Quad::sample(const glm::vec3& look_from, EmitterInfo& emit_info, float rand1,
-                       float rand2) const {
+glm::vec3 Quad::sample(const glm::vec3& look_from, EmitterInfo& emit_info,
+                       pcg32_random_t& pcg_rng) const {
+  float rand1 = rand_float(pcg_rng);
+  float rand2 = rand_float(pcg_rng);
+
   // random point on the quad
   emit_info.hit.hit_p = l_corner + u * rand1 + v * rand2;
   emit_info.hit.mat = mat;
