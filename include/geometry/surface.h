@@ -22,8 +22,8 @@ public:
     input point to sample from (look_from) and 2 random numbers. Return emission from light
     and fill EmitterInfo
   */
-  virtual glm::vec3 sample(const glm::vec3& look_from, EmitterInfo& emit_info,
-                           pcg32_random_t& pcg_rng) const
+  virtual std::pair<glm::vec3, EmitterInfo> sample(const glm::vec3& look_from,
+                                                   pcg32_random_t& pcg_rng) const
       = 0;
   virtual float pdf(const glm::vec3& look_from, const glm::vec3& look_at,
                     const glm::vec3& dir) const

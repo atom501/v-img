@@ -20,8 +20,8 @@ public:
   AABB bounds() const override;
   glm::vec3 get_center() const override;
 
-  glm::vec3 sample(const glm::vec3& look_from, EmitterInfo& emit_info,
-                   pcg32_random_t& pcg_rng) const override;
+  std::pair<glm::vec3, EmitterInfo> sample(const glm::vec3& look_from,
+                                           pcg32_random_t& pcg_rng) const override;
 
   float pdf(const glm::vec3& look_from, const glm::vec3& look_at,
             const glm::vec3& dir) const override;

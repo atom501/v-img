@@ -17,8 +17,8 @@ public:
   }
   ~GroupOfEmitters() {};
 
-  glm::vec3 sample(const glm::vec3& look_from, EmitterInfo& emit_info,
-                   pcg32_random_t& pcg_rng) const {
+  std::pair<glm::vec3, EmitterInfo> sample(const glm::vec3& look_from,
+                                           pcg32_random_t& pcg_rng) const {
     float rand = rand_float(pcg_rng);
 
     // choose random light object
@@ -28,12 +28,12 @@ public:
     // probability of choosing the light object
     const float prob_obj = 1 / list_of_emitters.size();
 
-    glm::vec3 emit_col = list_of_emitters[index_obj]->sample(look_from, emit_info, pcg_rng);
+    auto emitCol_emitInfo = list_of_emitters[index_obj]->sample(look_from, pcg_rng);
 
     // pdf of child sampled and probability of choosing the light
-    emit_info.pdf *= prob_obj;
+    emitCol_emitInfo.second.pdf *= prob_obj;
 
-    return emit_col;
+    return emitCol_emitInfo;
   }
 
   size_t num_lights() const { return num_total_lights; }

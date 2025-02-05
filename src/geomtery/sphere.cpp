@@ -68,10 +68,12 @@ AABB Sphere::bounds() const {
 
 glm::vec3 Sphere::get_center() const { return center; }
 
-glm::vec3 Sphere::sample(const glm::vec3 &look_from, EmitterInfo &emit_info,
-                         pcg32_random_t &pcg_rng) const {
+std::pair<glm::vec3, EmitterInfo> Sphere::sample(const glm::vec3 &look_from,
+                                                 pcg32_random_t &pcg_rng) const {
   float rand1 = rand_float(pcg_rng);
   float rand2 = rand_float(pcg_rng);
+
+  EmitterInfo emit_info;
 
   // if look from point is inside the sphere
   if (glm::length2(look_from - center) <= radius * radius) {
@@ -97,8 +99,6 @@ glm::vec3 Sphere::sample(const glm::vec3 &look_from, EmitterInfo &emit_info,
       emit_info.pdf = sphere_sa * glm::length2(vec_from_lf_to_pos)
                       / std::abs(glm::dot(emit_info.hit.hit_n, -emit_info.wi));
     }
-
-    return mat->emitted(Ray(look_from, emit_info.wi), emit_info.hit);
   } else {
     // if look from point is outside the sphere
     float cos_theta_max = sqrt(1.0f - ((radius * radius) / length2(look_from - center)));
@@ -137,9 +137,11 @@ glm::vec3 Sphere::sample(const glm::vec3 &look_from, EmitterInfo &emit_info,
     emit_info.hit.obj = this;
 
     emit_info.pdf = 1.0f / (2 * M_PI * (1.0f - cos_theta_max));
-
-    return mat->emitted(Ray(look_from, emit_info.wi), emit_info.hit);
   }
+
+  glm::vec3 emit_col = mat->emitted(Ray(look_from, emit_info.wi), emit_info.hit);
+
+  return std::make_pair(emit_col, emit_info);
 }
 
 float Sphere::pdf(const glm::vec3 &look_from, const glm::vec3 &look_at,
