@@ -1,5 +1,6 @@
 #include <geometry/mesh.h>
 #include <geometry/triangle.h>
+#include <rng/sampling.h>
 
 #include <glm/gtx/norm.hpp>
 
@@ -92,8 +93,8 @@ glm::vec3 Triangle::get_center() const {
   return (p0 + p1 + p2) / 3.0f;
 }
 
-glm::vec3 Triangle::sample(const glm::vec3& look_from, EmitterInfo& emit_info, float rand1,
-                           float rand2) const {
+glm::vec3 Triangle::sample(const glm::vec3& look_from, EmitterInfo& emit_info,
+                           pcg32_random_t& pcg_rng) const {
   const auto& tri_vertex_list = obj_mesh->tri_vertex;
   const auto& vertices_list = obj_mesh->vertices;
 
@@ -111,6 +112,9 @@ glm::vec3 Triangle::sample(const glm::vec3& look_from, EmitterInfo& emit_info, f
   const auto edge1 = p1 - p0;
   const auto edge2 = p2 - p0;
   auto tri_normal = glm::cross(edge1, edge2);
+
+  float rand1 = rand_float(pcg_rng);
+  float rand2 = rand_float(pcg_rng);
 
   float u = rand1, v = rand2;
 

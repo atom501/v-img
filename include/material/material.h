@@ -1,6 +1,7 @@
 #pragma once
 #include <hit_utils.h>
 #include <ray.h>
+#include <rng/pcg_rand.h>
 
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
@@ -22,8 +23,7 @@ public:
    *  hit: information of point of hit
    */
   virtual std::optional<ScatterInfo> sample_mat(const glm::vec3& wi, const HitInfo& hit,
-                                                const float& rand1, const float& rand2,
-                                                float rand3) const {
+                                                pcg32_random_t& pcg_rng) const {
     return std::nullopt;
   }
 

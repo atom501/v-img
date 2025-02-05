@@ -68,15 +68,18 @@ AABB Sphere::bounds() const {
 
 glm::vec3 Sphere::get_center() const { return center; }
 
-glm::vec3 Sphere::sample(const glm::vec3 &look_from, EmitterInfo &emit_info, float rand1,
-                         float rand2) const {
+glm::vec3 Sphere::sample(const glm::vec3 &look_from, EmitterInfo &emit_info,
+                         pcg32_random_t &pcg_rng) const {
+  float rand1 = rand_float(pcg_rng);
+  float rand2 = rand_float(pcg_rng);
+
   // if look from point is inside the sphere
   if (glm::length2(look_from - center) <= radius * radius) {
     auto point_on_unit_sphere = sample_sphere(rand1, rand2);
     auto point_on_sphere = (point_on_unit_sphere * radius) + center;
     auto vec_from_lf_to_pos = point_on_sphere - look_from;
 
-    emit_info.wi = normalize(vec_from_lf_to_pos);
+    emit_info.wi = glm::normalize(vec_from_lf_to_pos);
 
     emit_info.hit.hit_p = point_on_sphere;
     emit_info.hit.mat = mat;

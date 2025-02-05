@@ -28,10 +28,10 @@ public:
     }
   }
 
-  ~Lambertian(){};
+  ~Lambertian() {};
 
-  std::optional<ScatterInfo> sample_mat(const glm::vec3& wi, const HitInfo& hit, const float& rand1,
-                                        const float& rand2, float rand3) const override;
+  std::optional<ScatterInfo> sample_mat(const glm::vec3& wi, const HitInfo& hit,
+                                        pcg32_random_t& pcg_rng) const override;
   glm::vec3 eval(const glm::vec3& wi, const glm::vec3& wo, const HitInfo& hit) const override;
   float pdf(const glm::vec3& wi, const glm::vec3& wo, const HitInfo& hit) const override;
 };

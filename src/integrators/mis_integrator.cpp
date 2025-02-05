@@ -25,13 +25,9 @@ glm::vec3 mis_integrator(Ray& input_ray, std::vector<size_t>& thread_stack, cons
 
   // If first hit does not miss or hit light
   for (d = 0; d <= depth; d++) {
-    float rand1 = rand_float(hash_state);
-    float rand2 = rand_float(hash_state);
-    float rand3 = rand_float(hash_state);
-
     // info for next bounce
     std::optional<ScatterInfo> scattered_mat
-        = hit.value().mat->sample_mat(test_ray.dir, hit.value(), rand1, rand2, rand3);
+        = hit.value().mat->sample_mat(test_ray.dir, hit.value(), hash_state);
 
     if (!scattered_mat.has_value()) {
       return glm::vec3(0.0f);
@@ -42,12 +38,9 @@ glm::vec3 mis_integrator(Ray& input_ray, std::vector<size_t>& thread_stack, cons
 
     // skip if light sampling handling delta functions with material pdf = 0
     if (mat_sample_pdf != 0) {
-      rand1 = rand_float(hash_state);
-      rand2 = rand_float(hash_state);
-
       // light sampling
       EmitterInfo l_sample_info;
-      auto light_col = lights.sample(hit.value().hit_p, l_sample_info, rand1, rand2);
+      auto light_col = lights.sample(hit.value().hit_p, l_sample_info, hash_state);
 
       Ray shadow_ray = Ray(hit.value().hit_p, l_sample_info.wi);
       std::optional<HitInfo> l_visibility_check = bvh.hit(shadow_ray, thread_stack, prims);
