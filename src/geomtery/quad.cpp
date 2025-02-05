@@ -91,11 +91,12 @@ glm::vec3 Quad::get_center() const {
   return (opposite_corner + l_corner) / 2.0f;
 }
 
-glm::vec3 Quad::sample(const glm::vec3& look_from, EmitterInfo& emit_info,
-                       pcg32_random_t& pcg_rng) const {
+std::pair<glm::vec3, EmitterInfo> Quad::sample(const glm::vec3& look_from,
+                                               pcg32_random_t& pcg_rng) const {
   float rand1 = rand_float(pcg_rng);
   float rand2 = rand_float(pcg_rng);
 
+  EmitterInfo emit_info;
   // random point on the quad
   emit_info.hit.hit_p = l_corner + u * rand1 + v * rand2;
   emit_info.hit.mat = mat;
@@ -117,7 +118,9 @@ glm::vec3 Quad::sample(const glm::vec3& look_from, EmitterInfo& emit_info,
   const float cosine = std::abs(glm::dot(normal, emit_info.wi));
   emit_info.pdf = distance2 / (cosine * area);
 
-  return mat->emitted(Ray(look_from, emit_info.wi), emit_info.hit);
+  glm::vec3 emit_col = mat->emitted(Ray(look_from, emit_info.wi), emit_info.hit);
+
+  return std::make_pair(emit_col, emit_info);
 }
 
 float Quad::pdf(const glm::vec3& look_from, const glm::vec3& look_at, const glm::vec3& dir) const {

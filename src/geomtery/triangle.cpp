@@ -93,8 +93,8 @@ glm::vec3 Triangle::get_center() const {
   return (p0 + p1 + p2) / 3.0f;
 }
 
-glm::vec3 Triangle::sample(const glm::vec3& look_from, EmitterInfo& emit_info,
-                           pcg32_random_t& pcg_rng) const {
+std::pair<glm::vec3, EmitterInfo> Triangle::sample(const glm::vec3& look_from,
+                                                   pcg32_random_t& pcg_rng) const {
   const auto& tri_vertex_list = obj_mesh->tri_vertex;
   const auto& vertices_list = obj_mesh->vertices;
 
@@ -138,15 +138,15 @@ glm::vec3 Triangle::sample(const glm::vec3& look_from, EmitterInfo& emit_info,
 
   hit.front_face = glm::dot(dir_vec, tri_normal) < 0 ? true : false;
 
-  emit_info.hit = hit;
-  emit_info.wi = dir_vec;
-
   // convert to solid angle measure
   float area = glm::length(glm::cross(edge2, edge1)) / 2.0f;
   float cosine = std::abs(glm::dot(tri_normal, dir_vec));
-  emit_info.pdf = dist2 / (cosine * area);
+  float pdf = dist2 / (cosine * area);
 
-  return mat->emitted(Ray(look_from, emit_info.wi), emit_info.hit);
+  EmitterInfo emit_info = {dir_vec, pdf, hit};
+  glm::vec3 emit_col = mat->emitted(Ray(look_from, emit_info.wi), emit_info.hit);
+
+  return std::make_pair(emit_col, emit_info);
 }
 
 float Triangle::pdf(const glm::vec3& look_from, const glm::vec3& look_at,
