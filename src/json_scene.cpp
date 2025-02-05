@@ -339,8 +339,6 @@ bool set_list_of_objects(const nlohmann::json& json_settings,
         std::vector<glm::vec3> normals;
         std::vector<uint32_t> tri_vertex;
         std::vector<uint32_t> tri_normal;
-        AABB bbox = AABB(+glm::vec3(std::numeric_limits<float>::max()),
-                         -glm::vec3(std::numeric_limits<float>::max()));
 
         glm::mat4 surf_xform = get_transform(surf_data);
         // read vertices and normals, also transform them
@@ -355,7 +353,7 @@ bool set_list_of_objects(const nlohmann::json& json_settings,
         for (size_t i = 0; i < attrib.normals.size(); i += 3) {
           auto norm = glm::vec3(attrib.normals[i], attrib.normals[i + 1], attrib.normals[i + 2]);
           glm::vec4 result = normal_xform * glm::vec4(norm, 0);
-          normals.push_back(glm::vec3(result));
+          normals.push_back(glm::normalize(glm::vec3(result)));
         }
 
         vertices.shrink_to_fit();
@@ -405,9 +403,6 @@ bool set_list_of_objects(const nlohmann::json& json_settings,
               tri_normal.push_back(indices[3 * i + 1].normal_index);
               tri_normal.push_back(indices[3 * i + 2].normal_index);
             }
-
-            bbox.bboxes[0] = tri_min_point;
-            bbox.bboxes[1] = tri_max_point;
           }
         }
 
