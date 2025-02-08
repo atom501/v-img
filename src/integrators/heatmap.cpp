@@ -90,7 +90,7 @@ std::vector<glm::vec3> heatmap_img(const integrator_data& render_data, const BVH
                   Ray cam_ray = render_data.camera.generate_ray(x + rand_x, y + rand_y);
 
                   // use set integrator to get color for a pixel
-                  pixel_hit_accumulator += bvh.hit_heatmap(cam_ray, thread_stack, prims);
+                  pixel_hit_accumulator += bvh.hit<uint32_t>(cam_ray, thread_stack, prims);
                 }
               }
 

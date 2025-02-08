@@ -13,7 +13,7 @@ glm::vec3 mis_integrator(Ray& input_ray, std::vector<size_t>& thread_stack, cons
   constexpr uint32_t roulette_threshold = 5;
 
   // perform initial hit test
-  std::optional<HitInfo> hit = bvh.hit(test_ray, thread_stack, prims);
+  std::optional<HitInfo> hit = bvh.hit<std::optional<HitInfo>>(test_ray, thread_stack, prims);
 
   if (!hit.has_value()) {
     // scene missed
@@ -42,7 +42,8 @@ glm::vec3 mis_integrator(Ray& input_ray, std::vector<size_t>& thread_stack, cons
       auto [light_col, l_sample_info] = lights.sample(hit.value().hit_p, hash_state);
 
       Ray shadow_ray = Ray(hit.value().hit_p, l_sample_info.wi);
-      std::optional<HitInfo> l_visibility_check = bvh.hit(shadow_ray, thread_stack, prims);
+      std::optional<HitInfo> l_visibility_check
+          = bvh.hit<std::optional<HitInfo>>(shadow_ray, thread_stack, prims);
 
       // if light visible from point
       if (l_visibility_check.has_value()
@@ -65,7 +66,8 @@ glm::vec3 mis_integrator(Ray& input_ray, std::vector<size_t>& thread_stack, cons
 
     // where light goes after hitting object
     Ray direct_light_ray = Ray(hit.value().hit_p, scattered_mat.value().wo);
-    std::optional<HitInfo> hit_next_bounce = bvh.hit(direct_light_ray, thread_stack, prims);
+    std::optional<HitInfo> hit_next_bounce
+        = bvh.hit<std::optional<HitInfo>>(direct_light_ray, thread_stack, prims);
 
     // if next ray hits an object
     if (hit_next_bounce.has_value()) {

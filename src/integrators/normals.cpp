@@ -6,7 +6,7 @@ glm::vec3 normal_integrator(Ray& input_ray, std::vector<size_t>& thread_stack, c
                             const GroupOfEmitters& lights, pcg32_random_t& hash_state,
                             uint32_t depth) {
   // perform hit test
-  std::optional<HitInfo> hit = bvh.hit(input_ray, thread_stack, prims);
+  std::optional<HitInfo> hit = bvh.hit<std::optional<HitInfo>>(input_ray, thread_stack, prims);
 
   // If hit then get color using normal
   if (hit.has_value()) {
