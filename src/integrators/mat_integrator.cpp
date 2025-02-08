@@ -11,7 +11,7 @@ glm::vec3 material_integrator(Ray& input_ray, std::vector<size_t>& thread_stack,
 
   for (size_t d = 0; d <= depth; d++) {
     // perform scene-ray hit test
-    std::optional<HitInfo> hit = bvh.hit(test_ray, thread_stack, prims);
+    std::optional<HitInfo> hit = bvh.hit<std::optional<HitInfo>>(test_ray, thread_stack, prims);
 
     // if ray hits the scene
     if (hit.has_value()) {
