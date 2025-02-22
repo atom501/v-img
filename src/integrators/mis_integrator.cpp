@@ -42,12 +42,10 @@ glm::vec3 mis_integrator(Ray& input_ray, std::vector<size_t>& thread_stack, cons
       auto [light_col, l_sample_info] = lights.sample(hit.value().hit_p, hash_state);
 
       Ray shadow_ray = Ray(hit.value().hit_p, l_sample_info.wi);
-      std::optional<HitInfo> l_visibility_check
-          = bvh.hit<std::optional<HitInfo>>(shadow_ray, thread_stack, prims);
+      Surface* l_visibility_check = bvh.hit<Surface*>(shadow_ray, thread_stack, prims);
 
       // if light visible from point
-      if (l_visibility_check.has_value()
-          && l_visibility_check.value().obj == l_sample_info.hit.obj) {
+      if (l_visibility_check && l_visibility_check == l_sample_info.obj) {
         mat_pdf = hit.value().mat->pdf(test_ray.dir, l_sample_info.wi, hit.value());
         float mis_weight = l_sample_info.pdf / (l_sample_info.pdf + mat_pdf);
         bounce_result += throughput

@@ -4,63 +4,11 @@
 
 #include <glm/gtx/norm.hpp>
 
-std::optional<HitInfo> Triangle::hit(Ray& ray) const {
-  const auto& tri_vertex_list = obj_mesh->tri_vertex;
-  const auto& vertices_list = obj_mesh->vertices;
-
-  const auto& tri_normal_list = obj_mesh->tri_normal;
-  const auto& normal_list = obj_mesh->normals;
-
-  glm::vec3 p0 = vertices_list[tri_vertex_list[3 * tri_index]],
-            p1 = vertices_list[tri_vertex_list[3 * tri_index + 1]],
-            p2 = vertices_list[tri_vertex_list[3 * tri_index + 2]];
-
-  glm::vec3 n0 = normal_list[tri_normal_list[3 * tri_index]],
-            n1 = normal_list[tri_normal_list[3 * tri_index + 1]],
-            n2 = normal_list[tri_normal_list[3 * tri_index + 2]];
-
-  auto edge1 = p1 - p0;
-  auto edge2 = p2 - p0;
-
-  auto pvec = glm::cross(ray.dir, edge2);
-  float determinant = glm::dot(pvec, edge1);
-
-  // determinant is close to zero (dir is parallel)
-  if (fabs(determinant) < 0.000001) {
-    return std::nullopt;
-  }
-
-  float invDet = 1 / determinant;
-
-  auto tvec = ray.o - p0;
-
-  float u = glm::dot(tvec, pvec) * invDet;
-  if (u < 0 || u > 1) return std::nullopt;
-
-  auto qvec = glm::cross(tvec, edge1);
-
-  float v = glm::dot(ray.dir, qvec) * invDet;
-  if (v < 0 || u + v > 1) return std::nullopt;
-
-  float t = glm::dot(qvec, edge2) * invDet;
-
-  if (t < ray.minT || t > ray.maxT) return std::nullopt;
-
-  glm::vec3 normal = glm::normalize(u * n0 + v * n1 + (1 - u - v) * n2);
-
-  // change maxT
-  ray.maxT = t;
-
-  HitInfo hit;
-
-  hit.mat = mat;
-  hit.obj = this;
-  hit.hit_p = u * p0 + v * p1 + (1 - u - v) * p2;
-  hit.front_face = glm::dot(ray.dir, normal) < 0 ? true : false;
-  hit.hit_n = hit.front_face ? normal : -normal;
-
-  return std::make_optional(std::move(hit));
+std::optional<HitInfo> Triangle::hit_surface(Ray& ray) {
+  return tri_hit_template<std::optional<HitInfo>>(ray);
 }
+
+Surface* Triangle::hit_check(Ray& ray) { return tri_hit_template<Surface*>(ray); }
 
 AABB Triangle::bounds() const {
   const auto& tri_vertex_list = obj_mesh->tri_vertex;
@@ -125,26 +73,24 @@ std::pair<glm::vec3, EmitterInfo> Triangle::sample(const glm::vec3& look_from,
 
   float w = 1 - u - v;
 
-  HitInfo hit;
+  const glm::vec3 hit_p = p0 * u + p1 * v + p2 * w;
+  const glm::vec3 hit_n = glm::normalize(u * n0 + v * n1 + (1 - u - v) * n2);
 
-  hit.mat = mat;
-  hit.obj = this;
-  hit.hit_p = p0 * u + p1 * v + p2 * w;
-  hit.hit_n = glm::normalize(u * n0 + v * n1 + (1 - u - v) * n2);
-
-  auto dir_vec = hit.hit_p - look_from;
+  auto dir_vec = hit_p - look_from;
   float dist2 = glm::length2(dir_vec);
   dir_vec = glm::normalize(dir_vec);
 
-  hit.front_face = glm::dot(dir_vec, tri_normal) < 0 ? true : false;
+  const bool front_face = glm::dot(dir_vec, tri_normal) < 0 ? true : false;
+
+  HitInfo hit = {mat, this, hit_p, hit_n, front_face};
 
   // convert to solid angle measure
   float area = glm::length(glm::cross(edge2, edge1)) / 2.0f;
   float cosine = std::abs(glm::dot(tri_normal, dir_vec));
   float pdf = dist2 / (cosine * area);
 
-  EmitterInfo emit_info = {dir_vec, pdf, hit};
-  glm::vec3 emit_col = mat->emitted(Ray(look_from, emit_info.wi), emit_info.hit);
+  EmitterInfo emit_info = {dir_vec, pdf, this};
+  glm::vec3 emit_col = mat->emitted(Ray(look_from, emit_info.wi), hit);
 
   return std::make_pair(emit_col, emit_info);
 }
