@@ -25,7 +25,9 @@ public:
     w = n / glm::dot(n, n);
   }
 
-  std::optional<HitInfo> hit(Ray& r) const override;
+  std::optional<HitInfo> hit_surface(Ray& r) override;
+  Surface* hit_check(Ray& r) override;
+
   AABB bounds() const override;
   glm::vec3 get_center() const override;
 
@@ -36,4 +38,63 @@ public:
             const glm::vec3& dir) const override;
 
   ~Quad() {};
+
+private:
+  template <typename T,
+            std::enable_if_t<
+                std::is_same_v<T, std::optional<HitInfo>> || std::is_same_v<T, Surface*>, bool>
+            = true>
+  inline T quad_hit_template(Ray& r) {
+    auto denominator = glm::dot(normal, r.dir);
+
+    // No hit if the ray is parallel to the plane.
+    if (std::fabs(denominator) < 1e-8) {
+      if constexpr (std::is_same_v<T, Surface*>) {
+        return nullptr;
+      } else if constexpr (std::is_same_v<T, std::optional<HitInfo>>) {
+        return std::nullopt;
+      }
+    }
+
+    // Return nullopt if the hit point parameter t is outside the ray interval
+    auto t = (D - glm::dot(normal, r.o)) / denominator;
+
+    if (t < r.minT || t > r.maxT) {
+      if constexpr (std::is_same_v<T, Surface*>) {
+        return nullptr;
+      } else if constexpr (std::is_same_v<T, std::optional<HitInfo>>) {
+        return std::nullopt;
+      }
+    }
+
+    // Determine the hit point lies within the planar shape using its plane coordinates
+    auto intersection = r.at(t);
+    glm::vec3 planar_hitpt_vector = intersection - l_corner;
+    auto alpha = glm::dot(w, glm::cross(planar_hitpt_vector, v));
+    auto beta = glm::dot(w, glm::cross(u, planar_hitpt_vector));
+
+    if (!is_interior(alpha, beta)) {
+      if constexpr (std::is_same_v<T, Surface*>) {
+        return nullptr;
+      } else if constexpr (std::is_same_v<T, std::optional<HitInfo>>) {
+        return std::nullopt;
+      }
+    }
+
+    // if hit update the maxT for the ray
+    r.maxT = t;
+
+    if constexpr (std::is_same_v<T, Surface*>) {
+      return this;
+    } else if constexpr (std::is_same_v<T, std::optional<HitInfo>>) {
+      // Ray hits the 2D shape; set the rest of the hit record,
+      const glm::vec3 hit_p = intersection;
+      const bool front_face = glm::dot(r.dir, normal) < 0;
+      const glm::vec3 hit_n = front_face ? normal : -normal;
+
+      HitInfo hit = {mat, this, hit_p, hit_n, front_face};
+
+      return std::make_optional(std::move(hit));
+    }
+  };
 };

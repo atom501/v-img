@@ -56,8 +56,9 @@ public:
    * be used to make the heatmap. Only the total number of primitives hit by the ray are needed.
    */
   template <typename T,
-            std::enable_if_t<
-                std::is_same_v<T, std::optional<HitInfo>> || std::is_same_v<T, uint32_t>, bool>
+            std::enable_if_t<std::is_same_v<T, std::optional<HitInfo>>
+                                 || std::is_same_v<T, uint32_t> || std::is_same_v<T, Surface*>,
+                             bool>
             = true>
   T hit(Ray& ray, std::vector<size_t>& thread_stack,
         const std::vector<std::unique_ptr<Surface>>& prims) const {
@@ -67,6 +68,8 @@ public:
       return_variable = std::nullopt;
     } else if constexpr (std::is_same_v<T, uint32_t>) {
       return_variable = 0;
+    } else if constexpr (std::is_same_v<T, Surface*>) {
+      return_variable = nullptr;
     }
 
     std::optional<float> bb_hit1;
@@ -88,6 +91,8 @@ public:
         return std::nullopt;
       } else if constexpr (std::is_same_v<T, uint32_t>) {
         return static_cast<uint32_t>(0);
+      } else if constexpr (std::is_same_v<T, Surface*>) {
+        return nullptr;
       }
     }
 
@@ -104,13 +109,17 @@ public:
 
           // ray's tmax value will be changed if hit
           if constexpr (std::is_same_v<T, std::optional<HitInfo>>) {
-            auto hit_temp = prims[prim_index]->hit(ray);
+            const auto hit_temp = prims[prim_index]->hit_surface(ray);
             // if ray hit the object replace the last hit_final
             if (hit_temp.has_value()) return_variable = hit_temp;
           } else if constexpr (std::is_same_v<T, uint32_t>) {
-            prims[prim_index]->hit(ray);
+            prims[prim_index]->hit_check(ray);
             // increment whenever a hit test is done on a primitive
             ++return_variable;
+          } else if constexpr (std::is_same_v<T, Surface*>) {
+            const auto hit_surf_ptr = prims[prim_index]->hit_check(ray);
+            // if ray hit the object replace the last hit_final
+            if (hit_surf_ptr) return_variable = hit_surf_ptr;
           }
         }
       } else {

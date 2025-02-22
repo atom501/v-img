@@ -13,38 +13,11 @@ inline static bool is_interior(float a, float b) {
   return true;
 }
 
-std::optional<HitInfo> Quad::hit(Ray& r) const {
-  auto denominator = glm::dot(normal, r.dir);
-
-  // No hit if the ray is parallel to the plane.
-  if (std::fabs(denominator) < 1e-8) return std::nullopt;
-
-  // Return nullopt if the hit point parameter t is outside the ray interval
-  auto t = (D - glm::dot(normal, r.o)) / denominator;
-
-  if (t < r.minT || t > r.maxT) return std::nullopt;
-
-  // Determine the hit point lies within the planar shape using its plane coordinates
-  auto intersection = r.at(t);
-  glm::vec3 planar_hitpt_vector = intersection - l_corner;
-  auto alpha = glm::dot(w, glm::cross(planar_hitpt_vector, v));
-  auto beta = glm::dot(w, glm::cross(u, planar_hitpt_vector));
-
-  if (!is_interior(alpha, beta)) return std::nullopt;
-
-  // if hit update the maxT for the ray
-  r.maxT = t;
-
-  // Ray hits the 2D shape; set the rest of the hit record,
-  HitInfo hit;
-  hit.hit_p = intersection;
-  hit.mat = mat;
-  hit.obj = this;
-  hit.front_face = glm::dot(r.dir, normal) < 0;
-  hit.hit_n = hit.front_face ? normal : -normal;
-
-  return std::make_optional(std::move(hit));
+std::optional<HitInfo> Quad::hit_surface(Ray& ray) {
+  return quad_hit_template<std::optional<HitInfo>>(ray);
 }
+
+Surface* Quad::hit_check(Ray& ray) { return quad_hit_template<Surface*>(ray); }
 
 // returns AABB. After transform l_corner is moved so better to check all 4 corners
 AABB Quad::bounds() const {
@@ -96,29 +69,31 @@ std::pair<glm::vec3, EmitterInfo> Quad::sample(const glm::vec3& look_from,
   float rand1 = rand_float(pcg_rng);
   float rand2 = rand_float(pcg_rng);
 
-  EmitterInfo emit_info;
   // random point on the quad
-  emit_info.hit.hit_p = l_corner + u * rand1 + v * rand2;
-  emit_info.hit.mat = mat;
-  emit_info.hit.obj = this;
+  const glm::vec3 hit_p = l_corner + u * rand1 + v * rand2;
 
-  const glm::vec3 from_lf_to_p = emit_info.hit.hit_p - look_from;
+  const glm::vec3 from_lf_to_p = hit_p - look_from;
   const float distance2 = glm::length2(from_lf_to_p);
-  emit_info.wi = glm::normalize(from_lf_to_p);
+  const glm::vec3 wi = glm::normalize(from_lf_to_p);
 
-  emit_info.hit.hit_n = normal;
+  glm::vec3 hit_n = normal;
+  bool front_face;
 
-  if (glm::dot(emit_info.wi, normal) > 0) {
-    emit_info.hit.front_face = false;
-    emit_info.hit.hit_n *= -1.0f;
+  if (glm::dot(wi, normal) > 0) {
+    front_face = false;
+    hit_n *= -1.0f;
   } else
-    emit_info.hit.front_face = true;
+    front_face = true;
 
   const float area = glm::length(glm::cross(u, v));
-  const float cosine = std::abs(glm::dot(normal, emit_info.wi));
-  emit_info.pdf = distance2 / (cosine * area);
+  const float cosine = std::abs(glm::dot(normal, wi));
+  const float pdf = distance2 / (cosine * area);
 
-  glm::vec3 emit_col = mat->emitted(Ray(look_from, emit_info.wi), emit_info.hit);
+  HitInfo hit = {mat, this, hit_p, hit_n, front_face};
+
+  EmitterInfo emit_info = {wi, pdf, this};
+
+  glm::vec3 emit_col = mat->emitted(Ray(look_from, emit_info.wi), hit);
 
   return std::make_pair(emit_col, emit_info);
 }
