@@ -143,7 +143,7 @@ int main(int argc, char* argv[]) {
   fmt::print("Render time: {} {} {}\n", duration_mins, duration_secs, duration_ms);
 
   // TODO apply tone mapper
-  simple_gamma_correction(acc_image);
+  sRGB_gamma_correction(acc_image);
 
   // buffer for image writing
   uint8_t* pixels = new uint8_t[rendering_settings.resolution.x * rendering_settings.resolution.y
