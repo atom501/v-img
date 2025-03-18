@@ -55,13 +55,13 @@ public:
   glm::vec3 bboxes[2];  // 0 index min bounding box. 1 index max bounding box
 
 public:
-  AABB() {};
+  AABB() = default;
   AABB(const glm::vec3& box_min, const glm::vec3& box_max) {
     bboxes[0] = box_min;
     bboxes[1] = box_max;
   }
 
-  ~AABB() {};
+  ~AABB() = default;
 
   uint32_t largest_axis() const {
     auto d = bboxes[1] - bboxes[0];

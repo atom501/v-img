@@ -20,4 +20,6 @@ public:
        const std::vector<glm::vec3>& normals, const std::vector<uint32_t>& tri_normal,
        Material* mat_ptr)
       : vertices(vertices), tri_vertex(tri_vertex), normals(normals), tri_normal(tri_normal) {}
+
+  ~Mesh() = default;
 };

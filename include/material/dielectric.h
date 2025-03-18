@@ -22,7 +22,7 @@ public:
     }
   }
 
-  ~Dielectric() {}
+  ~Dielectric() = default;
 
   std::optional<ScatterInfo> sample_mat(const glm::vec3& wi, const HitInfo& hit,
                                         pcg32_random_t& pcg_rng) const override;

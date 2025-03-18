@@ -25,6 +25,8 @@ public:
     w = n / glm::dot(n, n);
   }
 
+  ~Quad() = default;
+
   std::optional<HitInfo> hit_surface(Ray& r) override;
   Surface* hit_check(Ray& r) override;
 
@@ -36,8 +38,6 @@ public:
 
   float pdf(const glm::vec3& look_from, const glm::vec3& look_at,
             const glm::vec3& dir) const override;
-
-  ~Quad() {};
 
 private:
   template <typename T,

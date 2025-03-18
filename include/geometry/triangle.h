@@ -16,6 +16,8 @@ public:
   Triangle(Mesh* mesh_ptr, uint32_t index, Material* mat_ptr)
       : obj_mesh(mesh_ptr), tri_index(index), Surface(mat_ptr) {}
 
+  ~Triangle() = default;
+
   std::optional<HitInfo> hit_surface(Ray& r) override;
   Surface* hit_check(Ray& r) override;
 
@@ -27,8 +29,6 @@ public:
 
   float pdf(const glm::vec3& look_from, const glm::vec3& look_at,
             const glm::vec3& dir) const override;
-
-  ~Triangle() {}
 
 private:
   template <typename T,

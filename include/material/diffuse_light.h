@@ -10,7 +10,7 @@ public:
 
 public:
   DiffuseLight() { emit = glm::vec3(0.5f, 0.5f, 0.5f); };
-  ~DiffuseLight(){};
+  ~DiffuseLight() = default;
 
   DiffuseLight(const glm::vec3& emit) : emit(emit) {}
 

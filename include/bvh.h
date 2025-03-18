@@ -23,10 +23,10 @@ public:
   size_t obj_count;
 
 public:
-  Bin() {};
+  Bin() = default;
   Bin(size_t obj_count, AABB aabb) : obj_count(obj_count), aabb(aabb) {}
 
-  ~Bin() {};
+  ~Bin() = default;
 
   float cost() { return aabb.half_SA() * obj_count; }
 };
@@ -43,8 +43,8 @@ public:
   std::vector<size_t> obj_indices;  // indices pointing to original object list
 
 public:
-  BVH() {};
-  ~BVH() {};
+  BVH() = default;
+  ~BVH() = default;
 
   // input is list of bounding boxes of primitives and their centers
   static BVH build(const std::vector<AABB>& bboxes, const std::vector<glm::vec3>& centers,
