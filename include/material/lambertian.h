@@ -13,7 +13,7 @@ private:
   glm::vec3 albedo;
 
 public:
-  Lambertian() { albedo = glm::vec3(0.0f); };
+  Lambertian() { albedo = glm::vec3(0.0f); }
 
   Lambertian(const glm::vec3& albedo) : albedo(albedo) {}
 
@@ -28,7 +28,7 @@ public:
     }
   }
 
-  ~Lambertian() {};
+  ~Lambertian() = default;
 
   std::optional<ScatterInfo> sample_mat(const glm::vec3& wi, const HitInfo& hit,
                                         pcg32_random_t& pcg_rng) const override;

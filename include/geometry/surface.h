@@ -11,8 +11,8 @@ public:
   Material* mat;
 
 public:
-  Surface(Material* in_mat) { mat = in_mat; }
-  ~Surface() {};
+  Surface(Material* const mat) : mat(mat) {}
+  ~Surface() = default;
 
   virtual std::optional<HitInfo> hit_surface(Ray& r) = 0;
   virtual Surface* hit_check(Ray& r) = 0;

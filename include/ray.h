@@ -15,8 +15,8 @@ public:
 
 public:
   Ray(const glm::vec3& o, const glm::vec3& d) : dir(d), o(o) {}
-  Ray() {}
-  ~Ray() {}
+  Ray() = default;
+  ~Ray() = default;
 
   glm::vec3 at(float t) { return o + t * dir; }
 

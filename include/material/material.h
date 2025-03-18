@@ -16,8 +16,8 @@ struct ScatterInfo {
 
 class Material {
 public:
-  Material() {};
-  ~Material() {};
+  Material() = default;
+  ~Material() = default;
 
   /* wi: ray direction towards surface
    *  hit: information of point of hit

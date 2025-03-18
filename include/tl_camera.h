@@ -20,8 +20,8 @@ private:
 
 public:
   TLCam(const glm::mat4& xform, const glm::ivec2& res, const float ver_fov);
-  TLCam() {}
-  ~TLCam() {}
+  TLCam() = default;
+  ~TLCam() = default;
 
   // generate ray with direction normalized
   Ray generate_ray(const float& x, const float& y) const;

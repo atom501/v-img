@@ -17,6 +17,8 @@ public:
   Sphere(const glm::vec3& center, float r, Material* mat_ptr)
       : center(center), radius(r), Surface(mat_ptr) {}
 
+  ~Sphere() = default;
+
   std::optional<HitInfo> hit_surface(Ray& r) override;
   Surface* hit_check(Ray& r) override;
 
@@ -28,8 +30,6 @@ public:
 
   float pdf(const glm::vec3& look_from, const glm::vec3& look_at,
             const glm::vec3& dir) const override;
-
-  ~Sphere() {};
 
 private:
   // intersection test from ray tracing gems 1, chapter 7

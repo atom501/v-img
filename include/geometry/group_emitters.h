@@ -15,7 +15,7 @@ public:
   GroupOfEmitters(const std::vector<Surface*>& list_lights) : list_of_emitters(list_lights) {
     num_total_lights = list_of_emitters.size();
   }
-  ~GroupOfEmitters() {};
+  ~GroupOfEmitters() = default;
 
   std::pair<glm::vec3, EmitterInfo> sample(const glm::vec3& look_from,
                                            pcg32_random_t& pcg_rng) const {
