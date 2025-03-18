@@ -22,7 +22,8 @@ static inline glm::vec3 refract_dir(const glm::vec3& wi, const glm::vec3& hit_p,
   return (iIndex_over_oIndex * wi) + (normal_mul * hit_n);
 }
 
-// how ray will scatter after hitting dielectric material
+// how ray will scatter after hitting dielectric material. Source: Reflections and Refractions in
+// Ray Tracing by Bram de Greve
 std::optional<ScatterInfo> Dielectric::sample_mat(const glm::vec3& wi, const HitInfo& hit,
                                                   pcg32_random_t& pcg_rng) const {
   glm::vec3 wo;  // ray direction after hit
