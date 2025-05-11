@@ -46,21 +46,17 @@ glm::vec3 mis_integrator(Ray& input_ray, std::vector<size_t>& thread_stack, cons
 
       // if light visible from point
       if (l_visibility_check && l_visibility_check == l_sample_info.obj) {
-        mat_pdf = hit.value().mat->pdf(test_ray.dir, l_sample_info.wi, hit.value());
+        const auto [mat_eval, mat_pdf]
+            = hit.value().mat->eval_pdf_pair(test_ray.dir, l_sample_info.wi, hit.value());
+
         float mis_weight = l_sample_info.pdf / (l_sample_info.pdf + mat_pdf);
-        bounce_result += throughput
-                         * hit.value().mat->eval(test_ray.dir, l_sample_info.wi, hit.value())
-                         * mis_weight * light_col / l_sample_info.pdf;
+        bounce_result += throughput * mat_eval * mis_weight * light_col / l_sample_info.pdf;
       }
     }
 
     // material sampling
-    if (mat_sample_pdf != 0) {
-      throughput *= hit.value().mat->eval(test_ray.dir, scattered_mat.value().wo, hit.value())
-                    / mat_sample_pdf;
-    } else {
-      throughput *= hit.value().mat->eval(test_ray.dir, scattered_mat.value().wo, hit.value());
-    }
+    throughput
+        *= hit.value().mat->eval_div_pdf(test_ray.dir, scattered_mat.value().wo, hit.value());
 
     // where light goes after hitting object
     Ray direct_light_ray = Ray(hit.value().hit_p, scattered_mat.value().wo);

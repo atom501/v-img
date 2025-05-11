@@ -31,3 +31,15 @@ glm::vec3 Lambertian::eval(const glm::vec3& wi, const glm::vec3& wo, const HitIn
 float Lambertian::pdf(const glm::vec3& wi, const glm::vec3& wo, const HitInfo& hit) const {
   return static_cast<float>(std::max(0.0f, glm::dot(wo, hit.hit_n)) / M_PI);
 }
+
+glm::vec3 Lambertian::eval_div_pdf(const glm::vec3& wi, const glm::vec3& wo,
+                                   const HitInfo& hit) const {
+  return albedo;
+}
+
+std::pair<glm::vec3, float> Lambertian::eval_pdf_pair(const glm::vec3& wi, const glm::vec3& wo,
+                                                      const HitInfo& hit) const {
+  float dot_product = static_cast<float>(std::max(0.0f, glm::dot(wo, hit.hit_n)) / M_PI);
+
+  return std::make_pair(albedo * dot_product, dot_product);
+}

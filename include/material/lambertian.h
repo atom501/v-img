@@ -34,4 +34,10 @@ public:
                                         pcg32_random_t& pcg_rng) const override;
   glm::vec3 eval(const glm::vec3& wi, const glm::vec3& wo, const HitInfo& hit) const override;
   float pdf(const glm::vec3& wi, const glm::vec3& wo, const HitInfo& hit) const override;
+
+  glm::vec3 eval_div_pdf(const glm::vec3& wi, const glm::vec3& wo,
+                         const HitInfo& hit) const override;
+
+  std::pair<glm::vec3, float> eval_pdf_pair(const glm::vec3& wi, const glm::vec3& wo,
+                                            const HitInfo& hit) const override;
 };

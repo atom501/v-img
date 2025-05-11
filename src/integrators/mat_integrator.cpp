@@ -23,19 +23,9 @@ glm::vec3 material_integrator(Ray& input_ray, std::vector<size_t>& thread_stack,
 
       // get color from material (sample the material)
       if (scattered_ray.has_value()) {
-        const auto mat_pdf
-            = hit.value().mat->pdf(test_ray.dir, scattered_ray.value().wo, hit.value());
-
-        const auto mat_eval
-            = hit.value().mat->eval(test_ray.dir, scattered_ray.value().wo, hit.value());
-
-        if (mat_pdf != 0) {
-          // change in throughput
-          throughput *= emitted_col + (mat_eval / mat_pdf);
-        } else {
-          // handling delta functions with material pdf = 0
-          throughput *= emitted_col + mat_eval;
-        }
+        throughput
+            *= emitted_col
+               + hit.value().mat->eval_div_pdf(test_ray.dir, scattered_ray.value().wo, hit.value());
 
         // perform russian roulette
         if (d > roulette_threshold) {
