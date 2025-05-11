@@ -35,6 +35,16 @@ public:
     return 1.0f;
   }
 
+  virtual glm::vec3 eval_div_pdf(const glm::vec3& wi, const glm::vec3& wo,
+                                 const HitInfo& hit) const {
+    return glm::vec3(0.0f);
+  }
+
+  virtual std::pair<glm::vec3, float> eval_pdf_pair(const glm::vec3& wi, const glm::vec3& wo,
+                                                    const HitInfo& hit) const {
+    return std::make_pair(glm::vec3(0.0f), 1.0f);
+  }
+
   // light emitted
   virtual glm::vec3 emitted(const Ray& ray, const HitInfo& hit) const {
     return glm::vec3(0.0f, 0.0f, 0.0f);
