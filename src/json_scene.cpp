@@ -37,19 +37,26 @@ static std::optional<std::string> read_file(std::filesystem::path path) {
     return std::nullopt;
   }
 
-  // Open the stream to 'lock' the file.
-  std::ifstream f(path, std::ios::in | std::ios::binary);
+  try {
+    // Open the stream to 'lock' the file.
+    std::ifstream file(path, std::ios::in | std::ios::binary);
 
-  // Obtain the size of the file.
-  const auto file_size = std::filesystem::file_size(path);
+    // Obtain the size of the file.
+    const auto file_size = std::filesystem::file_size(path);
 
-  // Create a buffer.
-  std::string json_string(file_size, '\0');
+    // Create a buffer.
+    std::string json_string(file_size, '\0');
 
-  // Read the whole file into the buffer.
-  f.read(json_string.data(), file_size);
+    // Read the whole file into the buffer.
+    file.read(json_string.data(), file_size);
 
-  return json_string;
+    file.close();
+
+    return json_string;
+  } catch (const std::exception& e) {
+    fmt::println("Exception reading file {}", e.what());
+    return std::nullopt;
+  }
 }
 
 static glm::mat4 get_transform(const nlohmann::json& json_xform) {
