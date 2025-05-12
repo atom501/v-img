@@ -89,7 +89,7 @@ std::pair<glm::vec3, EmitterInfo> Triangle::sample(const glm::vec3& look_from,
   float cosine = std::abs(glm::dot(tri_normal, dir_vec));
   float pdf = dist2 / (cosine * area);
 
-  EmitterInfo emit_info = {dir_vec, pdf, this};
+  EmitterInfo emit_info = {dir_vec, pdf, std::sqrtf(dist2), this};
   glm::vec3 emit_col = mat->emitted(Ray(look_from, emit_info.wi), hit);
 
   return std::make_pair(emit_col, emit_info);

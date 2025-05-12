@@ -22,8 +22,9 @@ struct HitInfo {
 };
 
 struct EmitterInfo {
-  glm::vec3 wi;                  // direction vector from look_from to point on surface
-  float pdf;                     // solid angle density wrt look_from
+  glm::vec3 wi;  // direction vector from look_from to point on surface
+  float pdf;     // solid angle density wrt look_from
+  float dist;
   const Surface* obj = nullptr;  // ptr of surface hit
 };
 

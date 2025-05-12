@@ -59,6 +59,8 @@ std::pair<glm::vec3, EmitterInfo> Sphere::sample(const glm::vec3& look_from,
 
     const float sphere_sa = 4 * M_PI * radius * radius;
 
+    emit_info.dist = glm::length(vec_from_lf_to_pos);
+
     if (glm::length2(emit_info.wi) == 0)
       emit_info.pdf = 0;
     else {
@@ -101,6 +103,7 @@ std::pair<glm::vec3, EmitterInfo> Sphere::sample(const glm::vec3& look_from,
     hit = {mat, this, hit_p, hit_n, true};
 
     emit_info.pdf = 1.0f / (2 * M_PI * (1.0f - cos_theta_max));
+    emit_info.dist = dist_lf_to_p;
   }
 
   glm::vec3 emit_col = mat->emitted(Ray(look_from, emit_info.wi), hit);
