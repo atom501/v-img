@@ -17,6 +17,11 @@
 
 namespace glm {
 
+  void from_json(const nlohmann::json& j, vec2& vec) {
+    j[0].get_to(vec.x);
+    j[1].get_to(vec.y);
+  }
+
   void from_json(const nlohmann::json& j, vec3& vec) {
     j[0].get_to(vec.x);
     j[1].get_to(vec.y);
@@ -104,9 +109,7 @@ static glm::mat4 look_from_json(const nlohmann::json& json_cam_xform) {
   glm::vec3 look_up = glm::vec3(0, 1, 0);
 
   if (json_cam_xform.contains("from")) {
-    look_from[0] = json_cam_xform["from"][0];
-    look_from[1] = json_cam_xform["from"][1];
-    look_from[2] = json_cam_xform["from"][2];
+    look_from = json_cam_xform["from"].template get<glm::vec3>();
 
     fmt::println("look from ({}, {}, {}) set", look_from[0], look_from[1], look_from[2]);
   } else {
@@ -114,9 +117,7 @@ static glm::mat4 look_from_json(const nlohmann::json& json_cam_xform) {
   }
 
   if (json_cam_xform.contains("at")) {
-    look_at[0] = json_cam_xform["at"][0];
-    look_at[1] = json_cam_xform["at"][1];
-    look_at[2] = json_cam_xform["at"][2];
+    look_at = json_cam_xform["at"].template get<glm::vec3>();
 
     fmt::println("look at ({}, {}, {}) set", look_at[0], look_at[1], look_at[2]);
   } else {
@@ -124,9 +125,7 @@ static glm::mat4 look_from_json(const nlohmann::json& json_cam_xform) {
   }
 
   if (json_cam_xform.contains("up")) {
-    look_up[0] = json_cam_xform["up"][0];
-    look_up[1] = json_cam_xform["up"][1];
-    look_up[2] = json_cam_xform["up"][2];
+    look_up = json_cam_xform["up"].template get<glm::vec3>();
 
     fmt::println("look up ({}, {}, {}) set", look_up[0], look_up[1], look_up[2]);
   } else {
@@ -144,8 +143,7 @@ bool set_integrator_data(const nlohmann::json& json_settings, integrator_data& i
 
     // set resolution
     if (cam_set.contains("resolution")) {
-      res[0] = cam_set["resolution"][0];
-      res[1] = cam_set["resolution"][1];
+      res = cam_set["resolution"].template get<glm::vec2>();
       fmt::println("resolution {}, {} set", res[0], res[1]);
     } else {
       fmt::println("Resolution not given. Default 500, 500 set");
@@ -189,9 +187,7 @@ bool set_integrator_data(const nlohmann::json& json_settings, integrator_data& i
   // set background color
   glm::vec3 background_color = glm::vec3(0);
   if (json_settings.contains("background")) {
-    background_color[0] = json_settings["background"][0];
-    background_color[1] = json_settings["background"][1];
-    background_color[2] = json_settings["background"][2];
+    background_color = json_settings["background"].template get<glm::vec3>();
   }
   integrator_data.background_col = background_color;
 
@@ -286,19 +282,13 @@ bool set_list_of_objects(const nlohmann::json& json_settings,
         glm::mat4 surf_xform = get_transform(surf_data);
 
         glm::vec3 l_corner;
-        l_corner[0] = surf_data["l_corner"][0];
-        l_corner[1] = surf_data["l_corner"][1];
-        l_corner[2] = surf_data["l_corner"][2];
+        l_corner = surf_data["l_corner"].template get<glm::vec3>();
 
         glm::vec3 u;
-        u[0] = surf_data["u"][0];
-        u[1] = surf_data["u"][1];
-        u[2] = surf_data["u"][2];
+        u = surf_data["u"].template get<glm::vec3>();
 
         glm::vec3 v;
-        v[0] = surf_data["v"][0];
-        v[1] = surf_data["v"][1];
-        v[2] = surf_data["v"][2];
+        v = surf_data["v"].template get<glm::vec3>();
 
         // transform the quad
         glm::vec4 temp_o = surf_xform * glm::vec4(l_corner, 1.0f);
@@ -323,9 +313,7 @@ bool set_list_of_objects(const nlohmann::json& json_settings,
 
         glm::vec3 center;
 
-        center[0] = surf_data["center"][0];
-        center[1] = surf_data["center"][1];
-        center[2] = surf_data["center"][2];
+        center = surf_data["center"].template get<glm::vec3>();
 
         float radius = surf_data.value("radius", 1.0f);
 

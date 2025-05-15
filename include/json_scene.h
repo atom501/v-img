@@ -36,6 +36,8 @@ bool set_list_of_objects(const nlohmann::json& json_settings,
 
 namespace glm {
 
+  void from_json(const nlohmann::json& j, vec2& vec);
+
   void from_json(const nlohmann::json& j, vec3& vec);
 
   void from_json(const nlohmann::json& j, quat& q);
