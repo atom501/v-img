@@ -18,6 +18,7 @@ struct HitInfo {
   glm::vec3 hit_p;  // point where hit in world coords
   glm::vec3 hit_n;  // Normal where hit in world coords.
                     // Always faces towards the incoming ray, always normalized
+  glm::vec2 uv;     // texture uv coordinates
   bool front_face;  // tell if hit front face or not. normal flipped if false
 };
 

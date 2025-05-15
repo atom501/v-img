@@ -55,7 +55,7 @@ std::pair<glm::vec3, EmitterInfo> Sphere::sample(const glm::vec3& look_from,
     // for point inside the sphere direction vec from point to surface of sphere will always be back
     // face
 
-    hit = {mat, this, hit_p, hit_n, false};
+    hit = {mat, this, hit_p, hit_n, glm::vec2(0.f, 0.f), false};
 
     const float sphere_sa = 4 * M_PI * radius * radius;
 
@@ -100,7 +100,7 @@ std::pair<glm::vec3, EmitterInfo> Sphere::sample(const glm::vec3& look_from,
     const glm::vec3 hit_n = glm::normalize(hit_p - center);
     // for point inside the sphere direction vec from point to surface of sphere will always be
     // front face
-    hit = {mat, this, hit_p, hit_n, true};
+    hit = {mat, this, hit_p, hit_n, glm::vec2(0.f, 0.f), true};
 
     emit_info.pdf = 1.0f / (2 * M_PI * (1.0f - cos_theta_max));
     emit_info.dist = dist_lf_to_p;

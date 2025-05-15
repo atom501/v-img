@@ -7,6 +7,7 @@
 #include <material/dielectric.h>
 #include <material/diffuse_light.h>
 #include <material/lambertian.h>
+#include <texture.h>
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <tiny_obj_loader.h>
 
@@ -219,15 +220,31 @@ bool set_integrator_data(const nlohmann::json& json_settings, integrator_data& i
   return true;
 }
 
+/*
+ * Takes in json as input. Check if object uses a texure already in the list. If not add new one to
+ * the list and return pointer
+ */
+Texture* json_to_texture(const nlohmann::json& mat_json,
+                         std::vector<std::unique_ptr<Texture>>& texture_list) {
+  glm::vec3 albedo = mat_json["albedo"].template get<glm::vec3>();
+  ConstColor col(albedo);
+
+  texture_list.push_back(std::make_unique<ConstColor>(col));
+
+  return texture_list[texture_list.size() - 1].get();
+}
+
 bool set_list_of_materials(const nlohmann::json& json_settings,
                            std::vector<std::unique_ptr<Material>>& list_materials,
-                           std::unordered_map<std::string, size_t>& name_to_index) {
+                           std::unordered_map<std::string, size_t>& name_to_index,
+                           std::vector<std::unique_ptr<Texture>>& texture_list) {
   if (json_settings.contains("materials")) {
     auto json_mat_list = json_settings["materials"];
 
     for (auto& mat_data : json_mat_list) {
       if (mat_data["type"] == "lambertian") {
-        auto temp_lambertian = Lambertian(mat_data);
+        Texture* t = json_to_texture(mat_data, texture_list);
+        auto temp_lambertian = Lambertian(t);
 
         // add material to list and associate a name with the index
         list_materials.push_back(std::make_unique<Lambertian>(temp_lambertian));
@@ -449,7 +466,8 @@ bool set_scene_from_json(const std::filesystem::path& path_file, integrator_data
                          std::vector<std::unique_ptr<Surface>>& list_surfaces,
                          std::vector<std::unique_ptr<Material>>& list_materials,
                          std::vector<Surface*>& list_lights,
-                         std::vector<std::unique_ptr<Mesh>>& list_meshes) {
+                         std::vector<std::unique_ptr<Mesh>>& list_meshes,
+                         std::vector<std::unique_ptr<Texture>>& texture_list) {
   // parse json at path_file
   const auto json_string_opt = read_file(path_file);
   std::string json_string;
@@ -474,7 +492,7 @@ bool set_scene_from_json(const std::filesystem::path& path_file, integrator_data
 
   // set material list and create hashmap for mapping material name to index in list
   std::unordered_map<std::string, size_t> name_to_mat;
-  if (set_list_of_materials(json_settings, list_materials, name_to_mat)) {
+  if (set_list_of_materials(json_settings, list_materials, name_to_mat, texture_list)) {
     fmt::println("List of materials loaded");
   } else {
     fmt::println("Material loading failed");

@@ -12,7 +12,7 @@ std::optional<ScatterInfo> Lambertian::sample_mat(const glm::vec3& wi, const Hit
   glm::vec3 dir = xform_with_onb(onb, sample_hemisphere_cosine(rand1, rand2));
 
   if (hit.front_face) {
-    ScatterInfo ret_inf = {Lambertian::albedo, dir};
+    ScatterInfo ret_inf = {Lambertian::tex->col_at_uv(glm::vec2(0.f, 0.f)), dir};
     return std::make_optional(std::move(ret_inf));
   } else {
     return std::nullopt;
@@ -25,7 +25,8 @@ std::optional<ScatterInfo> Lambertian::sample_mat(const glm::vec3& wi, const Hit
  * hit: hit information about ray object intersection point
  */
 glm::vec3 Lambertian::eval(const glm::vec3& wi, const glm::vec3& wo, const HitInfo& hit) const {
-  return albedo * static_cast<float>(std::max(0.0f, glm::dot(wo, hit.hit_n)) / M_PI);
+  return Lambertian::tex->col_at_uv(glm::vec2(0.f, 0.f))
+         * static_cast<float>(std::max(0.0f, glm::dot(wo, hit.hit_n)) / M_PI);
 }
 
 float Lambertian::pdf(const glm::vec3& wi, const glm::vec3& wo, const HitInfo& hit) const {
@@ -34,12 +35,12 @@ float Lambertian::pdf(const glm::vec3& wi, const glm::vec3& wo, const HitInfo& h
 
 glm::vec3 Lambertian::eval_div_pdf(const glm::vec3& wi, const glm::vec3& wo,
                                    const HitInfo& hit) const {
-  return albedo;
+  return Lambertian::tex->col_at_uv(glm::vec2(0.f, 0.f));
 }
 
 std::pair<glm::vec3, float> Lambertian::eval_pdf_pair(const glm::vec3& wi, const glm::vec3& wo,
                                                       const HitInfo& hit) const {
   float dot_product = static_cast<float>(std::max(0.0f, glm::dot(wo, hit.hit_n)) / M_PI);
 
-  return std::make_pair(albedo * dot_product, dot_product);
+  return std::make_pair(Lambertian::tex->col_at_uv(glm::vec2(0.f, 0.f)) * dot_product, dot_product);
 }
