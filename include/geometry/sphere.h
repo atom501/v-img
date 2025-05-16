@@ -82,7 +82,14 @@ private:
       const bool front_face = glm::dot(r.dir, normal) < 0;
       const glm::vec3 hit_n = front_face ? normal : -normal;
 
-      HitInfo hit = {mat, this, hit_p, hit_n, glm::vec2(0.f, 0.f), front_face};
+      // calculate uv
+      float theta = std::acos(-normal.y);
+      float phi = std::atan2(-normal.z, normal.x) + M_PI;
+
+      float u = phi / (2.f * M_PI);
+      float v = theta / M_PI;
+
+      HitInfo hit = {mat, this, hit_p, hit_n, glm::vec2(u, v), front_face};
 
       return std::make_optional(std::move(hit));
     }

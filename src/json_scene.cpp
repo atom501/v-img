@@ -222,12 +222,38 @@ bool set_integrator_data(const nlohmann::json& json_settings, integrator_data& i
  */
 Texture* json_to_texture(const nlohmann::json& mat_json,
                          std::vector<std::unique_ptr<Texture>>& texture_list) {
-  glm::vec3 albedo = mat_json["albedo"].template get<glm::vec3>();
-  ConstColor col(albedo);
+  // if can't find "texture" object assume constant texture
+  if (!mat_json.contains("texture")) {
+    glm::vec3 albedo = mat_json["albedo"].template get<glm::vec3>();
+    ConstColor col(albedo);
 
-  texture_list.push_back(std::make_unique<ConstColor>(col));
+    texture_list.push_back(std::make_unique<ConstColor>(col));
 
-  return texture_list[texture_list.size() - 1].get();
+    return texture_list[texture_list.size() - 1].get();
+  } else {
+    nlohmann::json tex_data = mat_json["texture"];
+
+    if (tex_data["type"] == "constant") {
+      glm::vec3 albedo = tex_data["albedo"].template get<glm::vec3>();
+      ConstColor col(albedo);
+
+      texture_list.push_back(std::make_unique<ConstColor>(col));
+
+      return texture_list[texture_list.size() - 1].get();
+    } else if (tex_data["type"] == "checkered") {
+      uint32_t width = tex_data["width"];
+      uint32_t height = tex_data["height"];
+
+      Checkerboard cb(width, height, tex_data["col1"].template get<glm::vec3>(),
+                      tex_data["col2"].template get<glm::vec3>());
+
+      texture_list.push_back(std::make_unique<Checkerboard>(cb));
+
+      return texture_list[texture_list.size() - 1].get();
+    }  // TODO else if check texture name is present. to reuse a texture
+
+    return nullptr;
+  }
 }
 
 bool set_list_of_materials(const nlohmann::json& json_settings,
