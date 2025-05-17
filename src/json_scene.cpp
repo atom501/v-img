@@ -375,8 +375,11 @@ bool set_list_of_objects(const nlohmann::json& json_settings,
         // data for mesh object
         std::vector<glm::vec3> vertices;
         std::vector<glm::vec3> normals;
+        std::vector<glm::vec2> texcoords;
+
         std::vector<uint32_t> tri_vertex;
         std::vector<uint32_t> tri_normal;
+        std::vector<int> tri_uv;
 
         glm::mat4 surf_xform = get_transform(surf_data);
         // read vertices and normals, also transform them
@@ -394,8 +397,14 @@ bool set_list_of_objects(const nlohmann::json& json_settings,
           normals.push_back(glm::normalize(glm::vec3(result)));
         }
 
+        for (size_t i = 0; i < attrib.texcoords.size(); i += 2) {
+          auto uv = glm::vec2(attrib.texcoords[i], attrib.texcoords[i + 1]);
+          texcoords.push_back(uv);
+        }
+
         vertices.shrink_to_fit();
         normals.shrink_to_fit();
+        texcoords.shrink_to_fit();
 
         for (const auto& shape : shapes) {
           const std::vector<tinyobj::index_t>& indices = shape.mesh.indices;
@@ -441,13 +450,26 @@ bool set_list_of_objects(const nlohmann::json& json_settings,
               tri_normal.push_back(indices[3 * i + 1].normal_index);
               tri_normal.push_back(indices[3 * i + 2].normal_index);
             }
+
+            // if one of the vertex uv don't exist, don't pass anything
+            if (indices[3 * i].texcoord_index == -1 || indices[3 * i + 1].texcoord_index == -1
+                || indices[3 * i + 2].texcoord_index == -1) {
+              // set the uvs for vertices tp -1
+              tri_uv.push_back(-1);
+              tri_uv.push_back(-1);
+              tri_uv.push_back(-1);
+            } else {
+              tri_uv.push_back(indices[3 * i].texcoord_index);
+              tri_uv.push_back(indices[3 * i + 1].texcoord_index);
+              tri_uv.push_back(indices[3 * i + 2].texcoord_index);
+            }
           }
         }
 
         std::string mat_name = surf_data["mat_name"];
         Material* mat_ptr = list_materials[name_to_index.at(mat_name)].get();
 
-        auto tri_mesh = Mesh(vertices, tri_vertex, normals, tri_normal, mat_ptr);
+        auto tri_mesh = Mesh(vertices, tri_vertex, normals, tri_normal, texcoords, tri_uv);
         list_meshes.push_back(std::make_unique<Mesh>(tri_mesh));
 
         // add to list of surfaces

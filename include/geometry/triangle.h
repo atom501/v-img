@@ -111,7 +111,20 @@ private:
       const bool front_face = glm::dot(ray.dir, normal) < 0 ? true : false;
       const glm::vec3 hit_n = front_face ? normal : -normal;
 
-      HitInfo hit = {mat, this, hit_p, hit_n, glm::vec2(0.f, 0.f), front_face};
+      const auto& tri_texcoords_list = obj_mesh->tri_normal;
+      const auto& texcoords_list = obj_mesh->texcoords;
+
+      glm::vec2 uv = glm::vec2(u, v);
+      if (tri_texcoords_list[3 * tri_index] != -1 && tri_texcoords_list[3 * tri_index + 1] != -1
+          && tri_texcoords_list[3 * tri_index + 2] != -1) {
+        glm::vec2 uv0 = texcoords_list[tri_texcoords_list[3 * tri_index]],
+                  uv1 = texcoords_list[tri_texcoords_list[3 * tri_index + 1]],
+                  uv2 = texcoords_list[tri_texcoords_list[3 * tri_index + 2]];
+
+        uv = u * uv0 + v * uv1 + (1.f - u - v) * uv2;
+      }
+
+      HitInfo hit = {mat, this, hit_p, hit_n, uv, front_face};
 
       return std::make_optional(std::move(hit));
     }
