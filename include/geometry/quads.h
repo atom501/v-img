@@ -92,7 +92,7 @@ private:
       const bool front_face = glm::dot(r.dir, normal) < 0;
       const glm::vec3 hit_n = front_face ? normal : -normal;
 
-      HitInfo hit = {mat, this, hit_p, hit_n, front_face};
+      HitInfo hit = {mat, this, hit_p, hit_n, glm::vec2(alpha, beta), front_face};
 
       return std::make_optional(std::move(hit));
     }

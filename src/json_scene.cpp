@@ -7,6 +7,7 @@
 #include <material/dielectric.h>
 #include <material/diffuse_light.h>
 #include <material/lambertian.h>
+#include <texture.h>
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <tiny_obj_loader.h>
 
@@ -15,6 +16,11 @@
 #include <glm/gtx/transform.hpp>
 
 namespace glm {
+
+  void from_json(const nlohmann::json& j, vec2& vec) {
+    j[0].get_to(vec.x);
+    j[1].get_to(vec.y);
+  }
 
   void from_json(const nlohmann::json& j, vec3& vec) {
     j[0].get_to(vec.x);
@@ -103,9 +109,7 @@ static glm::mat4 look_from_json(const nlohmann::json& json_cam_xform) {
   glm::vec3 look_up = glm::vec3(0, 1, 0);
 
   if (json_cam_xform.contains("from")) {
-    look_from[0] = json_cam_xform["from"][0];
-    look_from[1] = json_cam_xform["from"][1];
-    look_from[2] = json_cam_xform["from"][2];
+    look_from = json_cam_xform["from"].template get<glm::vec3>();
 
     fmt::println("look from ({}, {}, {}) set", look_from[0], look_from[1], look_from[2]);
   } else {
@@ -113,9 +117,7 @@ static glm::mat4 look_from_json(const nlohmann::json& json_cam_xform) {
   }
 
   if (json_cam_xform.contains("at")) {
-    look_at[0] = json_cam_xform["at"][0];
-    look_at[1] = json_cam_xform["at"][1];
-    look_at[2] = json_cam_xform["at"][2];
+    look_at = json_cam_xform["at"].template get<glm::vec3>();
 
     fmt::println("look at ({}, {}, {}) set", look_at[0], look_at[1], look_at[2]);
   } else {
@@ -123,9 +125,7 @@ static glm::mat4 look_from_json(const nlohmann::json& json_cam_xform) {
   }
 
   if (json_cam_xform.contains("up")) {
-    look_up[0] = json_cam_xform["up"][0];
-    look_up[1] = json_cam_xform["up"][1];
-    look_up[2] = json_cam_xform["up"][2];
+    look_up = json_cam_xform["up"].template get<glm::vec3>();
 
     fmt::println("look up ({}, {}, {}) set", look_up[0], look_up[1], look_up[2]);
   } else {
@@ -143,8 +143,7 @@ bool set_integrator_data(const nlohmann::json& json_settings, integrator_data& i
 
     // set resolution
     if (cam_set.contains("resolution")) {
-      res[0] = cam_set["resolution"][0];
-      res[1] = cam_set["resolution"][1];
+      res = cam_set["resolution"].template get<glm::vec2>();
       fmt::println("resolution {}, {} set", res[0], res[1]);
     } else {
       fmt::println("Resolution not given. Default 500, 500 set");
@@ -188,9 +187,7 @@ bool set_integrator_data(const nlohmann::json& json_settings, integrator_data& i
   // set background color
   glm::vec3 background_color = glm::vec3(0);
   if (json_settings.contains("background")) {
-    background_color[0] = json_settings["background"][0];
-    background_color[1] = json_settings["background"][1];
-    background_color[2] = json_settings["background"][2];
+    background_color = json_settings["background"].template get<glm::vec3>();
   }
   integrator_data.background_col = background_color;
 
@@ -219,15 +216,57 @@ bool set_integrator_data(const nlohmann::json& json_settings, integrator_data& i
   return true;
 }
 
+/*
+ * Takes in json as input. Check if object uses a texure already in the list. If not add new one to
+ * the list and return pointer
+ */
+Texture* json_to_texture(const nlohmann::json& mat_json,
+                         std::vector<std::unique_ptr<Texture>>& texture_list) {
+  // if can't find "texture" object assume constant texture
+  if (!mat_json.contains("texture")) {
+    glm::vec3 albedo = mat_json["albedo"].template get<glm::vec3>();
+    ConstColor col(albedo);
+
+    texture_list.push_back(std::make_unique<ConstColor>(col));
+
+    return texture_list[texture_list.size() - 1].get();
+  } else {
+    nlohmann::json tex_data = mat_json["texture"];
+
+    if (tex_data["type"] == "constant") {
+      glm::vec3 albedo = tex_data["albedo"].template get<glm::vec3>();
+      ConstColor col(albedo);
+
+      texture_list.push_back(std::make_unique<ConstColor>(col));
+
+      return texture_list[texture_list.size() - 1].get();
+    } else if (tex_data["type"] == "checkered") {
+      uint32_t width = tex_data["width"];
+      uint32_t height = tex_data["height"];
+
+      Checkerboard cb(width, height, tex_data["col1"].template get<glm::vec3>(),
+                      tex_data["col2"].template get<glm::vec3>());
+
+      texture_list.push_back(std::make_unique<Checkerboard>(cb));
+
+      return texture_list[texture_list.size() - 1].get();
+    }  // TODO else if check texture name is present. to reuse a texture
+
+    return nullptr;
+  }
+}
+
 bool set_list_of_materials(const nlohmann::json& json_settings,
                            std::vector<std::unique_ptr<Material>>& list_materials,
-                           std::unordered_map<std::string, size_t>& name_to_index) {
+                           std::unordered_map<std::string, size_t>& name_to_index,
+                           std::vector<std::unique_ptr<Texture>>& texture_list) {
   if (json_settings.contains("materials")) {
     auto json_mat_list = json_settings["materials"];
 
     for (auto& mat_data : json_mat_list) {
       if (mat_data["type"] == "lambertian") {
-        auto temp_lambertian = Lambertian(mat_data);
+        Texture* t = json_to_texture(mat_data, texture_list);
+        auto temp_lambertian = Lambertian(t);
 
         // add material to list and associate a name with the index
         list_materials.push_back(std::make_unique<Lambertian>(temp_lambertian));
@@ -269,19 +308,13 @@ bool set_list_of_objects(const nlohmann::json& json_settings,
         glm::mat4 surf_xform = get_transform(surf_data);
 
         glm::vec3 l_corner;
-        l_corner[0] = surf_data["l_corner"][0];
-        l_corner[1] = surf_data["l_corner"][1];
-        l_corner[2] = surf_data["l_corner"][2];
+        l_corner = surf_data["l_corner"].template get<glm::vec3>();
 
         glm::vec3 u;
-        u[0] = surf_data["u"][0];
-        u[1] = surf_data["u"][1];
-        u[2] = surf_data["u"][2];
+        u = surf_data["u"].template get<glm::vec3>();
 
         glm::vec3 v;
-        v[0] = surf_data["v"][0];
-        v[1] = surf_data["v"][1];
-        v[2] = surf_data["v"][2];
+        v = surf_data["v"].template get<glm::vec3>();
 
         // transform the quad
         glm::vec4 temp_o = surf_xform * glm::vec4(l_corner, 1.0f);
@@ -306,9 +339,7 @@ bool set_list_of_objects(const nlohmann::json& json_settings,
 
         glm::vec3 center;
 
-        center[0] = surf_data["center"][0];
-        center[1] = surf_data["center"][1];
-        center[2] = surf_data["center"][2];
+        center = surf_data["center"].template get<glm::vec3>();
 
         float radius = surf_data.value("radius", 1.0f);
 
@@ -344,8 +375,11 @@ bool set_list_of_objects(const nlohmann::json& json_settings,
         // data for mesh object
         std::vector<glm::vec3> vertices;
         std::vector<glm::vec3> normals;
+        std::vector<glm::vec2> texcoords;
+
         std::vector<uint32_t> tri_vertex;
         std::vector<uint32_t> tri_normal;
+        std::vector<int> tri_uv;
 
         glm::mat4 surf_xform = get_transform(surf_data);
         // read vertices and normals, also transform them
@@ -363,8 +397,14 @@ bool set_list_of_objects(const nlohmann::json& json_settings,
           normals.push_back(glm::normalize(glm::vec3(result)));
         }
 
+        for (size_t i = 0; i < attrib.texcoords.size(); i += 2) {
+          auto uv = glm::vec2(attrib.texcoords[i], attrib.texcoords[i + 1]);
+          texcoords.push_back(uv);
+        }
+
         vertices.shrink_to_fit();
         normals.shrink_to_fit();
+        texcoords.shrink_to_fit();
 
         for (const auto& shape : shapes) {
           const std::vector<tinyobj::index_t>& indices = shape.mesh.indices;
@@ -410,13 +450,26 @@ bool set_list_of_objects(const nlohmann::json& json_settings,
               tri_normal.push_back(indices[3 * i + 1].normal_index);
               tri_normal.push_back(indices[3 * i + 2].normal_index);
             }
+
+            // if one of the vertex uv don't exist, don't pass anything
+            if (indices[3 * i].texcoord_index == -1 || indices[3 * i + 1].texcoord_index == -1
+                || indices[3 * i + 2].texcoord_index == -1) {
+              // set the uvs for vertices tp -1
+              tri_uv.push_back(-1);
+              tri_uv.push_back(-1);
+              tri_uv.push_back(-1);
+            } else {
+              tri_uv.push_back(indices[3 * i].texcoord_index);
+              tri_uv.push_back(indices[3 * i + 1].texcoord_index);
+              tri_uv.push_back(indices[3 * i + 2].texcoord_index);
+            }
           }
         }
 
         std::string mat_name = surf_data["mat_name"];
         Material* mat_ptr = list_materials[name_to_index.at(mat_name)].get();
 
-        auto tri_mesh = Mesh(vertices, tri_vertex, normals, tri_normal, mat_ptr);
+        auto tri_mesh = Mesh(vertices, tri_vertex, normals, tri_normal, texcoords, tri_uv);
         list_meshes.push_back(std::make_unique<Mesh>(tri_mesh));
 
         // add to list of surfaces
@@ -449,7 +502,8 @@ bool set_scene_from_json(const std::filesystem::path& path_file, integrator_data
                          std::vector<std::unique_ptr<Surface>>& list_surfaces,
                          std::vector<std::unique_ptr<Material>>& list_materials,
                          std::vector<Surface*>& list_lights,
-                         std::vector<std::unique_ptr<Mesh>>& list_meshes) {
+                         std::vector<std::unique_ptr<Mesh>>& list_meshes,
+                         std::vector<std::unique_ptr<Texture>>& texture_list) {
   // parse json at path_file
   const auto json_string_opt = read_file(path_file);
   std::string json_string;
@@ -474,7 +528,7 @@ bool set_scene_from_json(const std::filesystem::path& path_file, integrator_data
 
   // set material list and create hashmap for mapping material name to index in list
   std::unordered_map<std::string, size_t> name_to_mat;
-  if (set_list_of_materials(json_settings, list_materials, name_to_mat)) {
+  if (set_list_of_materials(json_settings, list_materials, name_to_mat, texture_list)) {
     fmt::println("List of materials loaded");
   } else {
     fmt::println("Material loading failed");

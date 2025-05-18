@@ -11,6 +11,7 @@
 #include <json_scene.h>
 #include <material/material.h>
 #include <stb_image_write.h>
+#include <texture.h>
 #include <tl_camera.h>
 #include <tonemapper.h>
 
@@ -41,6 +42,7 @@ int main(int argc, char* argv[]) {
   std::vector<std::unique_ptr<Surface>> list_objects;
   std::vector<Surface*> list_lights;
   std::vector<std::unique_ptr<Mesh>> list_meshes;
+  std::vector<std::unique_ptr<Texture>> texture_list;
 
   std::vector<AABB> list_bboxes;
   std::vector<glm::vec3> list_centers;
@@ -86,7 +88,7 @@ int main(int argc, char* argv[]) {
     this
   */
   bool scene_load_check = set_scene_from_json(scene_file_path, rendering_settings, list_objects,
-                                              mat_list, list_lights, list_meshes);
+                                              mat_list, list_lights, list_meshes, texture_list);
 
   if (!scene_load_check) {
     fmt::println("Scene was not loaded");

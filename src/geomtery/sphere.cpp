@@ -55,7 +55,13 @@ std::pair<glm::vec3, EmitterInfo> Sphere::sample(const glm::vec3& look_from,
     // for point inside the sphere direction vec from point to surface of sphere will always be back
     // face
 
-    hit = {mat, this, hit_p, hit_n, false};
+    auto theta = std::acos(-point_on_unit_sphere.y);
+    auto phi = std::atan2(-point_on_unit_sphere.z, point_on_unit_sphere.x) + M_PI;
+
+    const float u = phi / (2.f * M_PI);
+    const float v = theta / M_PI;
+
+    hit = {mat, this, hit_p, hit_n, glm::vec2(u, v), false};
 
     const float sphere_sa = 4 * M_PI * radius * radius;
 
@@ -100,7 +106,15 @@ std::pair<glm::vec3, EmitterInfo> Sphere::sample(const glm::vec3& look_from,
     const glm::vec3 hit_n = glm::normalize(hit_p - center);
     // for point inside the sphere direction vec from point to surface of sphere will always be
     // front face
-    hit = {mat, this, hit_p, hit_n, true};
+
+    // calculate uv
+    float theta = std::acos(-hit_n.y);
+    float phi = std::atan2(-hit_n.z, hit_n.x) + M_PI;
+
+    float u = phi / (2.f * M_PI);
+    float v = theta / M_PI;
+
+    hit = {mat, this, hit_p, hit_n, glm::vec2(u, v), true};
 
     emit_info.pdf = 1.0f / (2 * M_PI * (1.0f - cos_theta_max));
     emit_info.dist = dist_lf_to_p;
