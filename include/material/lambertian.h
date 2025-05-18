@@ -3,6 +3,7 @@
 #include <fmt/core.h>
 #include <material/material.h>
 #include <rng/sampling.h>
+#include <texture.h>
 
 #include <algorithm>
 #include <cmath>
@@ -10,23 +11,12 @@
 
 class Lambertian : public Material {
 private:
-  glm::vec3 albedo;
+  Texture* tex;
 
 public:
-  Lambertian() { albedo = glm::vec3(0.0f); }
+  Lambertian() { tex = nullptr; }
 
-  Lambertian(const glm::vec3& albedo) : albedo(albedo) {}
-
-  Lambertian(const nlohmann::json& json_settings) {
-    if (json_settings.contains("albedo")) {
-      albedo[0] = json_settings["albedo"][0];
-      albedo[1] = json_settings["albedo"][1];
-      albedo[2] = json_settings["albedo"][2];
-    } else {
-      albedo = glm::vec3(0.0f);
-      fmt::println("Lambertian json did not have albedo. Default 0 set");
-    }
-  }
+  Lambertian(Texture* tex) : tex(tex) {}
 
   ~Lambertian() = default;
 

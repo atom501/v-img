@@ -16,10 +16,18 @@ public:
   std::vector<uint32_t> tri_normal;  // same as tri_vertex but for normals
   std::vector<glm::vec3> normals;    // normals of vertices loaded
 
+  std::vector<int> tri_uv;           // same as tri_vertex but for uvs
+  std::vector<glm::vec2> texcoords;  // uv of vertices loaded
+
   Mesh(const std::vector<glm::vec3>& vertices, const std::vector<uint32_t>& tri_vertex,
        const std::vector<glm::vec3>& normals, const std::vector<uint32_t>& tri_normal,
-       Material* mat_ptr)
-      : vertices(vertices), tri_vertex(tri_vertex), normals(normals), tri_normal(tri_normal) {}
+       const std::vector<glm::vec2>& texcoords, const std::vector<int>& tri_uv)
+      : vertices(vertices),
+        tri_vertex(tri_vertex),
+        normals(normals),
+        tri_normal(tri_normal),
+        texcoords(texcoords),
+        tri_uv(tri_uv) {}
 
   ~Mesh() = default;
 };
