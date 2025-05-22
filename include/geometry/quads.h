@@ -25,6 +25,22 @@ public:
     w = n / glm::dot(n, n);
   }
 
+  Quad(const glm::vec3& l_corner, const glm::vec3& u, const glm::vec3& v, Material* mat_ptr, const glm::mat4& to_world)
+      : Surface(mat_ptr) {
+    // transform quad
+    glm::vec4 temp_o = to_world * glm::vec4(l_corner, 1.0f);
+    temp_o /= temp_o[3];
+    Quad::l_corner = temp_o;
+
+    Quad::u = glm::vec3(to_world * glm::vec4(u, 0.0f));
+    Quad::v = glm::vec3(to_world * glm::vec4(v, 0.0f));
+
+    auto n = cross(Quad::u, Quad::v);
+    normal = glm::normalize(n);
+    D = glm::dot(normal, Quad::l_corner);
+    w = n / glm::dot(n, n);
+  }
+
   ~Quad() = default;
 
   std::optional<HitInfo> hit_surface(Ray& r) override;

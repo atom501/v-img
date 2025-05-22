@@ -8,12 +8,14 @@
 #include <geometry/mesh.h>
 #include <geometry/surface.h>
 #include <integrators.h>
-#include <json_scene.h>
 #include <material/material.h>
+#include <scene_loading/json_scene.h>
+#include <scene_loading/mitsuba_scene.h>
 #include <stb_image_write.h>
 #include <texture.h>
 #include <tl_camera.h>
 #include <tonemapper.h>
+#include <glm/gtx/transform.hpp>
 
 #include <algorithm>
 #include <args.hxx>
@@ -87,8 +89,16 @@ int main(int argc, char* argv[]) {
     list_objects and mat_list will be constant after this. ptr_to_objects especially depends on
     this
   */
-  bool scene_load_check = set_scene_from_json(scene_file_path, rendering_settings, list_objects,
-                                              mat_list, list_lights, list_meshes, texture_list);
+  std::filesystem::path extension = scene_file_path.extension();
+  bool scene_load_check;
+
+  if (extension.string() == ".json") {
+    scene_load_check = set_scene_from_json(scene_file_path, rendering_settings, list_objects,
+                                           mat_list, list_lights, list_meshes, texture_list);
+  } else if (extension.string() == ".xml") {
+    scene_load_check = set_scene_from_xml(scene_file_path, rendering_settings, list_objects,
+                                          mat_list, list_lights, list_meshes, texture_list);
+  }
 
   if (!scene_load_check) {
     fmt::println("Scene was not loaded");
