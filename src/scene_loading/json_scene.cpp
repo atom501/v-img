@@ -3,10 +3,10 @@
 #include <geometry/quads.h>
 #include <geometry/sphere.h>
 #include <geometry/triangle.h>
-#include <json_scene.h>
 #include <material/dielectric.h>
 #include <material/diffuse_light.h>
 #include <material/lambertian.h>
+#include <scene_loading/json_scene.h>
 #include <texture.h>
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <tiny_obj_loader.h>

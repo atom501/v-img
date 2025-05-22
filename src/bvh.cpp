@@ -17,7 +17,7 @@ Split get_best_split(const BVHNode& node, const std::vector<size_t>& obj_indices
                      const std::vector<AABB>& bboxes, const std::vector<glm::vec3>& centers,
                      const size_t num_bins) {
   Split best_split = {std::numeric_limits<size_t>::max(), std::numeric_limits<float>::max(),
-                      std::numeric_limits<uint8_t>::max()};
+                      0};
 
   // temp bin for initialisation
   Bin init_bin(0, AABB(glm::vec3(+std::numeric_limits<float>::max()),
