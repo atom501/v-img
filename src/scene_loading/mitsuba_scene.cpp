@@ -1,7 +1,29 @@
 #include <geometry/quads.h>
+#include <geometry/triangle.h>
 #include <material/diffuse_light.h>
 #include <material/lambertian.h>
 #include <scene_loading/mitsuba_scene.h>
+
+void cube_mesh(std::vector<glm::vec3>& vertices, std::vector<glm::vec3>& normals,
+               std::vector<glm::vec2>& texcoords, std::vector<uint32_t>& tri_vertex,
+               std::vector<uint32_t>& tri_normal, std::vector<int>& tri_uv) {
+  // data for mesh object
+  vertices
+      = {glm::vec3(-1, 1, -1), glm::vec3(-1, 1, 1),  glm::vec3(-1, -1, -1), glm::vec3(1, -1, 1),
+         glm::vec3(-1, -1, 1), glm::vec3(1, -1, -1), glm::vec3(1, 1, -1),   glm::vec3(1, 1, 1)};
+
+  normals = {glm::vec3(0, 1, 0),  glm::vec3(0, -1, 0), glm::vec3(1, 0, 0),
+             glm::vec3(-1, 0, 0), glm::vec3(0, 0, -1), glm::vec3(0, 0, 1)};
+
+  texcoords = {glm::vec2(0, 1), glm::vec2(1, 0), glm::vec2(1, 1), glm::vec2(0, 0)};
+
+  tri_vertex = {3, 4, 5, 2, 4, 5, 0, 1, 6, 1, 6, 7, 5, 6, 7, 3, 5, 7,
+                1, 3, 7, 1, 3, 4, 0, 1, 4, 0, 2, 4, 2, 5, 6, 0, 2, 6};
+  tri_normal = {1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2,
+                5, 5, 5, 5, 5, 5, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4};
+  tri_uv = {0, 1, 2, 0, 1, 3, 0, 1, 2, 0, 1, 3, 0, 1, 2, 0, 1, 3,
+            0, 1, 2, 0, 1, 3, 0, 1, 2, 0, 1, 3, 0, 1, 2, 0, 1, 3};
+}
 
 Material* mat_index_from_obj(std::shared_ptr<tinyparser_mitsuba::Object> mat_obj,
                              std::vector<std::unique_ptr<Texture>>& texture_list,
@@ -211,6 +233,61 @@ bool set_scene_from_xml(const std::filesystem::path& path_file, integrator_data&
           if (emitter) {
             Surface* s_ptr = list_surfaces[list_surfaces.size() - 1].get();
             list_lights.push_back(s_ptr);
+          }
+        } else if (obj->pluginType() == "cube") {
+          // manually set cube mesh
+          std::vector<glm::vec3> vertices;
+          std::vector<glm::vec3> normals;
+          std::vector<glm::vec2> texcoords;
+
+          std::vector<uint32_t> tri_vertex;
+          std::vector<uint32_t> tri_normal;
+          std::vector<int> tri_uv;
+
+          cube_mesh(vertices, normals, texcoords, tri_vertex, tri_normal, tri_uv);
+
+          // transform vertices
+          for (glm::vec3& vec : vertices) {
+            glm::vec4 result = transform * glm::vec4(vec, 1);
+            result /= result.w;
+            vec = result;
+          }
+
+          // transform normals
+          const glm::mat4 normal_xform = glm::transpose(glm::inverse(transform));
+          for (glm::vec3& normal : normals) {
+            glm::vec4 result = normal_xform * glm::vec4(normal, 0);
+            normal = result;
+          }
+
+          vertices.shrink_to_fit();
+          normals.shrink_to_fit();
+          texcoords.shrink_to_fit();
+
+          tri_vertex.shrink_to_fit();
+          tri_normal.shrink_to_fit();
+          tri_uv.shrink_to_fit();
+
+          // make mesh
+          auto tri_mesh = Mesh(vertices, tri_vertex, normals, tri_normal, texcoords, tri_uv);
+          list_meshes.push_back(std::make_unique<Mesh>(tri_mesh));
+
+          int num_tri = tri_vertex.size() / 3;
+
+          // add to list of surfaces
+          for (size_t i = 0; i < num_tri; i++) {
+            auto tri = Triangle(list_meshes[list_meshes.size() - 1].get(), i, mat_ptr);
+            list_surfaces.push_back(std::make_unique<Triangle>(tri));
+          }
+
+          // add to list of lights if needed
+          size_t rev_count_index = list_surfaces.size() - 1;
+
+          if (mat_ptr->is_emissive()) {
+            for (size_t i = rev_count_index; i > (rev_count_index - num_tri); i--) {
+              Surface* s_ptr = list_surfaces[i].get();
+              list_lights.push_back(s_ptr);
+            }
           }
         } else {
           fmt::println("shape plugin {} is not supported", obj->pluginType());

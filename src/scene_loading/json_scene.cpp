@@ -472,8 +472,10 @@ bool set_list_of_objects(const nlohmann::json& json_settings,
         auto tri_mesh = Mesh(vertices, tri_vertex, normals, tri_normal, texcoords, tri_uv);
         list_meshes.push_back(std::make_unique<Mesh>(tri_mesh));
 
+        int num_tri = tri_vertex.size() / 3;
+
         // add to list of surfaces
-        for (size_t i = 0; i < tri_vertex.size() / 3; i++) {
+        for (size_t i = 0; i < num_tri; i++) {
           auto tri = Triangle(list_meshes[list_meshes.size() - 1].get(), i, mat_ptr);
           list_surfaces.push_back(std::make_unique<Triangle>(tri));
         }
@@ -482,7 +484,7 @@ bool set_list_of_objects(const nlohmann::json& json_settings,
         size_t rev_count_index = list_surfaces.size() - 1;
 
         if (mat_ptr->is_emissive()) {
-          for (size_t i = 0; i < tri_vertex.size(); i++, rev_count_index--) {
+          for (size_t i = 0; i < num_tri; i++, rev_count_index--) {
             Surface* s_ptr = list_surfaces[rev_count_index].get();
             list_lights.push_back(s_ptr);
           }
