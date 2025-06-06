@@ -1,8 +1,10 @@
+#include <geometry/mesh.h>
 #include <geometry/quads.h>
 #include <geometry/triangle.h>
 #include <material/diffuse_light.h>
 #include <material/lambertian.h>
 #include <scene_loading/mitsuba_scene.h>
+#include <scene_loading/serialized_file.h>
 
 void cube_mesh(std::vector<glm::vec3>& vertices, std::vector<glm::vec3>& normals,
                std::vector<glm::vec2>& texcoords, std::vector<uint32_t>& tri_vertex,
@@ -196,19 +198,41 @@ bool set_scene_from_xml(const std::filesystem::path& path_file, integrator_data&
           }
         }
 
-        // search for emitter
-        bool emitter = false;
         Material* mat_ptr = nullptr;
-        for (const auto& child : obj_children) {
-          if (child->type() == tinyparser_mitsuba::OT_EMITTER) {
-            mat_ptr = mat_index_from_obj(child, texture_list, list_materials, name_to_mat);
-            emitter = true;
+
+        // loop over named children if present
+        // search for emitter
+        auto named_children = obj->namedChildren();
+        for (auto& [_, value] : named_children) {
+          if (value->type() == tinyparser_mitsuba::OT_EMITTER) {
+            mat_ptr = mat_index_from_obj(value, texture_list, list_materials, name_to_mat);
             break;
           }
         }
 
         // if emitter found skip mat if present
-        if (emitter == false) {
+        if (!mat_ptr) {
+          for (auto& [_, value] : named_children) {
+            if (value->type() == tinyparser_mitsuba::OT_BSDF) {
+              mat_ptr = mat_index_from_obj(value, texture_list, list_materials, name_to_mat);
+              break;
+            }
+          }
+        }
+
+        // loop over unnamed children if present. skip if named was already found
+        // search for emitter
+        if (!mat_ptr) {
+          for (const auto& child : obj_children) {
+            if (child->type() == tinyparser_mitsuba::OT_EMITTER) {
+              mat_ptr = mat_index_from_obj(child, texture_list, list_materials, name_to_mat);
+              break;
+            }
+          }
+        }
+
+        // if emitter found skip mat if present
+        if (!mat_ptr) {
           for (const auto& child : obj_children) {
             if (child->type() == tinyparser_mitsuba::OT_BSDF) {
               mat_ptr = mat_index_from_obj(child, texture_list, list_materials, name_to_mat);
@@ -230,7 +254,7 @@ bool set_scene_from_xml(const std::filesystem::path& path_file, integrator_data&
 
           list_surfaces.push_back(std::make_unique<Quad>(q));
 
-          if (emitter) {
+          if (mat_ptr->is_emissive()) {
             Surface* s_ptr = list_surfaces[list_surfaces.size() - 1].get();
             list_lights.push_back(s_ptr);
           }
@@ -273,6 +297,35 @@ bool set_scene_from_xml(const std::filesystem::path& path_file, integrator_data&
           list_meshes.push_back(std::make_unique<Mesh>(tri_mesh));
 
           int num_tri = tri_vertex.size() / 3;
+
+          // add to list of surfaces
+          for (size_t i = 0; i < num_tri; i++) {
+            auto tri = Triangle(list_meshes[list_meshes.size() - 1].get(), i, mat_ptr);
+            list_surfaces.push_back(std::make_unique<Triangle>(tri));
+          }
+
+          // add to list of lights if needed
+          size_t rev_count_index = list_surfaces.size() - 1;
+
+          if (mat_ptr->is_emissive()) {
+            for (size_t i = rev_count_index; i > (rev_count_index - num_tri); i--) {
+              Surface* s_ptr = list_surfaces[i].get();
+              list_lights.push_back(s_ptr);
+            }
+          }
+        } else if (obj->pluginType() == "serialized") {
+          std::string s_file = properties["filename"].getString();
+          std::filesystem::path model_filename = properties["filename"].getString();
+          std::filesystem::path scene_filename = path_file;
+
+          const auto model_path_rel_file = scene_filename.remove_filename() / model_filename;
+          int shape_index = properties["shape_index"].getInteger();
+
+          Mesh serialized_mesh = read_serialized_file(model_path_rel_file, shape_index, transform);
+
+          list_meshes.push_back(std::make_unique<Mesh>(serialized_mesh));
+
+          int num_tri = serialized_mesh.tri_vertex.size() / 3;
 
           // add to list of surfaces
           for (size_t i = 0; i < num_tri; i++) {

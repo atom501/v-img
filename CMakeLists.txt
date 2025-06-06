@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.20...3.22)
 # ---- Project ----
 
 # Note: update this to your new project's name and version
-project(v-img LANGUAGES CXX)
+project(v-img)
 
 # --- Import tools ----
 
@@ -74,7 +74,7 @@ CPMAddPackage(
 # Note: globbing sources is considered bad practice as CMake's generators may not detect new files
 # automatically. Keep that in mind when changing files, or explicitly mention them here.
 file(GLOB_RECURSE headers CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/include/*.h")
-file(GLOB_RECURSE sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
+file(GLOB_RECURSE sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/*")
 
 # ---- Create standalone executable ----
 
