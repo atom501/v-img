@@ -15,12 +15,12 @@
 #include <texture.h>
 #include <tl_camera.h>
 #include <tonemapper.h>
-#include <glm/gtx/transform.hpp>
 
 #include <algorithm>
 #include <args.hxx>
 #include <filesystem>
 #include <glm/glm.hpp>
+#include <glm/gtx/transform.hpp>
 
 void setup_for_bvh(const std::vector<std::unique_ptr<Surface>>& list_objects,
                    std::vector<AABB>& bboxes, std::vector<glm::vec3>& centers) {
