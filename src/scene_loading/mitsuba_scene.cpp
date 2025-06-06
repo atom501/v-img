@@ -46,14 +46,68 @@ Material* mat_index_from_obj(std::shared_ptr<tinyparser_mitsuba::Object> mat_obj
       if (mat_obj->type() == tinyparser_mitsuba::OT_BSDF) {
         if (plugin_type == "diffuse") {
           auto properties = mat_obj->properties();
-          tinyparser_mitsuba::Color reflectance = properties["reflectance"].getColor();
+          bool result;
+          tinyparser_mitsuba::Color reflectance
+              = properties["reflectance"].getColor(tinyparser_mitsuba::Color(0, 0, 0), &result);
 
-          glm::vec3 albedo = glm::vec3(reflectance.r, reflectance.g, reflectance.b);
-          ConstColor col(albedo);
-          texture_list.push_back(std::make_unique<ConstColor>(col));
+          if (result) {
+            glm::vec3 albedo = glm::vec3(reflectance.r, reflectance.g, reflectance.b);
+            ConstColor col(albedo);
+            texture_list.push_back(std::make_unique<ConstColor>(col));
 
-          Lambertian l(texture_list[texture_list.size() - 1].get());
-          list_materials.push_back(std::make_unique<Lambertian>(l));
+            Lambertian l(texture_list[texture_list.size() - 1].get());
+            list_materials.push_back(std::make_unique<Lambertian>(l));
+          } else {
+              // look for texture
+            fmt::println("looking for texture");
+
+            auto named_children = mat_obj->namedChildren();
+            bool found = false;
+            
+            for (auto& [_, value] : named_children) {
+              if (value->type() == tinyparser_mitsuba::OT_TEXTURE) {
+                if (value->pluginType() == "checkerboard") {
+                  auto child_p = value->properties();
+                  tinyparser_mitsuba::Color c0 = child_p["color0"].getColor();
+                  tinyparser_mitsuba::Color c1 = child_p["color1"].getColor();
+                  int t_width = child_p["uscale"].getNumber();
+                  int t_height = child_p["vscale"].getNumber();
+
+                  Checkerboard ch(t_width, t_height, glm::vec3(c0.r, c0.g, c0.b),
+                                  glm::vec3(c1.r, c1.g, c1.b));
+                  texture_list.push_back(std::make_unique<Checkerboard>(ch));
+
+                  Lambertian l(texture_list[texture_list.size() - 1].get());
+                  list_materials.push_back(std::make_unique<Lambertian>(l));
+                  found = true;
+                  break;
+                }
+              }
+            }
+
+            if (!found) {
+              auto mat_c = mat_obj->anonymousChildren();
+              for (auto& value : mat_c) {
+                if (value->type() == tinyparser_mitsuba::OT_TEXTURE) {
+                  if (value->pluginType() == "checkerboard") {
+                    auto child_p = value->properties();
+                    tinyparser_mitsuba::Color c0 = child_p["color0"].getColor();
+                    tinyparser_mitsuba::Color c1 = child_p["color1"].getColor();
+                    int t_width = child_p["uscale"].getNumber();
+                    int t_height = child_p["vscale"].getNumber();
+
+                    Checkerboard ch(t_width, t_height, glm::vec3(c0.r, c0.g, c0.b),
+                                    glm::vec3(c1.r, c1.g, c1.b));
+                    texture_list.push_back(std::make_unique<Checkerboard>(ch));
+
+                    Lambertian l(texture_list[texture_list.size() - 1].get());
+                    list_materials.push_back(std::make_unique<Lambertian>(l));
+                    break;
+                  }
+                }
+              }
+            }
+          }
         } else {
           fmt::println("plugin type {} is not supported.", plugin_type);
           return nullptr;
@@ -157,7 +211,7 @@ bool set_scene_from_xml(const std::filesystem::path& path_file, integrator_data&
               integrator_data.samples = sample_count;
 
               // assume always MIS for now
-              integrator_data.func = integrator_func::mis;
+              integrator_data.func = integrator_func::normal;
               break;
             }
             default:
