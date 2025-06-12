@@ -2,8 +2,8 @@
 
 glm::vec3 mis_integrator(Ray& input_ray, std::vector<size_t>& thread_stack, const BVH& bvh,
                          const std::vector<std::unique_ptr<Surface>>& prims,
-                         const GroupOfEmitters& lights, pcg32_random_t& hash_state,
-                         uint32_t depth) {
+                         const GroupOfEmitters& lights, pcg32_random_t& hash_state, uint32_t depth,
+                         Background* background) {
   Ray test_ray = input_ray;
   float light_pdf, mat_pdf;
   glm::vec3 bounce_result = glm::vec3(0.0f);
