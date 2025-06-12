@@ -1,3 +1,4 @@
+#include <background.h>
 #include <geometry/mesh.h>
 #include <geometry/quads.h>
 #include <geometry/triangle.h>
@@ -5,6 +6,7 @@
 #include <material/lambertian.h>
 #include <scene_loading/mitsuba_scene.h>
 #include <scene_loading/serialized_file.h>
+#include <tinyexr.h>
 
 void cube_mesh(std::vector<glm::vec3>& vertices, std::vector<glm::vec3>& normals,
                std::vector<glm::vec2>& texcoords, std::vector<uint32_t>& tri_vertex,
@@ -58,12 +60,12 @@ Material* mat_index_from_obj(std::shared_ptr<tinyparser_mitsuba::Object> mat_obj
             Lambertian l(texture_list[texture_list.size() - 1].get());
             list_materials.push_back(std::make_unique<Lambertian>(l));
           } else {
-              // look for texture
+            // look for texture
             fmt::println("looking for texture");
 
             auto named_children = mat_obj->namedChildren();
             bool found = false;
-            
+
             for (auto& [_, value] : named_children) {
               if (value->type() == tinyparser_mitsuba::OT_TEXTURE) {
                 if (value->pluginType() == "checkerboard") {
@@ -73,7 +75,7 @@ Material* mat_index_from_obj(std::shared_ptr<tinyparser_mitsuba::Object> mat_obj
                   int t_width = child_p["uscale"].getNumber();
                   int t_height = child_p["vscale"].getNumber();
 
-                  Checkerboard ch(t_width, t_height, glm::vec3(c0.r, c0.g, c0.b),
+                  Checkerboard ch(t_width * 2, t_height * 2, glm::vec3(c0.r, c0.g, c0.b),
                                   glm::vec3(c1.r, c1.g, c1.b));
                   texture_list.push_back(std::make_unique<Checkerboard>(ch));
 
@@ -156,12 +158,12 @@ bool set_scene_from_xml(const std::filesystem::path& path_file, integrator_data&
   // got the mitsuba file as scene object
   tinyparser_mitsuba::Scene scene = loader.loadFromFile(path_file.string());
 
-  integrator_data.background_col = glm::vec3(0.f, 0.f, 0.f);
+  integrator_data.background = std::make_unique<ConstBackground>(ConstBackground(glm::vec3(0)));
 
   std::unordered_map<std::string, size_t> name_to_mat;
 
   // convert scene objects to v-img objects
-  // loop through once and get integrator_data and materials
+  // loop through once and get integrator_data and envmap
   for (const auto& obj : scene.anonymousChildren()) {
     switch (obj->type()) {
       case tinyparser_mitsuba::OT_SENSOR: {
@@ -211,7 +213,7 @@ bool set_scene_from_xml(const std::filesystem::path& path_file, integrator_data&
               integrator_data.samples = sample_count;
 
               // assume always MIS for now
-              integrator_data.func = integrator_func::normal;
+              integrator_data.func = integrator_func::material;
               break;
             }
             default:
@@ -225,6 +227,71 @@ bool set_scene_from_xml(const std::filesystem::path& path_file, integrator_data&
         int max_depth = properties["max_depth"].getInteger();
         integrator_data.depth = max_depth;
         break;
+      }
+      case tinyparser_mitsuba::OT_EMITTER: {
+        // check if envmap. can be constant or image
+        if (obj->pluginType() == "envmap") {
+          fmt::println("envmap");
+          auto p = obj->properties();
+
+          std::filesystem::path env_file = p["filename"].getString();
+          float radiance_scale = p["scale"].getNumber(1.f);
+
+          tinyparser_mitsuba::Transform to_world_m = p["to_world"].getTransform();
+          glm::mat4 transform;
+
+          // glm is column major, tinyparser is row major
+          int count = 0;
+          for (size_t r = 0; r < 4; r++) {
+            for (size_t c = 0; c < 4; c++) {
+              transform[c][r] = to_world_m.matrix[count];
+              ++count;
+            }
+          }
+
+          // read exr file
+          std::string env_type = env_file.extension().generic_string();
+          if (env_type == ".exr") {
+            // read exr with tinyexr
+            float* out;  // width * height * RGBA
+            int width;
+            int height;
+            const char* err = nullptr;
+
+            std::filesystem::path scene_filename = path_file;
+            const auto env_path_rel_file = scene_filename.remove_filename() / env_file;
+
+            int ret
+                = LoadEXR(&out, &width, &height, env_path_rel_file.generic_string().c_str(), &err);
+            std::vector<glm::vec3> image;
+
+            if (ret != TINYEXR_SUCCESS) {
+              if (err) {
+                fprintf(stderr, "ERR : %s\n", err);
+                FreeEXRErrorMessage(err);  // release memory of error message.
+              }
+            } else {
+              // copy image data to vector. ignore alpha channel for now
+              image = std::vector<glm::vec3>(width * height);
+
+              for (size_t i = 0; i < width * height; i++) {
+                image[i] = glm::vec3(out[i * 4], out[i * 4 + 1], out[i * 4 + 2]);
+                image[i] *= radiance_scale;
+              }
+
+              free(out);  // release memory of image data
+
+              // set env map
+              integrator_data.background
+                  = std::make_unique<EnvMap>(EnvMap(width, height, image, glm::inverse(transform)));
+            }
+          } else {
+            fmt::println("env map file type {} is not supported", env_type);
+          }
+
+        } else if (obj->pluginType() == "constant") {
+          fmt::println("const background");
+        }
       }
       default:
         break;

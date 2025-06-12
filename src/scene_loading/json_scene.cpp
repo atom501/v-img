@@ -9,6 +9,7 @@
 #include <scene_loading/json_scene.h>
 #include <texture.h>
 #define TINYOBJLOADER_IMPLEMENTATION
+#include <background.h>
 #include <tiny_obj_loader.h>
 
 #include <filesystem>
@@ -189,7 +190,7 @@ bool set_integrator_data(const nlohmann::json& json_settings, integrator_data& i
   if (json_settings.contains("background")) {
     background_color = json_settings["background"].template get<glm::vec3>();
   }
-  integrator_data.background_col = background_color;
+  integrator_data.background = std::make_unique<ConstBackground>(ConstBackground(glm::vec3(0)));
 
   // set scene integrator
   integrator_func func = integrator_func::normal;
