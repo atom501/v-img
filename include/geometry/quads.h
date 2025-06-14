@@ -25,7 +25,8 @@ public:
     w = n / glm::dot(n, n);
   }
 
-  Quad(const glm::vec3& l_corner, const glm::vec3& u, const glm::vec3& v, Material* mat_ptr, const glm::mat4& to_world)
+  Quad(const glm::vec3& l_corner, const glm::vec3& u, const glm::vec3& v, Material* mat_ptr,
+       const glm::mat4& to_world)
       : Surface(mat_ptr) {
     // transform quad
     glm::vec4 temp_o = to_world * glm::vec4(l_corner, 1.0f);
@@ -44,7 +45,7 @@ public:
   ~Quad() = default;
 
   std::optional<HitInfo> hit_surface(Ray& r) override;
-  Surface* hit_check(Ray& r) override;
+  bool hit_check(Ray& r) override;
 
   AABB bounds() const override;
   glm::vec3 get_center() const override;
@@ -56,17 +57,17 @@ public:
             const glm::vec3& dir) const override;
 
 private:
-  template <typename T,
-            std::enable_if_t<
-                std::is_same_v<T, std::optional<HitInfo>> || std::is_same_v<T, Surface*>, bool>
-            = true>
+  template <
+      typename T,
+      std::enable_if_t<std::is_same_v<T, std::optional<HitInfo>> || std::is_same_v<T, bool>, bool>
+      = true>
   inline T quad_hit_template(Ray& r) {
     auto denominator = glm::dot(normal, r.dir);
 
     // No hit if the ray is parallel to the plane.
     if (std::fabs(denominator) < 1e-8) {
-      if constexpr (std::is_same_v<T, Surface*>) {
-        return nullptr;
+      if constexpr (std::is_same_v<T, bool>) {
+        return false;
       } else if constexpr (std::is_same_v<T, std::optional<HitInfo>>) {
         return std::nullopt;
       }
@@ -76,8 +77,8 @@ private:
     auto t = (D - glm::dot(normal, r.o)) / denominator;
 
     if (t < r.minT || t > r.maxT) {
-      if constexpr (std::is_same_v<T, Surface*>) {
-        return nullptr;
+      if constexpr (std::is_same_v<T, bool>) {
+        return false;
       } else if constexpr (std::is_same_v<T, std::optional<HitInfo>>) {
         return std::nullopt;
       }
@@ -90,8 +91,8 @@ private:
     auto beta = glm::dot(w, glm::cross(u, planar_hitpt_vector));
 
     if (!is_interior(alpha, beta)) {
-      if constexpr (std::is_same_v<T, Surface*>) {
-        return nullptr;
+      if constexpr (std::is_same_v<T, bool>) {
+        return false;
       } else if constexpr (std::is_same_v<T, std::optional<HitInfo>>) {
         return std::nullopt;
       }
@@ -100,8 +101,8 @@ private:
     // if hit update the maxT for the ray
     r.maxT = t;
 
-    if constexpr (std::is_same_v<T, Surface*>) {
-      return this;
+    if constexpr (std::is_same_v<T, bool>) {
+      return true;
     } else if constexpr (std::is_same_v<T, std::optional<HitInfo>>) {
       // Ray hits the 2D shape; set the rest of the hit record,
       const glm::vec3 hit_p = intersection;
@@ -112,5 +113,5 @@ private:
 
       return std::make_optional(std::move(hit));
     }
-  };
+  }
 };

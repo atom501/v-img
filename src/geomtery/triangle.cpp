@@ -8,7 +8,7 @@ std::optional<HitInfo> Triangle::hit_surface(Ray& ray) {
   return tri_hit_template<std::optional<HitInfo>>(ray);
 }
 
-Surface* Triangle::hit_check(Ray& ray) { return tri_hit_template<Surface*>(ray); }
+bool Triangle::hit_check(Ray& ray) { return tri_hit_template<bool>(ray); }
 
 AABB Triangle::bounds() const {
   const auto& tri_vertex_list = obj_mesh->tri_vertex;

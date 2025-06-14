@@ -21,7 +21,7 @@ std::optional<HitInfo> Sphere::hit_surface(Ray& ray) {
   return sphere_hit_template<std::optional<HitInfo>>(ray);
 }
 
-Surface* Sphere::hit_check(Ray& ray) { return sphere_hit_template<Surface*>(ray); }
+bool Sphere::hit_check(Ray& ray) { return sphere_hit_template<bool>(ray); }
 
 AABB Sphere::bounds() const {
   glm ::vec3 moving_diagonal = glm::vec3(radius, radius, radius);

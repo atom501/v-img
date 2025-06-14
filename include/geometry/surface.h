@@ -15,7 +15,7 @@ public:
   ~Surface() = default;
 
   virtual std::optional<HitInfo> hit_surface(Ray& r) = 0;
-  virtual Surface* hit_check(Ray& r) = 0;
+  virtual bool hit_check(Ray& r) = 0;
 
   virtual AABB bounds() const = 0;
   virtual glm::vec3 get_center() const = 0;
