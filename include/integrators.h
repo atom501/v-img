@@ -123,9 +123,13 @@ std::vector<glm::vec3> scene_integrator(const integrator_data& render_data, BVH&
                 Ray cam_ray = render_data.camera.generate_ray(x + rand_x, y + rand_y);
 
                 // use set integrator to get color for a pixel
-                pixel_col_accumulator
-                    += integrator(cam_ray, thread_stack, bvh, prims, lights, pcg_state,
-                                  render_data.depth, render_data.background.get());
+                glm::vec3 p_col = integrator(cam_ray, thread_stack, bvh, prims, lights, pcg_state,
+                                             render_data.depth, render_data.background.get());
+                if (std::isnan(p_col[0]) || std::isnan(p_col[1]) || std::isnan(p_col[2])) {
+                  fmt::println("NaN at x_sample {}, y_sample {}, x {}, y {}", x_sample, y_sample, x,
+                               y);
+                }
+                pixel_col_accumulator += p_col;
               }
             }
 
@@ -138,9 +142,12 @@ std::vector<glm::vec3> scene_integrator(const integrator_data& render_data, BVH&
               Ray cam_ray = render_data.camera.generate_ray(x + rand_x, y + rand_y);
 
               // use set integrator to get color for a pixel
-              pixel_col_accumulator
-                  += integrator(cam_ray, thread_stack, bvh, prims, lights, pcg_state,
-                                render_data.depth, render_data.background.get());
+              glm::vec3 p_col = integrator(cam_ray, thread_stack, bvh, prims, lights, pcg_state,
+                                           render_data.depth, render_data.background.get());
+              if (std::isnan(p_col[0]) || std::isnan(p_col[1]) || std::isnan(p_col[2])) {
+                fmt::println("NaN at remaining sample {}, x {}, y {}", sample, x, y);
+              }
+              pixel_col_accumulator += p_col;
             }
 
             // average final sum
