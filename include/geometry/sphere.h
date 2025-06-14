@@ -20,7 +20,7 @@ public:
   ~Sphere() = default;
 
   std::optional<HitInfo> hit_surface(Ray& r) override;
-  Surface* hit_check(Ray& r) override;
+  bool hit_check(Ray& r) override;
 
   AABB bounds() const override;
   glm::vec3 get_center() const override;
@@ -33,10 +33,10 @@ public:
 
 private:
   // intersection test from ray tracing gems 1, chapter 7
-  template <typename T,
-            std::enable_if_t<
-                std::is_same_v<T, std::optional<HitInfo>> || std::is_same_v<T, Surface*>, bool>
-            = true>
+  template <
+      typename T,
+      std::enable_if_t<std::is_same_v<T, std::optional<HitInfo>> || std::is_same_v<T, bool>, bool>
+      = true>
   inline T sphere_hit_template(Ray& r) {
     float t0, t1;
     const float radius_squared = radius * radius;
@@ -50,8 +50,8 @@ private:
     const float discriminant = radius_squared - (glm::dot(temp, temp));
 
     if (discriminant < 0) {
-      if constexpr (std::is_same_v<T, Surface*>) {
-        return nullptr;
+      if constexpr (std::is_same_v<T, bool>) {
+        return false;
       } else if constexpr (std::is_same_v<T, std::optional<HitInfo>>) {
         return std::nullopt;
       }
@@ -63,8 +63,8 @@ private:
     if (t0 < r.minT || t0 > r.maxT) {
       t0 = t1;
       if (t0 < r.minT || t0 > r.maxT) {
-        if constexpr (std::is_same_v<T, Surface*>) {
-          return nullptr;
+        if constexpr (std::is_same_v<T, bool>) {
+          return false;
         } else if constexpr (std::is_same_v<T, std::optional<HitInfo>>) {
           return std::nullopt;
         }
@@ -74,8 +74,8 @@ private:
     // if hit update the maxT for the ray
     r.maxT = t0;
 
-    if constexpr (std::is_same_v<T, Surface*>) {
-      return this;
+    if constexpr (std::is_same_v<T, bool>) {
+      return true;
     } else if constexpr (std::is_same_v<T, std::optional<HitInfo>>) {
       const glm::vec3 hit_p = r.o + r.dir * t0;
       const glm::vec3 normal = glm::normalize(hit_p - center);
@@ -93,5 +93,5 @@ private:
 
       return std::make_optional(std::move(hit));
     }
-  };
+  }
 };

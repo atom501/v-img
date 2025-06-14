@@ -17,7 +17,7 @@ std::optional<HitInfo> Quad::hit_surface(Ray& ray) {
   return quad_hit_template<std::optional<HitInfo>>(ray);
 }
 
-Surface* Quad::hit_check(Ray& ray) { return quad_hit_template<Surface*>(ray); }
+bool Quad::hit_check(Ray& ray) { return quad_hit_template<bool>(ray); }
 
 // returns AABB. After transform l_corner is moved so better to check all 4 corners
 AABB Quad::bounds() const {

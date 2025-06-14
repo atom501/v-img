@@ -54,7 +54,7 @@ public:
   ~Triangle() = default;
 
   std::optional<HitInfo> hit_surface(Ray& r) override;
-  Surface* hit_check(Ray& r) override;
+  bool hit_check(Ray& r) override;
 
   AABB bounds() const override;
   glm::vec3 get_center() const override;
@@ -70,10 +70,10 @@ private:
    * watertight ray triangle intersection. Source is pbrt and "Watertight Ray/Triangle Intersection"
    * paper
    */
-  template <typename T,
-            std::enable_if_t<
-                std::is_same_v<T, std::optional<HitInfo>> || std::is_same_v<T, Surface*>, bool>
-            = true>
+  template <
+      typename T,
+      std::enable_if_t<std::is_same_v<T, std::optional<HitInfo>> || std::is_same_v<T, bool>, bool>
+      = true>
   inline T tri_hit_template(Ray& ray) {
     const auto& tri_vertex_list = obj_mesh->tri_vertex;
     const auto& vertices_list = obj_mesh->vertices;
@@ -88,8 +88,8 @@ private:
     if (glm::length2(glm::cross(edge2, edge1)) == 0.f) {
       if constexpr (std::is_same_v<T, std::optional<HitInfo>>) {
         return std::nullopt;
-      } else if constexpr (std::is_same_v<T, Surface*>) {
-        return nullptr;
+      } else if constexpr (std::is_same_v<T, bool>) {
+        return false;
       }
     }
 
@@ -136,8 +136,8 @@ private:
     if ((e0 < 0 || e1 < 0 || e2 < 0) && (e0 > 0 || e1 > 0 || e2 > 0)) {
       if constexpr (std::is_same_v<T, std::optional<HitInfo>>) {
         return std::nullopt;
-      } else if constexpr (std::is_same_v<T, Surface*>) {
-        return nullptr;
+      } else if constexpr (std::is_same_v<T, bool>) {
+        return false;
       }
     }
 
@@ -145,8 +145,8 @@ private:
     if (det == 0) {
       if constexpr (std::is_same_v<T, std::optional<HitInfo>>) {
         return std::nullopt;
-      } else if constexpr (std::is_same_v<T, Surface*>) {
-        return nullptr;
+      } else if constexpr (std::is_same_v<T, bool>) {
+        return false;
       }
     }
 
@@ -157,14 +157,14 @@ private:
     if (det < 0 && (tScaled >= 0 || tScaled < ray.maxT * det || tScaled > ray.minT * det)) {
       if constexpr (std::is_same_v<T, std::optional<HitInfo>>) {
         return std::nullopt;
-      } else if constexpr (std::is_same_v<T, Surface*>) {
-        return nullptr;
+      } else if constexpr (std::is_same_v<T, bool>) {
+        return false;
       }
     } else if (det > 0 && (tScaled <= 0 || tScaled > ray.maxT * det || tScaled < ray.minT * det)) {
       if constexpr (std::is_same_v<T, std::optional<HitInfo>>) {
         return std::nullopt;
-      } else if constexpr (std::is_same_v<T, Surface*>) {
-        return nullptr;
+      } else if constexpr (std::is_same_v<T, bool>) {
+        return false;
       }
     }
 
@@ -172,8 +172,8 @@ private:
     float t = tScaled * invDet;
     ray.maxT = t;
 
-    if constexpr (std::is_same_v<T, Surface*>) {
-      return this;
+    if constexpr (std::is_same_v<T, bool>) {
+      return true;
     } else if constexpr (std::is_same_v<T, std::optional<HitInfo>>) {
       float u = e0 * invDet, v = e1 * invDet, w = e2 * invDet;
 

@@ -45,7 +45,9 @@ glm::vec3 mis_integrator(Ray& input_ray, std::vector<size_t>& thread_stack, cons
       if (l_sample_info.pdf != 0.f) {
         Ray shadow_ray = Ray(hit.value().hit_p, l_sample_info.wi);
         shadow_ray.maxT = l_sample_info.dist - 0.0001f;
-        Surface* l_visibility_check = bvh.hit<Surface*>(shadow_ray, thread_stack, prims);
+
+        // check if ray hits anything between ray origin and the point on light
+        bool l_visibility_check = bvh.occlude(shadow_ray, thread_stack, prims);
 
         // if light visible from point
         if (!l_visibility_check) {
