@@ -79,15 +79,24 @@ std::pair<glm::vec3, EmitterInfo> Quad::sample(const glm::vec3& look_from,
   glm::vec3 hit_n = normal;
   bool front_face;
 
-  if (glm::dot(wi, normal) > 0) {
+  float dot = glm::dot(wi, normal);
+
+  if (dot > 0) {
     front_face = false;
     hit_n *= -1.0f;
   } else
     front_face = true;
 
   const float area = glm::length(glm::cross(u, v));
-  const float cosine = std::abs(glm::dot(normal, wi));
-  const float pdf = distance2 / (cosine * area);
+  const float cosine = std::abs(dot);
+
+  float pdf;
+  // for the case where parallel ray hits quad on the edge
+  if (cosine > 1e-8) {
+    pdf = distance2 / (cosine * area);
+  } else {
+    pdf = 0.f;
+  }
 
   HitInfo hit = {mat, this, hit_p, hit_n, glm::vec2(rand1, rand2), front_face};
 
