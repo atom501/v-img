@@ -80,7 +80,9 @@ std::pair<glm::vec3, EmitterInfo> Triangle::sample(const glm::vec3& look_from,
   float dist2 = glm::length2(dir_vec);
   dir_vec = glm::normalize(dir_vec);
 
-  const bool front_face = glm::dot(dir_vec, tri_normal) < 0 ? true : false;
+  const float normal_dir_dot = glm::dot(dir_vec, tri_normal);
+
+  const bool front_face = normal_dir_dot < 0 ? true : false;
 
   const auto& tri_texcoords_list = obj_mesh->tri_normal;
   const auto& texcoords_list = obj_mesh->texcoords;
@@ -99,8 +101,15 @@ std::pair<glm::vec3, EmitterInfo> Triangle::sample(const glm::vec3& look_from,
 
   // convert to solid angle measure
   float area = glm::length(glm::cross(edge2, edge1)) / 2.0f;
-  float cosine = std::abs(glm::dot(tri_normal, dir_vec));
-  float pdf = dist2 / (cosine * area);
+  float cosine = std::abs(normal_dir_dot);
+
+  float pdf;
+  // for the case where parallel ray hits quad on the edge
+  if (cosine > 1e-8) {
+    pdf = dist2 / (cosine * area);
+  } else {
+    pdf = 0.f;
+  }
 
   EmitterInfo emit_info = {dir_vec, pdf, std::sqrtf(dist2), this};
   glm::vec3 emit_col = mat->emitted(Ray(look_from, emit_info.wi), hit);
