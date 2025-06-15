@@ -1,5 +1,6 @@
 #pragma once
 
+#include <geometry/emitters.h>
 #include <geometry/surface.h>
 #include <hit_utils.h>
 #include <ray.h>
@@ -8,7 +9,7 @@
 
 #include "glm/vec3.hpp"
 
-class Quad : public Surface {
+class Quad : public Surface, public Emitter {
 private:
   glm::vec3 l_corner = glm::vec3(0.0f);  // lower-left corner of a quad
   glm::vec3 u, v;                        // vectors starting from l_corner

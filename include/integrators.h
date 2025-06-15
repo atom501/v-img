@@ -3,7 +3,7 @@
 #include <background.h>
 #include <bvh.h>
 #include <fmt/core.h>
-#include <geometry/group_emitters.h>
+#include <geometry/emitters.h>
 #include <geometry/surface.h>
 #include <progress_print.h>
 #include <rng/pcg_rand.h>

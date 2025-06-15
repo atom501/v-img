@@ -10,11 +10,11 @@
 #include "glm/vec3.hpp"
 
 class Material;
-class Surface;
+class Emitter;
 
 struct HitInfo {
   Material* mat = nullptr;
-  const Surface* obj = nullptr;
+  const Emitter* obj = nullptr;
   glm::vec3 hit_p;  // point where hit in world coords
   glm::vec3 hit_n;  // Normal where hit in world coords.
                     // Always faces towards the incoming ray, always normalized
@@ -26,7 +26,6 @@ struct EmitterInfo {
   glm::vec3 wi;  // direction vector from look_from to point on surface
   float pdf;     // solid angle density wrt look_from
   float dist;
-  const Surface* obj = nullptr;  // ptr of surface hit
 };
 
 // ONB for transforming ray directions. All are unit vectors

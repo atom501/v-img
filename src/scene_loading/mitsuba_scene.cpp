@@ -150,7 +150,7 @@ Material* mat_index_from_obj(std::shared_ptr<tinyparser_mitsuba::Object> mat_obj
 bool set_scene_from_xml(const std::filesystem::path& path_file, integrator_data& integrator_data,
                         std::vector<std::unique_ptr<Surface>>& list_surfaces,
                         std::vector<std::unique_ptr<Material>>& list_materials,
-                        std::vector<Surface*>& list_lights,
+                        std::vector<Emitter*>& list_lights,
                         std::vector<std::unique_ptr<Mesh>>& list_meshes,
                         std::vector<std::unique_ptr<Texture>>& texture_list) {
   tinyparser_mitsuba::SceneLoader loader;
@@ -376,7 +376,7 @@ bool set_scene_from_xml(const std::filesystem::path& path_file, integrator_data&
           list_surfaces.push_back(std::make_unique<Quad>(q));
 
           if (mat_ptr->is_emissive()) {
-            Surface* s_ptr = list_surfaces[list_surfaces.size() - 1].get();
+            Quad* s_ptr = static_cast<Quad*>(list_surfaces[list_surfaces.size() - 1].get());
             list_lights.push_back(s_ptr);
           }
         } else if (obj->pluginType() == "cube") {
@@ -430,7 +430,7 @@ bool set_scene_from_xml(const std::filesystem::path& path_file, integrator_data&
 
           if (mat_ptr->is_emissive()) {
             for (size_t i = rev_count_index; i > (rev_count_index - num_tri); i--) {
-              Surface* s_ptr = list_surfaces[i].get();
+              Triangle* s_ptr = static_cast<Triangle*>(list_surfaces[i].get());
               list_lights.push_back(s_ptr);
             }
           }
@@ -459,7 +459,7 @@ bool set_scene_from_xml(const std::filesystem::path& path_file, integrator_data&
 
           if (mat_ptr->is_emissive()) {
             for (size_t i = rev_count_index; i > (rev_count_index - num_tri); i--) {
-              Surface* s_ptr = list_surfaces[i].get();
+              Triangle* s_ptr = static_cast<Triangle*>(list_surfaces[i].get());
               list_lights.push_back(s_ptr);
             }
           }

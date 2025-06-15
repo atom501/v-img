@@ -1,5 +1,6 @@
 #pragma once
 
+#include <geometry/emitters.h>
 #include <geometry/surface.h>
 #include <hit_utils.h>
 
@@ -42,7 +43,7 @@ static inline glm::vec3 permute_points(const glm::vec3& orig_vec, const glm::ive
   return glm::vec3(orig_vec[indexes.x], orig_vec[indexes.y], orig_vec[indexes.z]);
 }
 
-class Triangle : public Surface {
+class Triangle : public Surface, public Emitter {
 public:
   Mesh* obj_mesh = nullptr;
   uint32_t tri_index;  // triangle number in Mesh

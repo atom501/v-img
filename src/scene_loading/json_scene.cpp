@@ -298,7 +298,7 @@ bool set_list_of_materials(const nlohmann::json& json_settings,
 bool set_list_of_objects(const nlohmann::json& json_settings,
                          std::vector<std::unique_ptr<Surface>>& list_surfaces,
                          std::vector<std::unique_ptr<Material>>& list_materials,
-                         std::vector<Surface*>& list_lights,
+                         std::vector<Emitter*>& list_lights,
                          const std::unordered_map<std::string, size_t>& name_to_index,
                          std::vector<std::unique_ptr<Mesh>>& list_meshes) {
   if (json_settings.contains("surfaces")) {
@@ -332,7 +332,7 @@ bool set_list_of_objects(const nlohmann::json& json_settings,
         list_surfaces.push_back(std::make_unique<Quad>(quad));
 
         if (mat_ptr->is_emissive()) {
-          Surface* s_ptr = list_surfaces[list_surfaces.size() - 1].get();
+          Quad* s_ptr = static_cast<Quad*>(list_surfaces[list_surfaces.size() - 1].get());
           list_lights.push_back(s_ptr);
         }
       } else if (surf_data["type"] == "sphere") {
@@ -351,7 +351,7 @@ bool set_list_of_objects(const nlohmann::json& json_settings,
         list_surfaces.push_back(std::make_unique<Sphere>(sphere));
 
         if (mat_ptr->is_emissive()) {
-          Surface* s_ptr = list_surfaces[list_surfaces.size() - 1].get();
+          Sphere* s_ptr = static_cast<Sphere*>(list_surfaces[list_surfaces.size() - 1].get());
           list_lights.push_back(s_ptr);
         }
       } else if (surf_data["type"] == "mesh") {
@@ -486,7 +486,7 @@ bool set_list_of_objects(const nlohmann::json& json_settings,
 
         if (mat_ptr->is_emissive()) {
           for (size_t i = 0; i < num_tri; i++, rev_count_index--) {
-            Surface* s_ptr = list_surfaces[rev_count_index].get();
+            Triangle* s_ptr = static_cast<Triangle*>(list_surfaces[rev_count_index].get());
             list_lights.push_back(s_ptr);
           }
         }
@@ -504,7 +504,7 @@ bool set_list_of_objects(const nlohmann::json& json_settings,
 bool set_scene_from_json(const std::filesystem::path& path_file, integrator_data& integrator_data,
                          std::vector<std::unique_ptr<Surface>>& list_surfaces,
                          std::vector<std::unique_ptr<Material>>& list_materials,
-                         std::vector<Surface*>& list_lights,
+                         std::vector<Emitter*>& list_lights,
                          std::vector<std::unique_ptr<Mesh>>& list_meshes,
                          std::vector<std::unique_ptr<Texture>>& texture_list) {
   // parse json at path_file

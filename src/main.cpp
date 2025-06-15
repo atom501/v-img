@@ -4,7 +4,7 @@
 #include <bvh.h>
 #include <fmt/chrono.h>
 #include <fmt/core.h>
-#include <geometry/group_emitters.h>
+#include <geometry/emitters.h>
 #include <geometry/mesh.h>
 #include <geometry/surface.h>
 #include <integrators.h>
@@ -42,7 +42,7 @@ int main(int argc, char* argv[]) {
 
   std::vector<std::unique_ptr<Material>> mat_list;
   std::vector<std::unique_ptr<Surface>> list_objects;
-  std::vector<Surface*> list_lights;
+  std::vector<Emitter*> list_lights;
   std::vector<std::unique_ptr<Mesh>> list_meshes;
   std::vector<std::unique_ptr<Texture>> texture_list;
 

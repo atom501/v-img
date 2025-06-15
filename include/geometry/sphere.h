@@ -1,5 +1,6 @@
 #pragma once
 
+#include <geometry/emitters.h>
 #include <geometry/surface.h>
 #include <hit_utils.h>
 #include <ray.h>
@@ -8,7 +9,7 @@
 
 #include "glm/vec3.hpp"
 
-class Sphere : public Surface {
+class Sphere : public Surface, public Emitter {
 private:
   glm::vec3 center = glm::vec3(0.0f);
   float radius = 1.0f;

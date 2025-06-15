@@ -111,7 +111,7 @@ std::pair<glm::vec3, EmitterInfo> Triangle::sample(const glm::vec3& look_from,
     pdf = 0.f;
   }
 
-  EmitterInfo emit_info = {dir_vec, pdf, std::sqrtf(dist2), this};
+  EmitterInfo emit_info = {dir_vec, pdf, std::sqrtf(dist2)};
   glm::vec3 emit_col = mat->emitted(Ray(look_from, emit_info.wi), hit);
 
   return std::make_pair(emit_col, emit_info);
