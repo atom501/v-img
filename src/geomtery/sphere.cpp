@@ -3,20 +3,6 @@
 
 #include <glm/gtx/norm.hpp>
 
-static inline void solveQuadratic(const float& discriminant, const float& a, const float& b_prime,
-                                  const float& c, float& x0, float& x1) {
-  float sign = (b_prime > 0) ? 1.0f : -1.0f;
-  auto q = b_prime + sign * (sqrt(a * discriminant));
-
-  if (discriminant == 0)
-    x0 = x1 = c / q;
-  else {
-    x0 = c / q;
-    x1 = q / a;
-  }
-  if (x0 > x1) std::swap(x0, x1);
-}
-
 std::optional<HitInfo> Sphere::hit_surface(Ray& ray) {
   return sphere_hit_template<std::optional<HitInfo>>(ray);
 }

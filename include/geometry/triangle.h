@@ -5,6 +5,7 @@
 #include <hit_utils.h>
 
 #include <cstdint>
+#include <glm/gtx/norm.hpp>
 
 class Mesh;
 
