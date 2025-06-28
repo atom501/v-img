@@ -9,6 +9,14 @@
 
 #include "glm/vec3.hpp"
 
+inline static bool is_interior(float a, float b) {
+  // Given the hit point in plane coordinates, return false if it is outside the primitive
+
+  if ((a < 0) || (1 < a) || (b < 0) || (1 < b)) return false;
+
+  return true;
+}
+
 class Quad : public Surface, public Emitter {
 private:
   glm::vec3 l_corner = glm::vec3(0.0f);  // lower-left corner of a quad

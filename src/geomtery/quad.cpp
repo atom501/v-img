@@ -5,14 +5,6 @@
 #include <glm/gtx/norm.hpp>
 #include <optional>
 
-inline static bool is_interior(float a, float b) {
-  // Given the hit point in plane coordinates, return false if it is outside the primitive
-
-  if ((a < 0) || (1 < a) || (b < 0) || (1 < b)) return false;
-
-  return true;
-}
-
 std::optional<HitInfo> Quad::hit_surface(Ray& ray) {
   return quad_hit_template<std::optional<HitInfo>>(ray);
 }

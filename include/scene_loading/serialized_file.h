@@ -29,7 +29,7 @@ private:
   std::vector<std::byte> m_inflateBuffer;
 
 public:
-  ZStream::ZStream(std::fstream &in_fs) : fs(in_fs) {
+  ZStream(std::fstream &in_fs) : fs(in_fs) {
     // get file size
     std::streampos pos = fs.tellg();
     fs.seekg(0, fs.end);
@@ -55,7 +55,7 @@ public:
   virtual ~ZStream() = default;
 
   // decompress and read size number of bytes to ptr
-  void ZStream::read(void *ptr, size_t size) {
+  void read(void *ptr, size_t size) {
     unsigned char *targetPtr = (unsigned char *)ptr;
     while (size > 0) {
       // if ran out of data to read more into buffer and reset zstream pointer and data size

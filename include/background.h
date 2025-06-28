@@ -3,6 +3,7 @@
 #include <ray.h>
 
 #include <algorithm>
+#include <utility>
 #include <vector>
 
 #include "glm/vec3.hpp"
@@ -95,7 +96,11 @@ public:
   }
 
   std::pair<glm::vec3, EmitterInfo> sample(const glm::vec3& look_from,
-                                           pcg32_random_t& pcg_rng) const override;
+                                           pcg32_random_t& pcg_rng) const override {
+    return std::make_pair(glm::vec3(0.f), EmitterInfo{glm::vec3(0.f), 0.f, 0.f});
+  }
   float pdf(const glm::vec3& look_from, const glm::vec3& look_at,
-            const glm::vec3& dir) const override;
+            const glm::vec3& dir) const override {
+    return 0.f;
+  }
 };
