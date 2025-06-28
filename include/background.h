@@ -1,4 +1,5 @@
 #pragma once
+#include <geometry/emitters.h>
 #include <ray.h>
 
 #include <algorithm>
@@ -14,7 +15,7 @@ public:
   virtual glm::vec3 background_emit(const Ray& in_ray) const = 0;
 };
 
-class ConstBackground : public Background {
+class ConstBackground : public Background, public Emitter {
 private:
   glm::vec3 col;
 
@@ -23,10 +24,28 @@ public:
   ~ConstBackground() = default;
 
   glm::vec3 background_emit(const Ray& in_ray) const override { return col; }
+
+  std::pair<glm::vec3, EmitterInfo> sample(const glm::vec3& look_from,
+                                           pcg32_random_t& pcg_rng) const {
+    float r1 = rand_float(pcg_rng);
+    float r2 = rand_float(pcg_rng);
+    // sample uniform sphere
+    glm::vec3 wi = sample_sphere(r1, r2);
+
+    constexpr float pdf = 1.f / (4 * M_PI);
+
+    constexpr float dist = std::numeric_limits<float>::infinity();
+
+    return std::make_pair(ConstBackground::col, EmitterInfo{wi, pdf, dist});
+  }
+
+  float pdf(const glm::vec3& look_from, const glm::vec3& look_at, const glm::vec3& dir) const {
+    return 1.f / (4 * M_PI);
+  }
 };
 
 // image loaded in from a file
-class EnvMap : public Background {
+class EnvMap : public Background, public Emitter {
 private:
   uint32_t width;
   uint32_t height;
@@ -74,4 +93,9 @@ public:
 
     return glm::mix(a, b, glm::vec3(y_fraction));
   }
+
+  std::pair<glm::vec3, EmitterInfo> sample(const glm::vec3& look_from,
+                                           pcg32_random_t& pcg_rng) const override;
+  float pdf(const glm::vec3& look_from, const glm::vec3& look_at,
+            const glm::vec3& dir) const override;
 };

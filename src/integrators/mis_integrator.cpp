@@ -56,10 +56,6 @@ glm::vec3 mis_integrator(Ray& input_ray, std::vector<size_t>& thread_stack, cons
 
           float mis_weight = l_sample_info.pdf / (l_sample_info.pdf + mat_pdf);
           bounce_result += throughput * mat_eval * mis_weight * light_col / l_sample_info.pdf;
-          if (std::isnan(bounce_result[0]) || std::isnan(bounce_result[1])
-              || std::isnan(bounce_result[2])) {
-            fmt::println("NaN at bounce result depth {}", d);
-          }
         }
       }
     }

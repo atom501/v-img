@@ -2,6 +2,7 @@
 
 #include <rng/pcg_rand.h>
 
+#include <algorithm>
 #include <cmath>
 #include <glm/vec3.hpp>
 
@@ -68,3 +69,54 @@ inline glm::vec3 sample_hemisphere_cosine(const float& rand1, const float& rand2
 inline float rand_float(pcg32_random_t& pcg_state) {
   return std::ldexp(static_cast<float>(pcg32_random_r(&pcg_state)), -32);
 }
+
+class ArraySampling1D {
+public:
+  std::vector<float> cdf;
+  float funcInt;  // The integral of the absolute value of the function
+
+public:
+  // input value given by a function, will be used to create a CDF
+  ArraySampling1D(const std::vector<float>& function_values) {
+    size_t n = function_values.size();
+    ArraySampling1D::cdf = std::vector<float>(n + 1);
+
+    cdf[0] = 0.f;
+
+    // the integral of abs(f) at each point at x
+    for (size_t x = 1; x < n + 1; x++) {
+      // assumption is that min cdf is 0 and max 1
+      cdf[x] = cdf[x - 1] + std::abs(function_values[x - 1]) * 1.f / n;
+    }
+
+    // value of the integral
+    ArraySampling1D::funcInt = cdf[n];
+
+    // normalize CDF
+
+    // case of uniform probability distribution
+    if (ArraySampling1D::funcInt == 0)
+      for (size_t i = 1; i < n + 1; ++i) cdf[i] = static_cast<float>(i) / static_cast<float>(n);
+    else
+      for (size_t i = 1; i < n + 1; ++i) cdf[i] /= ArraySampling1D::funcInt;
+  }
+
+  ~ArraySampling1D() = default;
+
+  /*
+   * given a random value u [0,1). return the index chosen (index of function_values used to create
+   * it) as float
+   */
+  float sample(float u) {
+    // largest index where the CDF was less than or equal to u
+    // since will never be 1.f. Maximum index is n - 1 (last value for function_values)
+    std::vector<float>::iterator itr = std::upper_bound(cdf.begin(), cdf.end(), u);
+    size_t index = itr - cdf.begin() - 1;
+
+    // adding offset for sampling to avoid aliasing
+    float du = u - cdf[index];
+    if (cdf[index + 1] - cdf[index] > 0) du /= cdf[index + 1] - cdf[index];
+
+    return static_cast<float>(index) + du;
+  }
+};
