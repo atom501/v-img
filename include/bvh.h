@@ -137,8 +137,8 @@ public:
 
         if constexpr (std::is_same_v<T, bool>) {
           // don't care about order in hitcheck. as exit on first hit
-          thread_stack.push_back(first_child);
-          thread_stack.push_back(sec_child);
+          if (bb_hit1) thread_stack.push_back(first_child);
+          if (bb_hit2) thread_stack.push_back(sec_child);
         } else {
           // order by distance
           if (bb_hit2) {
