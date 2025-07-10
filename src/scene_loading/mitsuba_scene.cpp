@@ -236,9 +236,6 @@ bool set_scene_from_xml(const std::filesystem::path& path_file, integrator_data&
               int64_t sample_count = child_p["sample_count"].getInteger();
 
               integrator_data.samples = sample_count;
-
-              // assume always MIS for now
-              integrator_data.func = integrator_func::mis;
               break;
             }
             default:
@@ -251,6 +248,17 @@ bool set_scene_from_xml(const std::filesystem::path& path_file, integrator_data&
         auto properties = obj->properties();
         int max_depth = properties["max_depth"].getInteger();
         integrator_data.depth = max_depth;
+
+        if (obj->pluginType() == "path") {
+          integrator_data.func = integrator_func::mis;
+        } else if (obj->pluginType() == "mat") {
+          integrator_data.func = integrator_func::material;
+        } else if (obj->pluginType() == "normal") {
+          integrator_data.func = integrator_func::normal;
+        } else {
+          fmt::println("Unknown integrator {}. Default to MIS", obj->pluginType());
+          integrator_data.func = integrator_func::mis;
+        }
         break;
       }
       case tinyparser_mitsuba::OT_EMITTER: {
