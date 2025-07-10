@@ -17,7 +17,7 @@ glm::vec3 mis_integrator(Ray& input_ray, std::vector<size_t>& thread_stack, cons
 
   if (!hit.has_value()) {
     // scene missed. if background not assigned it will be init to black
-    background->background_emit(test_ray);
+    return background->background_emit(test_ray);
   } else if (hit.value().mat->is_emissive()) {
     // if first hit is emissive
     return hit.value().mat->emitted(test_ray, hit.value());
