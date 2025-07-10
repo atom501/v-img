@@ -8,6 +8,15 @@
 #include <scene_loading/serialized_file.h>
 #include <tinyexr.h>
 
+float hfov_deg_to_vfov_deg(float h_fov_deg, int64_t width, int64_t height) {
+  float hfov_rad = h_fov_deg * M_PI / 180.f;
+  float aspect_ratio = static_cast<float>(width) / static_cast<float>(height);
+
+  float vfov_deg = 2.f * atan(tan(hfov_rad / 2.f) * aspect_ratio) * (180.f / M_PI);
+
+  return vfov_deg;
+}
+
 void cube_mesh(std::vector<glm::vec3>& vertices, std::vector<glm::vec3>& normals,
                std::vector<glm::vec2>& texcoords, std::vector<uint32_t>& tri_vertex,
                std::vector<uint32_t>& tri_normal, std::vector<int>& tri_uv) {
@@ -168,7 +177,8 @@ bool set_scene_from_xml(const std::filesystem::path& path_file, integrator_data&
     switch (obj->type()) {
       case tinyparser_mitsuba::OT_SENSOR: {
         auto properties = obj->properties();
-        float h_fov = properties["fov"].getNumber();
+        float fov_deg = properties["fov"].getNumber();
+        std::string fov_axis = properties["fov_axis"].getString("x");
 
         tinyparser_mitsuba::Transform to_world_m = properties["to_world"].getTransform();
         for (const auto& obj_child : obj->anonymousChildren()) {
@@ -180,11 +190,26 @@ bool set_scene_from_xml(const std::filesystem::path& path_file, integrator_data&
 
               // set up camera
               integrator_data.resolution = glm::ivec2(width, height);
+              float vfov;
 
-              float hfov_rad = h_fov * M_PI / 180.f;
-              float aspect_ratio = static_cast<float>(width) / static_cast<float>(height);
-
-              float vfov = 2.f * atan(tan(hfov_rad / 2.f) * aspect_ratio) * (180.f / M_PI);
+              if (fov_axis == "x") {
+                vfov = hfov_deg_to_vfov_deg(fov_deg, width, height);
+              } else if (fov_axis == "y") {
+                vfov = fov_deg;
+              } else if (fov_axis == "smaller") {
+                if (width < height)
+                  vfov = hfov_deg_to_vfov_deg(fov_deg, width, height);
+                else
+                  vfov = fov_deg;
+              } else if (fov_axis == "larger") {
+                if (width > height)
+                  vfov = hfov_deg_to_vfov_deg(fov_deg, width, height);
+                else
+                  vfov = fov_deg;
+              } else {
+                fmt::println("fov axis {} is unknown. defaulting to x axis", fov_axis);
+                vfov = hfov_deg_to_vfov_deg(fov_deg, width, height);
+              }
 
               glm::mat4 to_world;
 
@@ -213,7 +238,7 @@ bool set_scene_from_xml(const std::filesystem::path& path_file, integrator_data&
               integrator_data.samples = sample_count;
 
               // assume always MIS for now
-              integrator_data.func = integrator_func::material;
+              integrator_data.func = integrator_func::mis;
               break;
             }
             default:
@@ -284,13 +309,21 @@ bool set_scene_from_xml(const std::filesystem::path& path_file, integrator_data&
               // set env map
               integrator_data.background
                   = std::make_unique<EnvMap>(EnvMap(width, height, image, glm::inverse(transform)));
+
+              list_lights.push_back(static_cast<EnvMap*>(integrator_data.background.get()));
             }
           } else {
             fmt::println("env map file type {} is not supported", env_type);
           }
 
         } else if (obj->pluginType() == "constant") {
-          fmt::println("const background");
+          auto p = obj->properties();
+          tinyparser_mitsuba::Color c = p["radiance"].getColor();
+
+          glm::vec3 const_col(c.r, c.g, c.b);
+          integrator_data.background
+              = std::make_unique<ConstBackground>(ConstBackground(const_col));
+          list_lights.push_back(static_cast<ConstBackground*>(integrator_data.background.get()));
         }
       }
       default:

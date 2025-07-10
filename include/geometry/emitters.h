@@ -21,6 +21,8 @@ public:
   virtual float pdf(const glm::vec3& look_from, const glm::vec3& look_at,
                     const glm::vec3& dir) const
       = 0;
+
+  virtual bool is_background() const { return false; }
 };
 
 class GroupOfEmitters {
