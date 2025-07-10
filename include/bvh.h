@@ -80,6 +80,10 @@ public:
     std::optional<float> bb_hit1;
     std::optional<float> bb_hit2;
 
+    if (BVH::nodes.size() == 0) {
+      return return_variable;
+    }
+
     /*
      * check root node first. Since children are always hit checked before being pushed onto the
      * stack, no need to perform hit test again when popping the node (except root node)
