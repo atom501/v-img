@@ -16,8 +16,8 @@ glm::vec3 mis_integrator(Ray& input_ray, std::vector<size_t>& thread_stack, cons
   std::optional<HitInfo> hit = bvh.hit<std::optional<HitInfo>>(test_ray, thread_stack, prims);
 
   if (!hit.has_value()) {
-    // scene missed
-    return glm::vec3(0.0f);
+    // scene missed. if background not assigned it will be init to black
+    background->background_emit(test_ray);
   } else if (hit.value().mat->is_emissive()) {
     // if first hit is emissive
     return hit.value().mat->emitted(test_ray, hit.value());
@@ -111,7 +111,14 @@ glm::vec3 mis_integrator(Ray& input_ray, std::vector<size_t>& thread_stack, cons
         test_ray = direct_light_ray;
       }
     } else {
-      // missed scene
+      // missed scene. compensate for hitting emissive background
+      if (mat_sample_pdf != 0 && background->is_emissive()) {
+        light_pdf = background->background_pdf(direct_light_ray.dir) / lights.num_lights();
+
+        float mis_weight = mat_sample_pdf / (light_pdf + mat_sample_pdf);
+
+        bounce_result += throughput * mis_weight * background->background_emit(direct_light_ray);
+      }
       return bounce_result;
     }
   }

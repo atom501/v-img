@@ -5,6 +5,8 @@
 #include <algorithm>
 #include <cmath>
 #include <glm/vec3.hpp>
+#include <span>
+#include <vector>
 
 // give two random numbers [0,1] as input and return a point on sphere.
 // where pole of hemisphere is (0,0,1)
@@ -73,11 +75,11 @@ inline float rand_float(pcg32_random_t& pcg_state) {
 class ArraySampling1D {
 public:
   std::vector<float> cdf;
-  float funcInt;  // The integral of the absolute value of the function
+  float func_int;  // The integral of the absolute value of the function
 
 public:
   // input value given by a function, will be used to create a CDF
-  ArraySampling1D(const std::vector<float>& function_values) {
+  ArraySampling1D(std::span<const float> function_values) {
     size_t n = function_values.size();
     ArraySampling1D::cdf = std::vector<float>(n + 1);
 
@@ -90,33 +92,93 @@ public:
     }
 
     // value of the integral
-    ArraySampling1D::funcInt = cdf[n];
+    ArraySampling1D::func_int = cdf[n];
 
     // normalize CDF
-
     // case of uniform probability distribution
-    if (ArraySampling1D::funcInt == 0)
+    if (ArraySampling1D::func_int == 0)
       for (size_t i = 1; i < n + 1; ++i) cdf[i] = static_cast<float>(i) / static_cast<float>(n);
     else
-      for (size_t i = 1; i < n + 1; ++i) cdf[i] /= ArraySampling1D::funcInt;
+      for (size_t i = 1; i < n + 1; ++i) cdf[i] /= ArraySampling1D::func_int;
   }
 
+  ArraySampling1D() = default;
   ~ArraySampling1D() = default;
 
   /*
    * given a random value u [0,1). return the index chosen (index of function_values used to create
-   * it) as float
+   * it) and offset as (index, offset)
    */
-  float sample(float u) {
+  std::pair<size_t, float> sample(float u) const {
     // largest index where the CDF was less than or equal to u
     // since will never be 1.f. Maximum index is n - 1 (last value for function_values)
-    std::vector<float>::iterator itr = std::upper_bound(cdf.begin(), cdf.end(), u);
+    std::vector<float>::const_iterator itr = std::upper_bound(cdf.begin(), cdf.end(), u);
     size_t index = itr - cdf.begin() - 1;
 
     // adding offset for sampling to avoid aliasing
     float du = u - cdf[index];
     if (cdf[index + 1] - cdf[index] > 0) du /= cdf[index + 1] - cdf[index];
 
-    return static_cast<float>(index) + du;
+    return std::make_pair(index, du);
+  }
+};
+
+class ArraySampling2D {
+private:
+  ArraySampling1D row_probabilities;
+  std::vector<ArraySampling1D> image_probabilities;
+  uint32_t width;
+  uint32_t height;
+
+public:
+  ArraySampling2D() = default;
+
+  ArraySampling2D(const std::vector<glm::vec3>& image, uint32_t width, uint32_t height) {
+    ArraySampling2D::width = width;
+    ArraySampling2D::height = height;
+
+    // make a copy of image with luminance values
+    std::vector<float> image_luminance(image.size());
+
+    constexpr glm::vec3 lum_const = glm::vec3(0.2126f, 0.7152f, 0.0722f);
+    for (size_t i = 0; i < image.size(); i++) {
+      image_luminance[i] = glm::dot(image[i], lum_const);
+    }
+
+    std::vector<float> row_integral_vals;
+
+    for (size_t h = 0; h < height; h++) {
+      std::span<const float> img_span(image_luminance.data() + (h * width), width);
+
+      const ArraySampling1D prob_sampling_of_row = ArraySampling1D(img_span);
+      image_probabilities.push_back(prob_sampling_of_row);
+      row_integral_vals.push_back(prob_sampling_of_row.func_int);
+    }
+
+    // using integral values of each row as weights
+    row_probabilities = ArraySampling1D(row_integral_vals);
+  }
+
+  ~ArraySampling2D() = default;
+
+  /*
+   * return the (u, v) coords of the env map. where (0, 0) is the top left corner. Third item is the
+   * pdf of choosing the sample
+   */
+  std::tuple<float, float, float> sample(float r1, float r2) const {
+    // pick a row
+    auto [row_index, dv] = row_probabilities.sample(r1);
+
+    // pick column
+    auto [column_index, du] = image_probabilities[row_index].sample(r2);
+
+    const float u = (static_cast<float>(column_index) + du) / ArraySampling2D::width;
+    const float v = (static_cast<float>(row_index) + dv) / ArraySampling2D::height;
+
+    float pdf = (row_probabilities.cdf[row_index + 1] - row_probabilities.cdf[row_index])
+                * (image_probabilities[row_index].cdf[column_index + 1]
+                   - image_probabilities[row_index].cdf[column_index]);
+
+    return std::make_tuple(u, v, pdf);
   }
 };
