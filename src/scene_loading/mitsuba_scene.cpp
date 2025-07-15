@@ -309,14 +309,13 @@ bool set_scene_from_xml(const std::filesystem::path& path_file, integrator_data&
 
               for (size_t i = 0; i < width * height; i++) {
                 image[i] = glm::vec3(out[i * 4], out[i * 4 + 1], out[i * 4 + 2]);
-                image[i] *= radiance_scale;
               }
 
               free(out);  // release memory of image data
 
               // set env map
-              integrator_data.background
-                  = std::make_unique<EnvMap>(EnvMap(width, height, image, glm::inverse(transform)));
+              integrator_data.background = std::make_unique<EnvMap>(
+                  EnvMap(width, height, image, glm::inverse(transform), transform, radiance_scale));
 
               list_lights.push_back(static_cast<EnvMap*>(integrator_data.background.get()));
             }
