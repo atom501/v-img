@@ -3,6 +3,7 @@
 #include <rng/pcg_rand.h>
 
 #include <algorithm>
+#include <bit>
 #include <cmath>
 #include <glm/vec3.hpp>
 #include <span>
@@ -67,9 +68,30 @@ inline glm::vec3 sample_hemisphere_cosine(const float& rand1, const float& rand2
   return glm::vec3(x, y, z);
 }
 
-// get a random float of value [0,1)
+/*
+ * get a random float of value [0,1). source:
+ * https://marc-b-reynolds.github.io/distribution/2017/01/17/DenseFloat.html
+ */
 inline float rand_float(pcg32_random_t& pcg_state) {
-  return std::ldexp(static_cast<float>(pcg32_random_r(&pcg_state)), -32);
+  uint64_t r1 = pcg32_random_r(&pcg_state);
+  uint64_t r2 = pcg32_random_r(&pcg_state);
+
+  uint64_t u = (r1 << 32ull) | r2;
+
+  uint32_t z = std::countl_zero(u);
+
+  if (z <= 40) {
+    uint32_t e = 126 - z;                   // compute the biased exponent
+    uint32_t m = ((uint32_t)u) & 0x7fffff;  // explict significand bits
+    uint32_t float_bits = e << 23 | m;
+    return reinterpret_cast<float&>(float_bits);  // construct the binary32
+  }
+
+  // The probabilty of reaching here is 2^-40. There are as many points
+  // on this subinterval as the standard equidistance method produces
+  // across the entire output range.
+
+  return 0x1.0p-64f * (float)((uint32_t)u);
 }
 
 class ArraySampling1D {
@@ -88,7 +110,7 @@ public:
     // the integral of abs(f) at each point at x
     for (size_t x = 1; x < n + 1; x++) {
       // assumption is that min cdf is 0 and max 1
-      cdf[x] = cdf[x - 1] + std::abs(function_values[x - 1]) * 1.f / n;
+      cdf[x] = cdf[x - 1] + std::abs(function_values[x - 1]);
     }
 
     // value of the integral
@@ -97,9 +119,9 @@ public:
     // normalize CDF
     // case of uniform probability distribution
     if (ArraySampling1D::func_int == 0)
-      for (size_t i = 1; i < n + 1; ++i) cdf[i] = static_cast<float>(i) / static_cast<float>(n);
+      for (size_t i = 0; i < n + 1; ++i) cdf[i] = static_cast<float>(i) / static_cast<float>(n);
     else
-      for (size_t i = 1; i < n + 1; ++i) cdf[i] /= ArraySampling1D::func_int;
+      for (size_t i = 0; i < n + 1; ++i) cdf[i] /= ArraySampling1D::func_int;
   }
 
   ArraySampling1D() = default;
@@ -124,13 +146,12 @@ public:
 };
 
 class ArraySampling2D {
-private:
+public:
   ArraySampling1D row_probabilities;
   std::vector<ArraySampling1D> image_probabilities;
   uint32_t width;
   uint32_t height;
 
-public:
   ArraySampling2D() = default;
 
   ArraySampling2D(const std::vector<glm::vec3>& image, uint32_t width, uint32_t height) {
@@ -141,8 +162,14 @@ public:
     std::vector<float> image_luminance(image.size());
 
     constexpr glm::vec3 lum_const = glm::vec3(0.2126f, 0.7152f, 0.0722f);
-    for (size_t i = 0; i < image.size(); i++) {
-      image_luminance[i] = glm::dot(image[i], lum_const);
+    for (size_t y = 0; y < height; y++) {
+      float v = (static_cast<float>(y) + 0.5f) / static_cast<float>(height);
+      float sin_elevation = std::sin(M_PI * v);
+
+      for (size_t x = 0; x < width; x++) {
+        image_luminance[(y * width) + x]
+            = glm::dot(image[(y * width) + x], lum_const) * sin_elevation;
+      }
     }
 
     std::vector<float> row_integral_vals;
@@ -175,9 +202,11 @@ public:
     const float u = (static_cast<float>(column_index) + du) / ArraySampling2D::width;
     const float v = (static_cast<float>(row_index) + dv) / ArraySampling2D::height;
 
-    float pdf = (row_probabilities.cdf[row_index + 1] - row_probabilities.cdf[row_index])
-                * (image_probabilities[row_index].cdf[column_index + 1]
-                   - image_probabilities[row_index].cdf[column_index]);
+    float pdf_y = row_probabilities.cdf[row_index + 1] - row_probabilities.cdf[row_index];
+
+    float pdf_x = image_probabilities[row_index].cdf[column_index + 1]
+                  - image_probabilities[row_index].cdf[column_index];
+    float pdf = pdf_y * pdf_x;
 
     return std::make_tuple(u, v, pdf);
   }
