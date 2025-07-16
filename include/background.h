@@ -133,20 +133,21 @@ public:
     auto [u_env, v_env, choose_sample_pdf] = image_sampling.sample(r1, r2);
 
     // convert u, v to a direction
-    glm::vec3 wi;
 
-    wi.y = std::cos(v_env * M_PI);
+    float elevation = v_env * M_PI;
+    float y = std::cos(v_env * M_PI);
 
-    const float temp = (u_env * 2.f - 1.f) * M_PI;
-    wi.x = -std::sin(temp);
-    wi.z = std::cos(temp);
+    const float azimuth = u_env * 2.f * M_PI;
+    float x = std::sin(azimuth) * std::sin(elevation);
+    float z = -1 * std::cos(azimuth) * std::sin(elevation);
 
+    glm::vec3 wi(x, y, z);
     wi = glm::vec3(env_to_world * glm::vec4(wi, 0.0f));
     wi = glm::normalize(wi);
 
     constexpr float dist = std::numeric_limits<float>::infinity();
 
-    float sin_elevation = std::sin(M_PI * v_env);
+    float sin_elevation = std::sin(elevation);
     float pdf = (choose_sample_pdf * width * height) / (2.f * M_PI * M_PI * sin_elevation);
 
     return std::make_pair(col_from_uv(u_env, v_env) * radiance_scale, EmitterInfo{wi, pdf, dist});
