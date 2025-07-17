@@ -1,8 +1,9 @@
 #pragma once
 
+#include <background.h>
 #include <bvh.h>
 #include <fmt/core.h>
-#include <geometry/group_emitters.h>
+#include <geometry/emitters.h>
 #include <geometry/surface.h>
 #include <progress_print.h>
 #include <rng/pcg_rand.h>
@@ -27,7 +28,7 @@ struct integrator_data {
   glm::ivec2 resolution;
   uint32_t samples;
   uint32_t depth;
-  glm::vec3 background_col;
+  std::unique_ptr<Background> background;
   TLCam camera;
 };
 
@@ -122,8 +123,13 @@ std::vector<glm::vec3> scene_integrator(const integrator_data& render_data, BVH&
                 Ray cam_ray = render_data.camera.generate_ray(x + rand_x, y + rand_y);
 
                 // use set integrator to get color for a pixel
-                pixel_col_accumulator += integrator(cam_ray, thread_stack, bvh, prims, lights,
-                                                    pcg_state, render_data.depth);
+                glm::vec3 p_col = integrator(cam_ray, thread_stack, bvh, prims, lights, pcg_state,
+                                             render_data.depth, render_data.background.get());
+                if (std::isnan(p_col[0]) || std::isnan(p_col[1]) || std::isnan(p_col[2])) {
+                  fmt::println("NaN at x_sample {}, y_sample {}, x {}, y {}", x_sample, y_sample, x,
+                               y);
+                }
+                pixel_col_accumulator += p_col;
               }
             }
 
@@ -136,8 +142,12 @@ std::vector<glm::vec3> scene_integrator(const integrator_data& render_data, BVH&
               Ray cam_ray = render_data.camera.generate_ray(x + rand_x, y + rand_y);
 
               // use set integrator to get color for a pixel
-              pixel_col_accumulator += integrator(cam_ray, thread_stack, bvh, prims, lights,
-                                                  pcg_state, render_data.depth);
+              glm::vec3 p_col = integrator(cam_ray, thread_stack, bvh, prims, lights, pcg_state,
+                                           render_data.depth, render_data.background.get());
+              if (std::isnan(p_col[0]) || std::isnan(p_col[1]) || std::isnan(p_col[2])) {
+                fmt::println("NaN at remaining sample {}, x {}, y {}", sample, x, y);
+              }
+              pixel_col_accumulator += p_col;
             }
 
             // average final sum
@@ -164,16 +174,17 @@ std::vector<glm::vec3> scene_integrator(const integrator_data& render_data, BVH&
 glm::vec3 normal_integrator(Ray& input_ray, std::vector<size_t>& thread_stack, const BVH& bvh,
                             const std::vector<std::unique_ptr<Surface>>& prims,
                             const GroupOfEmitters& lights, pcg32_random_t& hash_state,
-                            uint32_t depth);
+                            uint32_t depth, Background* background);
 
 glm::vec3 material_integrator(Ray& input_ray, std::vector<size_t>& thread_stack, const BVH& bvh,
                               const std::vector<std::unique_ptr<Surface>>& prims,
                               const GroupOfEmitters& lights, pcg32_random_t& hash_state,
-                              uint32_t depth);
+                              uint32_t depth, Background* background);
 
 glm::vec3 mis_integrator(Ray& input_ray, std::vector<size_t>& thread_stack, const BVH& bvh,
                          const std::vector<std::unique_ptr<Surface>>& prims,
-                         const GroupOfEmitters& lights, pcg32_random_t& hash_state, uint32_t depth);
+                         const GroupOfEmitters& lights, pcg32_random_t& hash_state, uint32_t depth,
+                         Background* background);
 
 std::vector<glm::vec3> heatmap_img(const integrator_data& render_data, const BVH& bvh,
                                    const std::vector<std::unique_ptr<Surface>>& prims,

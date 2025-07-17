@@ -4,7 +4,7 @@
 glm::vec3 normal_integrator(Ray& input_ray, std::vector<size_t>& thread_stack, const BVH& bvh,
                             const std::vector<std::unique_ptr<Surface>>& prims,
                             const GroupOfEmitters& lights, pcg32_random_t& hash_state,
-                            uint32_t depth) {
+                            uint32_t depth, Background* background) {
   // perform hit test
   std::optional<HitInfo> hit = bvh.hit<std::optional<HitInfo>>(input_ray, thread_stack, prims);
 

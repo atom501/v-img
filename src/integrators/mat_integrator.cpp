@@ -4,7 +4,7 @@
 glm::vec3 material_integrator(Ray& input_ray, std::vector<size_t>& thread_stack, const BVH& bvh,
                               const std::vector<std::unique_ptr<Surface>>& prims,
                               const GroupOfEmitters& lights, pcg32_random_t& hash_state,
-                              uint32_t depth) {
+                              uint32_t depth, Background* background) {
   auto test_ray = input_ray;
   glm::vec3 throughput = glm::vec3(1.0f);
   constexpr uint32_t roulette_threshold = 5;
@@ -47,8 +47,7 @@ glm::vec3 material_integrator(Ray& input_ray, std::vector<size_t>& thread_stack,
         return throughput * emitted_col;
       }
     } else {
-      // TODO set background color
-      return glm::vec3(0.0f);
+      return throughput * background->background_emit(test_ray);
     }
   }
 

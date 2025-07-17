@@ -2,8 +2,8 @@
 
 glm::vec3 mis_integrator(Ray& input_ray, std::vector<size_t>& thread_stack, const BVH& bvh,
                          const std::vector<std::unique_ptr<Surface>>& prims,
-                         const GroupOfEmitters& lights, pcg32_random_t& hash_state,
-                         uint32_t depth) {
+                         const GroupOfEmitters& lights, pcg32_random_t& hash_state, uint32_t depth,
+                         Background* background) {
   Ray test_ray = input_ray;
   float light_pdf, mat_pdf;
   glm::vec3 bounce_result = glm::vec3(0.0f);
@@ -16,8 +16,8 @@ glm::vec3 mis_integrator(Ray& input_ray, std::vector<size_t>& thread_stack, cons
   std::optional<HitInfo> hit = bvh.hit<std::optional<HitInfo>>(test_ray, thread_stack, prims);
 
   if (!hit.has_value()) {
-    // scene missed
-    return glm::vec3(0.0f);
+    // scene missed. if background not assigned it will be init to black
+    return background->background_emit(test_ray);
   } else if (hit.value().mat->is_emissive()) {
     // if first hit is emissive
     return hit.value().mat->emitted(test_ray, hit.value());
@@ -41,17 +41,22 @@ glm::vec3 mis_integrator(Ray& input_ray, std::vector<size_t>& thread_stack, cons
       // light sampling
       auto [light_col, l_sample_info] = lights.sample(hit.value().hit_p, hash_state);
 
-      Ray shadow_ray = Ray(hit.value().hit_p, l_sample_info.wi);
-      shadow_ray.maxT = l_sample_info.dist + 0.0001f;
-      Surface* l_visibility_check = bvh.hit<Surface*>(shadow_ray, thread_stack, prims);
+      // pdf == 0 where light sampling fails
+      if (l_sample_info.pdf != 0.f) {
+        Ray shadow_ray = Ray(hit.value().hit_p, l_sample_info.wi);
+        shadow_ray.maxT = l_sample_info.dist - 0.0001f;
 
-      // if light visible from point
-      if (l_visibility_check && l_visibility_check == l_sample_info.obj) {
-        const auto [mat_eval, mat_pdf]
-            = hit.value().mat->eval_pdf_pair(test_ray.dir, l_sample_info.wi, hit.value());
+        // check if ray hits anything between ray origin and the point on light
+        bool l_visibility_check = bvh.occlude(shadow_ray, thread_stack, prims);
 
-        float mis_weight = l_sample_info.pdf / (l_sample_info.pdf + mat_pdf);
-        bounce_result += throughput * mat_eval * mis_weight * light_col / l_sample_info.pdf;
+        // if light visible from point
+        if (!l_visibility_check) {
+          const auto [mat_eval, mat_pdf]
+              = hit.value().mat->eval_pdf_pair(test_ray.dir, l_sample_info.wi, hit.value());
+
+          float mis_weight = l_sample_info.pdf / (l_sample_info.pdf + mat_pdf);
+          bounce_result += throughput * mat_eval * mis_weight * light_col / l_sample_info.pdf;
+        }
       }
     }
 
@@ -106,7 +111,14 @@ glm::vec3 mis_integrator(Ray& input_ray, std::vector<size_t>& thread_stack, cons
         test_ray = direct_light_ray;
       }
     } else {
-      // missed scene
+      // missed scene. compensate for hitting emissive background
+      if (mat_sample_pdf != 0 && background->is_emissive()) {
+        light_pdf = background->background_pdf(direct_light_ray.dir) / lights.num_lights();
+
+        float mis_weight = mat_sample_pdf / (light_pdf + mat_sample_pdf);
+
+        bounce_result += throughput * mis_weight * background->background_emit(direct_light_ray);
+      }
       return bounce_result;
     }
   }

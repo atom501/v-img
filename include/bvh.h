@@ -50,6 +50,11 @@ public:
   static BVH build(const std::vector<AABB>& bboxes, const std::vector<glm::vec3>& centers,
                    const size_t num_bins);
 
+  bool occlude(Ray& ray, std::vector<size_t>& thread_stack,
+               const std::vector<std::unique_ptr<Surface>>& prims) const {
+    return hit<bool>(ray, thread_stack, prims);
+  }
+
   /*
    * If output type is set to std::optional<HitInfo>, this will perform same function as
    * bvh checking for hit and getting surface information. If output is set to uint32_t it will
@@ -57,7 +62,7 @@ public:
    */
   template <typename T,
             std::enable_if_t<std::is_same_v<T, std::optional<HitInfo>>
-                                 || std::is_same_v<T, uint32_t> || std::is_same_v<T, Surface*>,
+                                 || std::is_same_v<T, uint32_t> || std::is_same_v<T, bool>,
                              bool>
             = true>
   T hit(Ray& ray, std::vector<size_t>& thread_stack,
@@ -68,12 +73,16 @@ public:
       return_variable = std::nullopt;
     } else if constexpr (std::is_same_v<T, uint32_t>) {
       return_variable = 0;
-    } else if constexpr (std::is_same_v<T, Surface*>) {
-      return_variable = nullptr;
+    } else if constexpr (std::is_same_v<T, bool>) {
+      return_variable = false;
     }
 
     std::optional<float> bb_hit1;
     std::optional<float> bb_hit2;
+
+    if (BVH::nodes.size() == 0) {
+      return return_variable;
+    }
 
     /*
      * check root node first. Since children are always hit checked before being pushed onto the
@@ -91,8 +100,8 @@ public:
         return std::nullopt;
       } else if constexpr (std::is_same_v<T, uint32_t>) {
         return static_cast<uint32_t>(0);
-      } else if constexpr (std::is_same_v<T, Surface*>) {
-        return nullptr;
+      } else if constexpr (std::is_same_v<T, bool>) {
+        return false;
       }
     }
 
@@ -116,10 +125,10 @@ public:
             prims[prim_index]->hit_check(ray);
             // increment whenever a hit test is done on a primitive
             ++return_variable;
-          } else if constexpr (std::is_same_v<T, Surface*>) {
+          } else if constexpr (std::is_same_v<T, bool>) {
             const auto hit_surf_ptr = prims[prim_index]->hit_check(ray);
-            // if ray hit the object replace the last hit_final
-            if (hit_surf_ptr) return_variable = hit_surf_ptr;
+            // exit on first hit
+            if (hit_surf_ptr) return true;
           }
         }
       } else {
@@ -130,18 +139,25 @@ public:
         bb_hit1 = nodes[first_child].aabb.intersect(ray, ray_inv_dir);
         bb_hit2 = nodes[sec_child].aabb.intersect(ray, ray_inv_dir);
 
-        if (bb_hit2) {
-          if (bb_hit1) {
-            // both intersect. swap according to dist. push more distant bbox first
-            if (bb_hit2.value() > bb_hit1.value()) {
-              std::swap(first_child, sec_child);
+        if constexpr (std::is_same_v<T, bool>) {
+          // don't care about order in hitcheck. as exit on first hit
+          if (bb_hit1) thread_stack.push_back(first_child);
+          if (bb_hit2) thread_stack.push_back(sec_child);
+        } else {
+          // order by distance
+          if (bb_hit2) {
+            if (bb_hit1) {
+              // both intersect. swap according to dist. push more distant bbox first
+              if (bb_hit2.value() > bb_hit1.value()) {
+                std::swap(first_child, sec_child);
+              }
+              thread_stack.push_back(first_child);
             }
+            thread_stack.push_back(sec_child);
+          } else if (bb_hit1) {
             thread_stack.push_back(first_child);
-          }
-          thread_stack.push_back(sec_child);
-        } else if (bb_hit1) {
-          thread_stack.push_back(first_child);
-        }  // else don't push any child node
+          }  // else don't push any child node
+        }
       }
     }
 
