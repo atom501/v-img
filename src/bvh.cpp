@@ -16,8 +16,7 @@ static size_t bin_index(uint8_t axis, const AABB& bbox, const glm::vec3& center,
 Split get_best_split(const BVHNode& node, const std::vector<size_t>& obj_indices,
                      const std::vector<AABB>& bboxes, const std::vector<glm::vec3>& centers,
                      const size_t num_bins) {
-  Split best_split = {std::numeric_limits<size_t>::max(), std::numeric_limits<float>::max(),
-                      std::numeric_limits<uint8_t>::max()};
+  Split best_split = {std::numeric_limits<size_t>::max(), std::numeric_limits<float>::max(), 0};
 
   // temp bin for initialisation
   Bin init_bin(0, AABB(glm::vec3(+std::numeric_limits<float>::max()),
@@ -145,20 +144,22 @@ BVH BVH::build(const std::vector<AABB>& bboxes, const std::vector<glm::vec3>& ce
   BVH bvh;
   size_t obj_count = centers.size();
 
-  // initialise indices pointing to original object list
-  bvh.obj_indices.resize(obj_count);
-  std::iota(bvh.obj_indices.begin(), bvh.obj_indices.end(), 0);
+  if (obj_count > 0) {
+    // initialise indices pointing to original object list
+    bvh.obj_indices.resize(obj_count);
+    std::iota(bvh.obj_indices.begin(), bvh.obj_indices.end(), 0);
 
-  // resize to maximum nodes possible
-  bvh.nodes.resize(2 * obj_count - 1);
-  bvh.nodes[0].obj_count = obj_count;
-  bvh.nodes[0].first_index = 0;
+    // resize to maximum nodes possible
+    bvh.nodes.resize(2 * obj_count - 1);
+    bvh.nodes[0].obj_count = obj_count;
+    bvh.nodes[0].first_index = 0;
 
-  size_t node_count = 1;
-  // build the bvh top down
-  build_recursive(bvh, 0, node_count, bboxes, centers, num_bins);
+    size_t node_count = 1;
+    // build the bvh top down
+    build_recursive(bvh, 0, node_count, bboxes, centers, num_bins);
 
-  bvh.nodes.resize(node_count);
+    bvh.nodes.resize(node_count);
+  }
 
   return bvh;
 }

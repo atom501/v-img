@@ -6,13 +6,32 @@
 #include <algorithm>
 #include <vector>
 
+class Emitter {
+public:
+  Emitter() = default;
+  ~Emitter() = default;
+
+  /*
+    input point to sample from (look_from) and 2 random numbers. Return emission from light
+    and fill EmitterInfo
+  */
+  virtual std::pair<glm::vec3, EmitterInfo> sample(const glm::vec3& look_from,
+                                                   pcg32_random_t& pcg_rng) const
+      = 0;
+  virtual float pdf(const glm::vec3& look_from, const glm::vec3& look_at,
+                    const glm::vec3& dir) const
+      = 0;
+
+  virtual bool is_background() const { return false; }
+};
+
 class GroupOfEmitters {
 private:
-  std::vector<Surface*> list_of_emitters;
+  std::vector<Emitter*> list_of_emitters;
   size_t num_total_lights = 0;
 
 public:
-  GroupOfEmitters(const std::vector<Surface*>& list_lights) : list_of_emitters(list_lights) {
+  GroupOfEmitters(const std::vector<Emitter*>& list_lights) : list_of_emitters(list_lights) {
     num_total_lights = list_of_emitters.size();
   }
   ~GroupOfEmitters() = default;

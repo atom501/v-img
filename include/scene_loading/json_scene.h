@@ -16,7 +16,7 @@
 bool set_scene_from_json(const std::filesystem::path& path_file, integrator_data& integrator_data,
                          std::vector<std::unique_ptr<Surface>>& list_surfaces,
                          std::vector<std::unique_ptr<Material>>& list_materials,
-                         std::vector<Surface*>& list_lights,
+                         std::vector<Emitter*>& list_lights,
                          std::vector<std::unique_ptr<Mesh>>& list_meshes,
                          std::vector<std::unique_ptr<Texture>>& texture_list);
 
@@ -30,7 +30,7 @@ bool set_list_of_materials(const nlohmann::json& json_settings,
 bool set_list_of_objects(const nlohmann::json& json_settings,
                          std::vector<std::unique_ptr<Surface>>& list_surfaces,
                          std::vector<std::unique_ptr<Material>>& list_materials,
-                         std::vector<Surface*>& list_lights,
+                         std::vector<Emitter*>& list_lights,
                          const std::unordered_map<std::string, size_t>& name_to_index,
                          std::vector<std::unique_ptr<Mesh>>& list_meshes);
 

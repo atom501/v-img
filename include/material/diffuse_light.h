@@ -1,8 +1,10 @@
 #pragma once
 
+#include <fmt/core.h>
 #include <material/material.h>
 
 #include <glm/vec3.hpp>
+#include <nlohmann/json.hpp>
 
 class DiffuseLight : public Material {
 public:
