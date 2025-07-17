@@ -87,50 +87,42 @@ public:
    * source is https://tavianator.com/2022/ray_box_boundary.html
    * loop is manually unrolled and ray inverse calculated in bvh hit call
    */
-  std::optional<float> intersect(const Ray& ray, const glm::vec3& ray_inv_dir) const {
-    float tmin = ray.minT, tmax = ray.maxT;
-    std::optional<float> t = std::nullopt;
-    bool sign;
-    float dmin, dmax;
+  inline std::optional<float> intersect(const Ray& ray, const glm::vec3& ray_inv_dir) const {
+    bool sign_x = std::signbit(ray.dir[0]);
+    bool sign_y = std::signbit(ray.dir[1]);
+    bool sign_z = std::signbit(ray.dir[2]);
+
+    const float o_x = ray.o[0];
+    const float o_y = ray.o[1];
+    const float o_z = ray.o[2];
 
     // x-axis
-    sign = std::signbit(ray.dir[0]);
+    const float bmin0 = this->bboxes[sign_x][0];
+    const float bmax0 = this->bboxes[!sign_x][0];
 
-    const float bmin0 = this->bboxes[sign][0];
-    const float bmax0 = this->bboxes[!sign][0];
-
-    dmin = (bmin0 - ray.o[0]) * ray_inv_dir[0];
-    dmax = (bmax0 - ray.o[0]) * ray_inv_dir[0];
-
-    tmin = std::max(dmin, tmin);
-    tmax = std::min(dmax, tmax);
+    const float dmin_x = (bmin0 - o_x) * ray_inv_dir[0];
+    const float dmax_x = (bmax0 - o_x) * ray_inv_dir[0];
 
     // y-axis
-    sign = std::signbit(ray.dir[1]);
+    const float bmin1 = this->bboxes[sign_y][1];
+    const float bmax1 = this->bboxes[!sign_y][1];
 
-    const float bmin1 = this->bboxes[sign][1];
-    const float bmax1 = this->bboxes[!sign][1];
-
-    dmin = (bmin1 - ray.o[1]) * ray_inv_dir[1];
-    dmax = (bmax1 - ray.o[1]) * ray_inv_dir[1];
-
-    tmin = std::max(dmin, tmin);
-    tmax = std::min(dmax, tmax);
+    const float dmin_y = (bmin1 - o_y) * ray_inv_dir[1];
+    const float dmax_y = (bmax1 - o_y) * ray_inv_dir[1];
 
     // z-axis
-    sign = std::signbit(ray.dir[2]);
+    const float bmin2 = this->bboxes[sign_z][2];
+    const float bmax2 = this->bboxes[!sign_z][2];
 
-    const float bmin2 = this->bboxes[sign][2];
-    const float bmax2 = this->bboxes[!sign][2];
+    const float dmin_z = (bmin2 - o_z) * ray_inv_dir[2];
+    const float dmax_z = (bmax2 - o_z) * ray_inv_dir[2];
 
-    dmin = (bmin2 - ray.o[2]) * ray_inv_dir[2];
-    dmax = (bmax2 - ray.o[2]) * ray_inv_dir[2];
+    float tmin = std::max(dmin_x, std::max(dmin_y, std::max(dmin_z, ray.minT)));
+    float tmax = std::min(dmax_x, std::min(dmax_y, std::min(dmax_z, ray.maxT)));
 
-    tmin = std::max(dmin, tmin);
-    tmax = std::min(dmax, tmax);
-
-    if (tmin <= tmax) t = tmin;
-
-    return t;
+    if (tmin <= tmax)
+      return tmin;
+    else
+      return std::nullopt;
   }
 };
