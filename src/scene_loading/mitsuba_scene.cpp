@@ -7,6 +7,7 @@
 #include <scene_loading/mitsuba_scene.h>
 #include <scene_loading/serialized_file.h>
 #include <tinyexr.h>
+
 #include <numbers>
 
 float hfov_deg_to_vfov_deg(float h_fov_deg, int64_t width, int64_t height) {
@@ -70,9 +71,6 @@ Material* mat_index_from_obj(std::shared_ptr<tinyparser_mitsuba::Object> mat_obj
             Lambertian l(texture_list[texture_list.size() - 1].get());
             list_materials.push_back(std::make_unique<Lambertian>(l));
           } else {
-            // look for texture
-            fmt::println("looking for texture");
-
             auto named_children = mat_obj->namedChildren();
             bool found = false;
 
@@ -146,7 +144,7 @@ Material* mat_index_from_obj(std::shared_ptr<tinyparser_mitsuba::Object> mat_obj
       if (bsdf_name != "") {
         name_to_mat[bsdf_name] = list_materials.size() - 1;
       } else {
-        fmt::println("mat_name is empty");
+        // fmt::println("mat_name is empty");
       }
 
       return list_materials[list_materials.size() - 1].get();
@@ -265,7 +263,6 @@ bool set_scene_from_xml(const std::filesystem::path& path_file, integrator_data&
       case tinyparser_mitsuba::OT_EMITTER: {
         // check if envmap. can be constant or image
         if (obj->pluginType() == "envmap") {
-          fmt::println("envmap");
           auto p = obj->properties();
 
           std::filesystem::path env_file = p["filename"].getString();

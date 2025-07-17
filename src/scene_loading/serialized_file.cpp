@@ -69,7 +69,6 @@ Mesh read_serialized_file(const std::filesystem::path &filepath, int shape_index
   // version number
   uint16_t version = 0;
   file_stream.read((char *)&version, sizeof(uint16_t));
-  fmt::println("version {}", version);
 
   // after version number stream is compressed by the DEFLATE algorithm
   // used encoding is that of the zlib library. I use miniz to inflate the stream
@@ -84,7 +83,6 @@ Mesh read_serialized_file(const std::filesystem::path &filepath, int shape_index
 
   uint32_t flags;
   zs.read((char *)&flags, sizeof(uint32_t));
-  fmt::println("flags {}", flags);
 
   // mesh name
   std::string name;

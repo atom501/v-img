@@ -107,40 +107,49 @@ int main(int argc, char* argv[]) {
 
   GroupOfEmitters lights = GroupOfEmitters(list_lights);
 
-  fmt::println("Number of lights {}", lights.num_lights());
+  fmt::println("\nNumber of lights loaded {}", lights.num_lights());
+  fmt::println("Number of Textures loaded {}", texture_list.size());
+  fmt::println("Number of Meshes loaded {}", list_meshes.size());
+  fmt::println("Number of Surfaces loaded {}", list_objects.size());
+
+  fmt::println("\nImage resolution {}x{}, samples per pixel {}, max depth {}\n",
+               rendering_settings.resolution.x, rendering_settings.resolution.y,
+               rendering_settings.samples, rendering_settings.depth);
 
   // take a list of Surfaces and make a vector of AABBs and centers
   setup_for_bvh(list_objects, list_bboxes, list_centers);
 
   // make bvh
   BVH bvh = BVH::build(list_bboxes, list_centers, NUM_BINS);
-  // bvh.stack.reserve(64);
 
   fmt::println("scene BVH built");
 
   auto begin_time = std::chrono::steady_clock::now();
   std::vector<glm::vec3> acc_image;
 
-  fmt::println("Start render");
+  fmt::println("Started rendering\n");
 
   if (heatmap_max < 0) {
     // run integrator
     switch (rendering_settings.func) {
       case integrator_func::normal:
+        fmt::println("Running normal integrator");
         acc_image
             = scene_integrator(rendering_settings, bvh, list_objects, lights, normal_integrator);
         break;
 
       case integrator_func::material:
+        fmt::println("Running normal material");
         acc_image
             = scene_integrator(rendering_settings, bvh, list_objects, lights, material_integrator);
         break;
       case integrator_func::mis:
+        fmt::println("Running MIS integrator");
         acc_image = scene_integrator(rendering_settings, bvh, list_objects, lights, mis_integrator);
         break;
     }
   } else {
-    fmt::println("Heatmap mode");
+    fmt::println("Creating BVH Heatmap");
     acc_image = heatmap_img(rendering_settings, bvh, list_objects, heatmap_max);
   }
 
