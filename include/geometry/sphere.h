@@ -5,6 +5,7 @@
 #include <hit_utils.h>
 #include <ray.h>
 
+#include <numbers>
 #include <optional>
 
 #include "glm/vec3.hpp"
@@ -99,10 +100,10 @@ private:
 
       // calculate uv
       float theta = std::acos(-normal.y);
-      float phi = std::atan2(-normal.z, normal.x) + M_PI;
+      float phi = std::atan2(-normal.z, normal.x) + std::numbers::pi;
 
-      float u = phi / (2.f * M_PI);
-      float v = theta / M_PI;
+      float u = phi / (2.f * std::numbers::pi);
+      float v = theta / std::numbers::pi;
 
       HitInfo hit = {mat, this, hit_p, hit_n, glm::vec2(u, v), front_face};
 

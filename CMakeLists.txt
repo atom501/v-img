@@ -82,7 +82,7 @@ add_executable(${PROJECT_NAME} ${sources})
 GroupSourcesByFolder(${PROJECT_NAME})
 
 if(MSVC)
-  target_compile_definitions(${PROJECT_NAME} PUBLIC -D_USE_MATH_DEFINES -DNOMINMAX -DWIN32_LEAN_AND_MEAN)
+  target_compile_definitions(${PROJECT_NAME} PUBLIC -DNOMINMAX -DWIN32_LEAN_AND_MEAN)
 endif()
 
 set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 20 OUTPUT_NAME "v-img")

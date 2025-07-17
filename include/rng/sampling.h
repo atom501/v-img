@@ -8,11 +8,12 @@
 #include <glm/vec3.hpp>
 #include <span>
 #include <vector>
+#include <numbers>
 
 // give two random numbers [0,1] as input and return a point on sphere.
 // where pole of hemisphere is (0,0,1)
 inline glm::vec3 sample_sphere(const float& rand1, const float& rand2) {
-  float phi = 2 * M_PI * rand1;
+  float phi = 2 * std::numbers::pi * rand1;
   float cos_theta = 2 * rand2 - 1;
   float sin_theta = sqrt(1 - cos_theta * cos_theta);
 
@@ -29,7 +30,7 @@ static inline float lerp(float a, float b, float f) { return a + f * (b - a); }
 // where pole of hemisphere is (0,0,1) and cos_theta_max starts from pole
 inline glm::vec3 sample_sphere_cap(const float& rand1, const float& rand2,
                                    const float& cos_theta_max) {
-  float phi = 2 * M_PI * rand1;
+  float phi = 2 * std::numbers::pi * rand1;
   float cos_theta = lerp(cos_theta_max, 1.0f, rand2);
   float sin_theta = sqrtf(1 - cos_theta * cos_theta);
 
@@ -43,7 +44,7 @@ inline glm::vec3 sample_sphere_cap(const float& rand1, const float& rand2,
 // give two random numbers [0,1] as input and return a point on hemisphere.
 // where pole of hemisphere is (0,0,1)
 inline glm::vec3 sample_hemisphere(const float& rand1, const float& rand2) {
-  float phi = 2 * M_PI * rand1;
+  float phi = 2 * std::numbers::pi * rand1;
   float cos_theta = rand2;
   float sin_theta = std::sqrt(1 - cos_theta * cos_theta);
 
@@ -57,7 +58,7 @@ inline glm::vec3 sample_hemisphere(const float& rand1, const float& rand2) {
 /// input two random numbers and return Cosine-weighted point on the hemisphere
 /// where pole of hemisphere is (0,0,1)
 inline glm::vec3 sample_hemisphere_cosine(const float& rand1, const float& rand2) {
-  float phi = 2 * M_PI * rand1;
+  float phi = 2 * std::numbers::pi * rand1;
   float cos_theta = std::sqrt(rand2);
   float sin_theta = std::sqrt(1 - cos_theta * cos_theta);
 
@@ -164,7 +165,7 @@ public:
     constexpr glm::vec3 lum_const = glm::vec3(0.2126f, 0.7152f, 0.0722f);
     for (size_t y = 0; y < height; y++) {
       float v = (static_cast<float>(y) + 0.5f) / static_cast<float>(height);
-      float sin_elevation = std::sin(M_PI * v);
+      float sin_elevation = std::sin(std::numbers::pi * v);
 
       for (size_t x = 0; x < width; x++) {
         image_luminance[(y * width) + x]

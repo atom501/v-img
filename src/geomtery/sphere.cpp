@@ -42,14 +42,14 @@ std::pair<glm::vec3, EmitterInfo> Sphere::sample(const glm::vec3& look_from,
     // face
 
     auto theta = std::acos(-point_on_unit_sphere.y);
-    auto phi = std::atan2(-point_on_unit_sphere.z, point_on_unit_sphere.x) + M_PI;
+    auto phi = std::atan2(-point_on_unit_sphere.z, point_on_unit_sphere.x) + std::numbers::pi;
 
-    const float u = phi / (2.f * M_PI);
-    const float v = theta / M_PI;
+    const float u = phi / (2.f * std::numbers::pi);
+    const float v = theta / std::numbers::pi;
 
     hit = {mat, this, hit_p, hit_n, glm::vec2(u, v), false};
 
-    const float sphere_sa = 4 * M_PI * radius * radius;
+    const float sphere_sa = 4 * std::numbers::pi * radius * radius;
 
     emit_info.dist = glm::length(vec_from_lf_to_pos);
 
@@ -95,14 +95,14 @@ std::pair<glm::vec3, EmitterInfo> Sphere::sample(const glm::vec3& look_from,
 
     // calculate uv
     float theta = std::acos(-hit_n.y);
-    float phi = std::atan2(-hit_n.z, hit_n.x) + M_PI;
+    float phi = std::atan2(-hit_n.z, hit_n.x) + std::numbers::pi;
 
-    float u = phi / (2.f * M_PI);
-    float v = theta / M_PI;
+    float u = phi / (2.f * std::numbers::pi);
+    float v = theta / std::numbers::pi;
 
     hit = {mat, this, hit_p, hit_n, glm::vec2(u, v), true};
 
-    emit_info.pdf = 1.0f / (2 * M_PI * (1.0f - cos_theta_max));
+    emit_info.pdf = 1.0f / (2 * std::numbers::pi * (1.0f - cos_theta_max));
     emit_info.dist = dist_lf_to_p;
   }
 
@@ -119,7 +119,7 @@ float Sphere::pdf(const glm::vec3& look_from, const glm::vec3& look_at,
       return 0;
     else {
       const auto vec_from_lf_to_pos = look_at - look_from;
-      const float sphere_sa = 4 * M_PI * radius * radius;
+      const float sphere_sa = 4 * std::numbers::pi * radius * radius;
       const glm::vec3 surface_norm = glm::normalize(look_at - center);
 
       return sphere_sa * glm::length2(vec_from_lf_to_pos) / std::abs(glm::dot(surface_norm, -dir));
@@ -127,6 +127,6 @@ float Sphere::pdf(const glm::vec3& look_from, const glm::vec3& look_at,
   } else {
     float cos_theta_max = sqrt(1.0f - ((radius * radius) / length2(look_from - center)));
 
-    return 1.0f / (2 * M_PI * (1.0f - cos_theta_max));
+    return 1.0f / (2 * std::numbers::pi * (1.0f - cos_theta_max));
   }
 }
