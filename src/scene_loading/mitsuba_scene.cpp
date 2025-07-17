@@ -7,12 +7,13 @@
 #include <scene_loading/mitsuba_scene.h>
 #include <scene_loading/serialized_file.h>
 #include <tinyexr.h>
+#include <numbers>
 
 float hfov_deg_to_vfov_deg(float h_fov_deg, int64_t width, int64_t height) {
-  float hfov_rad = h_fov_deg * M_PI / 180.f;
+  float hfov_rad = h_fov_deg * std::numbers::pi / 180.f;
   float aspect_ratio = static_cast<float>(width) / static_cast<float>(height);
 
-  float vfov_deg = 2.f * atan(tan(hfov_rad / 2.f) * aspect_ratio) * (180.f / M_PI);
+  float vfov_deg = 2.f * atan(tan(hfov_rad / 2.f) * aspect_ratio) * (180.f / std::numbers::pi);
 
   return vfov_deg;
 }

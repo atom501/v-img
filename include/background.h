@@ -3,6 +3,7 @@
 #include <ray.h>
 
 #include <algorithm>
+#include <numbers>
 #include <utility>
 #include <vector>
 
@@ -35,14 +36,14 @@ public:
     // sample uniform sphere
     glm::vec3 wi = sample_sphere(r1, r2);
 
-    constexpr float pdf = 1.f / (4 * M_PI);
+    constexpr float pdf = 1.f / (4 * std::numbers::pi);
 
     constexpr float dist = std::numeric_limits<float>::infinity();
 
     return std::make_pair(ConstBackground::col, EmitterInfo{wi, pdf, dist});
   }
 
-  float background_pdf(const glm::vec3& dir) const override { return 1.f / (4 * M_PI); }
+  float background_pdf(const glm::vec3& dir) const override { return 1.f / (4 * std::numbers::pi); }
 
   bool is_emissive() const override {
     if (col == glm::vec3(0.f))
@@ -91,8 +92,8 @@ public:
 
     // get uv coordinates. Envmap assumes latitude-longitude format. same as in mitsuba
     dir = glm::normalize(dir);
-    float u = (1.f + std::atan2(-dir.x, dir.z) * M_1_PI) * 0.5f;
-    float v = std::acos(dir.y) * M_1_PI;
+    float u = (1.f + std::atan2(-dir.x, dir.z) * std::numbers::inv_pi) * 0.5f;
+    float v = std::acos(dir.y) * std::numbers::inv_pi;
 
     return col_from_uv(u, v) * radiance_scale;
   }
@@ -134,10 +135,10 @@ public:
 
     // convert u, v to a direction
 
-    float elevation = v_env * M_PI;
-    float y = std::cos(v_env * M_PI);
+    float elevation = v_env * std::numbers::pi;
+    float y = std::cos(v_env * std::numbers::pi);
 
-    const float azimuth = u_env * 2.f * M_PI;
+    const float azimuth = u_env * 2.f * std::numbers::pi;
     float x = std::sin(azimuth) * std::sin(elevation);
     float z = -1 * std::cos(azimuth) * std::sin(elevation);
 
@@ -148,7 +149,8 @@ public:
     constexpr float dist = std::numeric_limits<float>::infinity();
 
     float sin_elevation = std::sin(elevation);
-    float pdf = (choose_sample_pdf * width * height) / (2.f * M_PI * M_PI * sin_elevation);
+    float pdf = (choose_sample_pdf * width * height)
+                / (2.f * std::numbers::pi * std::numbers::pi * sin_elevation);
 
     return std::make_pair(col_from_uv(u_env, v_env) * radiance_scale, EmitterInfo{wi, pdf, dist});
   }
@@ -159,8 +161,8 @@ public:
 
     // get uv coordinates. Envmap assumes latitude-longitude format. same as in mitsuba
     dir = glm::normalize(dir);
-    float u = (1.f + std::atan2(-dir.x, dir.z) * M_1_PI) * 0.5f;
-    float v = std::acos(dir.y) * M_1_PI;
+    float u = (1.f + std::atan2(-dir.x, dir.z) * std::numbers::inv_pi) * 0.5f;
+    float v = std::acos(dir.y) * std::numbers::inv_pi;
 
     // use u, v to get pdf
     int pixel_u = u * width;
@@ -176,8 +178,9 @@ public:
     float pdf_x = image_sampling.image_probabilities[row_index].cdf[column_index + 1]
                   - image_sampling.image_probabilities[row_index].cdf[column_index];
 
-    float sin_elevation = std::sin(M_PI * v);
-    float pdf = (pdf_y * pdf_x * width * height) / (2.f * M_PI * M_PI * sin_elevation);
+    float sin_elevation = std::sin(std::numbers::pi * v);
+    float pdf = (pdf_y * pdf_x * width * height)
+                / (2.f * std::numbers::pi * std::numbers::pi * sin_elevation);
 
     return pdf;
   }
