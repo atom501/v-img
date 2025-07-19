@@ -1,6 +1,7 @@
 #include <background.h>
 #include <geometry/mesh.h>
 #include <geometry/quads.h>
+#include <geometry/sphere.h>
 #include <geometry/triangle.h>
 #include <material/diffuse_light.h>
 #include <material/lambertian.h>
@@ -500,6 +501,22 @@ bool set_scene_from_xml(const std::filesystem::path& path_file, integrator_data&
               Triangle* s_ptr = static_cast<Triangle*>(list_surfaces[i].get());
               list_lights.push_back(s_ptr);
             }
+          }
+        } else if (obj->pluginType() == "sphere") {
+          fmt::println("sphere");
+          float radius = properties["radius"].getNumber(1.0f);
+          tinyparser_mitsuba::Vector center_p = properties["center"].getVector();
+
+          glm::vec3 center(center_p.x, center_p.y, center_p.z);
+
+          // create sphere
+          Sphere s(center, radius, mat_ptr);
+
+          list_surfaces.push_back(std::make_unique<Sphere>(s));
+
+          if (mat_ptr->is_emissive()) {
+            Sphere* s_ptr = static_cast<Sphere*>(list_surfaces[list_surfaces.size() - 1].get());
+            list_lights.push_back(s_ptr);
           }
         } else {
           fmt::println("shape plugin {} is not supported", obj->pluginType());
