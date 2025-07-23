@@ -24,21 +24,27 @@ void cube_mesh(std::vector<glm::vec3>& vertices, std::vector<glm::vec3>& normals
                std::vector<glm::vec2>& texcoords, std::vector<uint32_t>& tri_vertex,
                std::vector<uint32_t>& tri_normal, std::vector<int>& tri_uv) {
   // data for mesh object
-  vertices
-      = {glm::vec3(-1, 1, -1), glm::vec3(-1, 1, 1),  glm::vec3(-1, -1, -1), glm::vec3(1, -1, 1),
-         glm::vec3(-1, -1, 1), glm::vec3(1, -1, -1), glm::vec3(1, 1, -1),   glm::vec3(1, 1, 1)};
+  vertices = {glm::vec3(1.f, -1.f, -1.f),  glm::vec3(1.f, -1.f, 1.f), glm::vec3(-1.f, -1.f, 1.f),
+              glm::vec3(-1.f, -1.f, -1.f), glm::vec3(1.f, 1.f, -1.f), glm::vec3(1.f, 1.f, 1.f),
+              glm::vec3(-1.f, 1.f, 1.f),   glm::vec3(-1.f, 1.f, -1.f)};
 
-  normals = {glm::vec3(0, 1, 0),  glm::vec3(0, -1, 0), glm::vec3(1, 0, 0),
-             glm::vec3(-1, 0, 0), glm::vec3(0, 0, -1), glm::vec3(0, 0, 1)};
+  normals = {glm::vec3(0.f, -1.f, 0.f), glm::vec3(0.f, 1.f, 0.f),  glm::vec3(1.f, 0.f, 0.f),
+             glm::vec3(0.f, 0.f, 1.f),  glm::vec3(-1.f, 0.f, 0.f), glm::vec3(0.f, 0.f, -1.f)};
 
-  texcoords = {glm::vec2(0, 1), glm::vec2(1, 0), glm::vec2(1, 1), glm::vec2(0, 0)};
+  texcoords = {
+      glm::vec2(1.000000, 0.333333), glm::vec2(1.000000, 0.666667), glm::vec2(0.666667, 0.666667),
+      glm::vec2(0.666667, 0.333333), glm::vec2(0.666667, 0.000000), glm::vec2(0.000000, 0.333333),
+      glm::vec2(0.000000, 0.000000), glm::vec2(0.333333, 0.000000), glm::vec2(0.333333, 1.000000),
+      glm::vec2(0.000000, 1.000000), glm::vec2(0.000000, 0.666667), glm::vec2(0.333333, 0.333333),
+      glm::vec2(0.333333, 0.666667), glm::vec2(1.000000, 0.000000),
+  };
 
-  tri_vertex = {3, 4, 5, 2, 4, 5, 0, 1, 6, 1, 6, 7, 5, 6, 7, 3, 5, 7,
-                1, 3, 7, 1, 3, 4, 0, 1, 4, 0, 2, 4, 2, 5, 6, 0, 2, 6};
-  tri_normal = {1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2,
-                5, 5, 5, 5, 5, 5, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4};
-  tri_uv = {0, 1, 2, 0, 1, 3, 0, 1, 2, 0, 1, 3, 0, 1, 2, 0, 1, 3,
-            0, 1, 2, 0, 1, 3, 0, 1, 2, 0, 1, 3, 0, 1, 2, 0, 1, 3};
+  tri_vertex = {1, 2, 3, 7, 6, 5, 4, 5, 1, 5, 6, 2, 2, 6, 7, 0, 3, 7,
+                0, 1, 3, 4, 7, 5, 0, 4, 1, 1, 5, 2, 3, 2, 7, 4, 0, 7};
+  tri_normal = {0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4, 5, 5, 5,
+                0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4, 5, 5, 5};
+  tri_uv = {0, 1, 2, 0,  3, 4, 5,  6, 7, 7,  4, 3, 8,  9, 10, 11, 12, 10,
+            3, 0, 2, 13, 0, 4, 11, 5, 7, 11, 7, 3, 12, 8, 10, 5,  11, 10};
 }
 
 Material* mat_index_from_obj(std::shared_ptr<tinyparser_mitsuba::Object> mat_obj,
