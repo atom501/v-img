@@ -193,14 +193,17 @@ bool set_integrator_data(const nlohmann::json& json_settings, integrator_data& i
   integrator_data.background = std::make_unique<ConstBackground>(ConstBackground(glm::vec3(0)));
 
   // set scene integrator
-  integrator_func func = integrator_func::normal;
+  integrator_func func = integrator_func::s_normal;
   if (json_settings.contains("integrator")) {
     std::string integrator_string = json_settings["integrator"]["type"];
     fmt::println("function type read {}", integrator_string);
 
-    if (integrator_string == "normal") {
-      func = integrator_func::normal;
-      fmt::println("Normal integrator set");
+    if (integrator_string == "s_normal") {
+      func = integrator_func::s_normal;
+      fmt::println("Shading normal integrator set");
+    } else if (integrator_string == "g_normal") {
+      func = integrator_func::g_normal;
+      fmt::println("Shading normal integrator set");
     } else if (integrator_string == "material") {
       func = integrator_func::material;
       fmt::println("Material integrator set");
@@ -218,8 +221,8 @@ bool set_integrator_data(const nlohmann::json& json_settings, integrator_data& i
 }
 
 /*
- * Takes in json as input. Check if object uses a texure already in the list. If not add new one to
- * the list and return pointer
+ * Takes in json as input. Check if object uses a texure already in the list. If not add new one
+ * to the list and return pointer
  */
 Texture* json_to_texture(const nlohmann::json& mat_json,
                          std::vector<std::unique_ptr<Texture>>& texture_list) {

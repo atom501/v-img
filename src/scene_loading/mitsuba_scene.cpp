@@ -259,8 +259,10 @@ bool set_scene_from_xml(const std::filesystem::path& path_file, integrator_data&
           integrator_data.func = integrator_func::mis;
         } else if (obj->pluginType() == "mat") {
           integrator_data.func = integrator_func::material;
-        } else if (obj->pluginType() == "normal") {
-          integrator_data.func = integrator_func::normal;
+        } else if (obj->pluginType() == "s_normal") {
+          integrator_data.func = integrator_func::s_normal;
+        } else if (obj->pluginType() == "g_normal") {
+          integrator_data.func = integrator_func::g_normal;
         } else {
           fmt::println("Unknown integrator {}. Default to MIS", obj->pluginType());
           integrator_data.func = integrator_func::mis;

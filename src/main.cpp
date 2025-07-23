@@ -132,14 +132,18 @@ int main(int argc, char* argv[]) {
   if (heatmap_max < 0) {
     // run integrator
     switch (rendering_settings.func) {
-      case integrator_func::normal:
-        fmt::println("Running normal integrator");
-        acc_image
-            = scene_integrator(rendering_settings, bvh, list_objects, lights, normal_integrator);
+      case integrator_func::s_normal:
+        fmt::println("Running shading normal integrator");
+        acc_image = scene_integrator(rendering_settings, bvh, list_objects, lights,
+                                     shading_normal_integrator);
         break;
-
+      case integrator_func::g_normal:
+        fmt::println("Running geometric normal integrator");
+        acc_image = scene_integrator(rendering_settings, bvh, list_objects, lights,
+                                     geometric_normal_integrator);
+        break;
       case integrator_func::material:
-        fmt::println("Running normal material");
+        fmt::println("Running material integrator");
         acc_image
             = scene_integrator(rendering_settings, bvh, list_objects, lights, material_integrator);
         break;
@@ -149,7 +153,7 @@ int main(int argc, char* argv[]) {
         break;
     }
   } else {
-    fmt::println("Creating BVH Heatmap");
+    fmt::println("Creating Heatmap for ray intersection");
     acc_image = heatmap_img(rendering_settings, bvh, list_objects, heatmap_max);
   }
 

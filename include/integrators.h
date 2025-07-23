@@ -21,7 +21,7 @@
 #include <utility>
 #include <vector>
 
-enum class integrator_func { normal, material, mis };
+enum class integrator_func { s_normal, g_normal, material, mis };
 
 struct integrator_data {
   integrator_func func;
@@ -171,10 +171,17 @@ std::vector<glm::vec3> scene_integrator(const integrator_data& render_data, BVH&
   return image_accumulated;
 }
 
-glm::vec3 normal_integrator(Ray& input_ray, std::vector<size_t>& thread_stack, const BVH& bvh,
-                            const std::vector<std::unique_ptr<Surface>>& prims,
-                            const GroupOfEmitters& lights, pcg32_random_t& hash_state,
-                            uint32_t depth, Background* background);
+glm::vec3 shading_normal_integrator(Ray& input_ray, std::vector<size_t>& thread_stack,
+                                    const BVH& bvh,
+                                    const std::vector<std::unique_ptr<Surface>>& prims,
+                                    const GroupOfEmitters& lights, pcg32_random_t& hash_state,
+                                    uint32_t depth, Background* background);
+
+glm::vec3 geometric_normal_integrator(Ray& input_ray, std::vector<size_t>& thread_stack,
+                                      const BVH& bvh,
+                                      const std::vector<std::unique_ptr<Surface>>& prims,
+                                      const GroupOfEmitters& lights, pcg32_random_t& hash_state,
+                                      uint32_t depth, Background* background);
 
 glm::vec3 material_integrator(Ray& input_ray, std::vector<size_t>& thread_stack, const BVH& bvh,
                               const std::vector<std::unique_ptr<Surface>>& prims,
