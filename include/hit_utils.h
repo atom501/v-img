@@ -15,11 +15,12 @@ class Emitter;
 struct HitInfo {
   Material* mat = nullptr;
   const Emitter* obj = nullptr;
-  glm::vec3 hit_p;  // point where hit in world coords
-  glm::vec3 hit_n;  // Normal where hit in world coords.
-                    // Always faces towards the incoming ray, always normalized
-  glm::vec2 uv;     // texture uv coordinates
-  bool front_face;  // tell if hit front face or not. normal flipped if false
+  glm::vec3 hit_p;    // point where hit in world coords
+  glm::vec3 hit_n_s;  // shading Normal where hit in world coords.
+  glm::vec3 hit_n_g;  // geometric Normal where hit in world coords.
+                      // Both normals faces towards the incoming ray and are normalized
+  glm::vec2 uv;       // texture uv coordinates
+  bool front_face;    // tell if hit front face or not. normal flipped if false
 };
 
 struct EmitterInfo {
@@ -38,6 +39,11 @@ struct ONB {
 // ray_dir should be unit vector
 inline glm::vec3 xform_with_onb(const ONB& onb, const glm::vec3& ray_dir) {
   return (onb.u * ray_dir[0] + onb.v * ray_dir[1] + onb.w * ray_dir[2]);
+}
+
+// ray_dir should be unit vector
+inline glm::vec3 project_onto_onb(const ONB& onb, const glm::vec3& ray_dir) {
+  return glm::vec3{glm::dot(ray_dir, onb.u), glm::dot(ray_dir, onb.v), glm::dot(ray_dir, onb.w)};
 }
 
 // normal_vec must already be normalized

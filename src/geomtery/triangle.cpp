@@ -74,7 +74,7 @@ std::pair<glm::vec3, EmitterInfo> Triangle::sample(const glm::vec3& look_from,
   float w = 1 - u - v;
 
   const glm::vec3 hit_p = p0 * u + p1 * v + p2 * w;
-  const glm::vec3 hit_n = glm::normalize(u * n0 + v * n1 + (1 - u - v) * n2);
+  glm::vec3 hit_n = glm::normalize(u * n0 + v * n1 + (1 - u - v) * n2);
 
   auto dir_vec = hit_p - look_from;
   float dist2 = glm::length2(dir_vec);
@@ -84,7 +84,7 @@ std::pair<glm::vec3, EmitterInfo> Triangle::sample(const glm::vec3& look_from,
 
   const bool front_face = normal_dir_dot < 0 ? true : false;
 
-  const auto& tri_texcoords_list = obj_mesh->tri_normal;
+  const auto& tri_texcoords_list = obj_mesh->tri_uv;
   const auto& texcoords_list = obj_mesh->texcoords;
 
   glm::vec2 uv = glm::vec2(u, v);
@@ -97,7 +97,11 @@ std::pair<glm::vec3, EmitterInfo> Triangle::sample(const glm::vec3& look_from,
     uv = u * uv0 + v * uv1 + w * uv2;
   }
 
-  HitInfo hit = {mat, this, hit_p, hit_n, uv, front_face};
+  tri_normal = glm::normalize(tri_normal);
+  tri_normal = front_face ? tri_normal : -tri_normal;
+  hit_n = front_face ? hit_n : -hit_n;
+
+  HitInfo hit = {mat, this, hit_p, hit_n, tri_normal, uv, front_face};
 
   // convert to solid angle measure
   float area = glm::length(glm::cross(edge2, edge1)) / 2.0f;

@@ -28,7 +28,7 @@ std::optional<ScatterInfo> Dielectric::sample_mat(const glm::vec3& wi, const Hit
                                                   pcg32_random_t& pcg_rng) const {
   glm::vec3 wo;  // ray direction after hit
 
-  const float cos_thetaI = -1.f * (glm::dot(wi, hit.hit_n));
+  const float cos_thetaI = -1.f * (glm::dot(wi, hit.hit_n_s));
   float randf = rand_float(pcg_rng);
 
   // from air to dielectric
@@ -36,12 +36,13 @@ std::optional<ScatterInfo> Dielectric::sample_mat(const glm::vec3& wi, const Hit
     const float schlick = schlick_apprx(cos_thetaI, 1.0f, ior);
 
     if (schlick > randf) {
-      wo = reflect_dir(wi, hit.hit_p, hit.hit_n);
+      wo = reflect_dir(wi, hit.hit_p, hit.hit_n_s);
     } else {
       const auto iIndex_over_oIndex = 1.f / ior;
       const auto sin_thetaT_square
           = (iIndex_over_oIndex * iIndex_over_oIndex) * (1.f - (cos_thetaI * cos_thetaI));
-      wo = refract_dir(wi, hit.hit_p, hit.hit_n, iIndex_over_oIndex, cos_thetaI, sin_thetaT_square);
+      wo = refract_dir(wi, hit.hit_p, hit.hit_n_s, iIndex_over_oIndex, cos_thetaI,
+                       sin_thetaT_square);
     }
   } else {
     // dielectric to air
@@ -52,10 +53,11 @@ std::optional<ScatterInfo> Dielectric::sample_mat(const glm::vec3& wi, const Hit
     // total internal reflection or reflection by schlick approx
     if ((sin_thetaT_square > 1.f)
         || (schlick_apprx(std::sqrtf(1.f - sin_thetaT_square), ior, 1.f) > randf)) {
-      wo = reflect_dir(wi, hit.hit_p, hit.hit_n);
+      wo = reflect_dir(wi, hit.hit_p, hit.hit_n_s);
     } else {
       // refracted
-      wo = refract_dir(wi, hit.hit_p, hit.hit_n, iIndex_over_oIndex, cos_thetaI, sin_thetaT_square);
+      wo = refract_dir(wi, hit.hit_p, hit.hit_n_s, iIndex_over_oIndex, cos_thetaI,
+                       sin_thetaT_square);
     }
   }
 

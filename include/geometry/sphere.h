@@ -105,7 +105,7 @@ private:
       float u = phi / (2.f * std::numbers::pi);
       float v = theta / std::numbers::pi;
 
-      HitInfo hit = {mat, this, hit_p, hit_n, glm::vec2(u, v), front_face};
+      HitInfo hit = {mat, this, hit_p, hit_n, hit_n, glm::vec2(u, v), front_face};
 
       return std::make_optional(std::move(hit));
     }

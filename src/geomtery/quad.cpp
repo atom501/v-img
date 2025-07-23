@@ -90,7 +90,7 @@ std::pair<glm::vec3, EmitterInfo> Quad::sample(const glm::vec3& look_from,
     pdf = 0.f;
   }
 
-  HitInfo hit = {mat, this, hit_p, hit_n, glm::vec2(rand1, rand2), front_face};
+  HitInfo hit = {mat, this, hit_p, hit_n, hit_n, glm::vec2(rand1, rand2), front_face};
 
   EmitterInfo emit_info = {wi, pdf, std::sqrtf(distance2)};
 

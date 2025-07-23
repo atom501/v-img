@@ -47,7 +47,7 @@ std::pair<glm::vec3, EmitterInfo> Sphere::sample(const glm::vec3& look_from,
     const float u = phi / (2.f * std::numbers::pi);
     const float v = theta / std::numbers::pi;
 
-    hit = {mat, this, hit_p, hit_n, glm::vec2(u, v), false};
+    hit = {mat, this, hit_p, hit_n, hit_n, glm::vec2(u, v), false};
 
     const float sphere_sa = 4 * std::numbers::pi * radius * radius;
 
@@ -57,7 +57,7 @@ std::pair<glm::vec3, EmitterInfo> Sphere::sample(const glm::vec3& look_from,
       emit_info.pdf = 0;
     else {
       emit_info.pdf = sphere_sa * glm::length2(vec_from_lf_to_pos)
-                      / std::abs(glm::dot(hit.hit_n, -emit_info.wi));
+                      / std::abs(glm::dot(hit.hit_n_s, -emit_info.wi));
     }
   } else {
     // if look from point is outside the sphere
@@ -100,7 +100,7 @@ std::pair<glm::vec3, EmitterInfo> Sphere::sample(const glm::vec3& look_from,
     float u = phi / (2.f * std::numbers::pi);
     float v = theta / std::numbers::pi;
 
-    hit = {mat, this, hit_p, hit_n, glm::vec2(u, v), true};
+    hit = {mat, this, hit_p, hit_n, hit_n, glm::vec2(u, v), true};
 
     emit_info.pdf = 1.0f / (2 * std::numbers::pi * (1.0f - cos_theta_max));
     emit_info.dist = dist_lf_to_p;

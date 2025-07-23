@@ -10,7 +10,7 @@ glm::vec3 normal_integrator(Ray& input_ray, std::vector<size_t>& thread_stack, c
 
   // If hit then get color using normal
   if (hit.has_value()) {
-    auto normal_col = hit.value().hit_n;
+    auto normal_col = hit.value().hit_n_s;
     normal_col = (normal_col + 1.0f) / 2.0f;
 
     return normal_col;
