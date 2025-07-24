@@ -96,6 +96,26 @@ static glm::mat4 get_transform(const nlohmann::json& json_xform) {
       glm::vec3 translate = transform_entry["translate"].template get<glm::vec3>();
       xform = glm::translate(translate) * xform;
 
+    } else if (transform_entry.contains("x") | transform_entry.contains("y")
+               | transform_entry.contains("z") | transform_entry.contains("o")) {
+      glm::vec3 x(1.f, 0.f, 0.f);
+      glm::vec3 y(0.f, 1.f, 0.f);
+      glm::vec3 z(0.f, 0.f, 1.f);
+      glm::vec3 o(0.f, 0.f, 0.f);
+
+      if (transform_entry.contains("x")) {
+        x = transform_entry["x"].template get<glm::vec3>();
+      } else if (transform_entry.contains("y")) {
+        y = transform_entry["y"].template get<glm::vec3>();
+      } else if (transform_entry.contains("z")) {
+        z = transform_entry["z"].template get<glm::vec3>();
+      } else if (transform_entry.contains("z")) {
+        o = transform_entry["o"].template get<glm::vec3>();
+      }
+
+      glm::mat4 loaded_mat
+          = glm::mat4(glm::vec4(x, 0.f), glm::vec4(y, 0.f), glm::vec4(z, 0.f), glm::vec4(o, 1.f));
+      xform = loaded_mat * xform;
     } else {
       fmt::println("Unknown transformation type when reading json. {}", transform_entry.dump());
     }

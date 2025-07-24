@@ -9,7 +9,7 @@ glm::vec3 material_integrator(Ray& input_ray, std::vector<size_t>& thread_stack,
   glm::vec3 throughput = glm::vec3(1.0f);
   constexpr uint32_t roulette_threshold = 5;
 
-  for (size_t d = 0; d <= depth; d++) {
+  for (size_t d = 0; d < depth; d++) {
     // perform scene-ray hit test
     std::optional<HitInfo> hit = bvh.hit<std::optional<HitInfo>>(test_ray, thread_stack, prims);
 

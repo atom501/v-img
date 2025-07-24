@@ -1,0 +1,86 @@
+{
+    "camera": {
+        "transform": {
+            "from": [20, 20, 50],
+            "at": [0, 4, 0],
+            "up": [0, 1, 0]
+        },
+        "vfov": 20,
+        "fdist": 800,
+        "resolution": [768, 432]
+    },
+    "sampler": {
+        "samples": 64,
+        "depth": 1
+    },
+    "background": [0 ,0, 0],
+    "integrator": {
+        "type": "mis"
+    },
+    "materials": [
+        {
+            "type": "lambertian",
+            "name": "monolith",
+            "texture": {
+                "type": "constant",
+                "albedo": [0.8, 0.8, 0.8]
+            }
+        },
+        {
+            "type": "lambertian",
+            "name": "floor",
+            "texture": {
+                "type": "constant",
+                "albedo": [0.95, 0.95, 0.95]
+            }
+        },
+        {
+            "type": "diffuse_light",
+            "name": "glowing wall",
+            "albedo": [1, 1, 1]
+        }
+    ],
+    "surfaces": [
+        {
+            "type": "mesh",
+            "filename": "../../assets/cube.obj",
+            "mat_name": "monolith",
+            "transform": [
+                {
+                    "translate": [0, 0.5, 0]
+                }, {
+                    "scale": [1, 9, 4]
+                }
+            ]
+        }, {
+            "type": "quad",
+            "mat_name": "floor",
+            "l_corner": [-12, -9, 0],
+            "u": [24, 0, 0],
+            "v": [0, 18, 0],
+            "transform": [
+                {
+                    "y": [0, 0, -1],
+                    "z": [0, 1, 0]
+                }
+            ]
+        }, {
+            "type": "quad",
+            "mat_name": "glowing wall",
+            "l_corner": [9, -5, 0],
+            "u": [-18, 0, 0],
+            "v": [0, 10, 0],
+            "transform": [
+                {
+                    "translate": [0, 5, 0]
+                }, {
+                    "x": [0, 0, 1],
+                    "y": [0, 1, 0],
+                    "z": [1, 0, 0]
+                }, {
+                    "translate": [-12, 0, 0]
+                }
+            ]
+        }
+    ]
+}

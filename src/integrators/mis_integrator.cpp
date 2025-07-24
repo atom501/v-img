@@ -24,7 +24,7 @@ glm::vec3 mis_integrator(Ray& input_ray, std::vector<size_t>& thread_stack, cons
   }
 
   // If first hit does not miss or hit light
-  for (d = 0; d <= depth; d++) {
+  for (d = 0; d < depth; d++) {
     // info for next bounce
     std::optional<ScatterInfo> scattered_mat
         = hit.value().mat->sample_mat(test_ray.dir, hit.value(), hash_state);
