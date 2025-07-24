@@ -191,7 +191,7 @@ private:
       auto tri_normal = glm::normalize(glm::cross(edge1, edge2));
 
       const glm::vec3 hit_p = u * p0 + v * p1 + w * p2;
-      const bool front_face = glm::dot(ray.dir, normal) < 0 ? true : false;
+      const bool front_face = glm::dot(ray.dir, tri_normal) < 0 ? true : false;
       const glm::vec3 hit_n = front_face ? normal : -normal;
       tri_normal = front_face ? tri_normal : -tri_normal;
 
