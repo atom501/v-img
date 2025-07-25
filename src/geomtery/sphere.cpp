@@ -69,7 +69,7 @@ std::pair<glm::vec3, EmitterInfo> Sphere::sample(const glm::vec3& look_from,
 
     auto onb = init_onb(dir_lf_to_center);
     auto sample_z_dir = sample_sphere_cap(rand1, rand2, cos_theta_max);
-    auto sampler_dir = glm::normalize((onb, sample_z_dir));
+    auto sampler_dir = glm::normalize(xform_with_onb(onb, sample_z_dir));
 
     emit_info.wi = sampler_dir;
     float costheta = sample_z_dir.z;
@@ -84,14 +84,11 @@ std::pair<glm::vec3, EmitterInfo> Sphere::sample(const glm::vec3& look_from,
     }
 
     float dist_lf_to_center = glm::length(center - look_from);
-    float dist_lf_to_p
-        = (dist_lf_to_center * costheta)
-          - sqrt((radius * radius) - (dist_lf_to_center * dist_lf_to_center) * sintheta_sq);
+    float dist_lf_to_p = dist_lf_to_center - radius;
 
     const glm::vec3 hit_p = look_from + sampler_dir * dist_lf_to_p;
     const glm::vec3 hit_n = glm::normalize(hit_p - center);
-    // for point inside the sphere direction vec from point to surface of sphere will always be
-    // front face
+    // for a point outside the sphere the direction vec will always front face
 
     // calculate uv
     float theta = std::acos(-hit_n.y);
