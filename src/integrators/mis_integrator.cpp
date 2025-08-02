@@ -10,6 +10,8 @@ glm::vec3 mis_integrator(Ray& input_ray, std::vector<size_t>& thread_stack, cons
   glm::vec3 throughput = glm::vec3(1.0f);
   size_t d = 0;
 
+  // tracking eta_scale and removing it from the path contribution when doing MIS
+  float eta_scale = 1;
   constexpr uint32_t roulette_threshold = 5;
 
   // perform initial hit test
@@ -38,6 +40,10 @@ glm::vec3 mis_integrator(Ray& input_ray, std::vector<size_t>& thread_stack, cons
 
     // skip if light sampling handling delta functions with material pdf = 0
     if (mat_sample_pdf != 0) {
+      if (scattered_mat.value().eta != 0.f) {
+        eta_scale /= (scattered_mat.value().eta * scattered_mat.value().eta);
+      }
+
       // light sampling
       auto [light_col, l_sample_info] = lights.sample(hit.value().hit_p, hash_state);
 
@@ -98,7 +104,9 @@ glm::vec3 mis_integrator(Ray& input_ray, std::vector<size_t>& thread_stack, cons
           float rand_float = static_cast<float>(pcg32_random_r(&hash_state))
                              / std::numeric_limits<uint32_t>::max();
 
-          float max_val = std::max(std::max(throughput.x, throughput.y), throughput.z);
+          glm::vec3 rr_throughput = (1.f / eta_scale) * throughput;
+          float max_val = std::min(
+              std::max(std::max(rr_throughput.x, rr_throughput.y), rr_throughput.z), 0.95f);
 
           if (rand_float > max_val) {
             break;
