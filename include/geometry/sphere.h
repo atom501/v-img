@@ -95,8 +95,6 @@ private:
     } else if constexpr (std::is_same_v<T, std::optional<HitInfo>>) {
       const glm::vec3 hit_p = r.o + r.dir * t0;
       const glm::vec3 normal = glm::normalize(hit_p - center);
-      const bool front_face = glm::dot(r.dir, normal) < 0;
-      const glm::vec3 hit_n = front_face ? normal : -normal;
 
       // calculate uv
       float theta = std::acos(-normal.y);
@@ -105,7 +103,7 @@ private:
       float u = phi / (2.f * std::numbers::pi);
       float v = theta / std::numbers::pi;
 
-      HitInfo hit = {mat, this, hit_p, hit_n, hit_n, glm::vec2(u, v), front_face};
+      HitInfo hit = {mat, this, hit_p, normal, normal, glm::vec2(u, v)};
 
       return std::make_optional(std::move(hit));
     }

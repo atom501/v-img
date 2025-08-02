@@ -186,14 +186,9 @@ private:
                 n1 = normal_list[tri_normal_list[3 * tri_index + 1]],
                 n2 = normal_list[tri_normal_list[3 * tri_index + 2]];
 
-      glm::vec3 normal = glm::normalize(u * n0 + v * n1 + w * n2);
-
-      auto tri_normal = glm::normalize(glm::cross(edge1, edge2));
-
+      const glm::vec3 shading_normal = glm::normalize(u * n0 + v * n1 + w * n2);
       const glm::vec3 hit_p = u * p0 + v * p1 + w * p2;
-      const bool front_face = glm::dot(ray.dir, tri_normal) < 0 ? true : false;
-      const glm::vec3 hit_n = front_face ? normal : -normal;
-      tri_normal = front_face ? tri_normal : -tri_normal;
+      const glm::vec3 tri_normal = glm::normalize(glm::cross(edge1, edge2));
 
       const auto& tri_texcoords_list = obj_mesh->tri_uv;
       const auto& texcoords_list = obj_mesh->texcoords;
@@ -208,7 +203,7 @@ private:
         uv = u * uv0 + v * uv1 + w * uv2;
       }
 
-      HitInfo hit = {mat, this, hit_p, hit_n, tri_normal, uv, front_face};
+      HitInfo hit = {mat, this, hit_p, shading_normal, tri_normal, uv};
 
       return std::make_optional(std::move(hit));
     }

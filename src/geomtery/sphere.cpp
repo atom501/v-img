@@ -37,7 +37,7 @@ std::pair<glm::vec3, EmitterInfo> Sphere::sample(const glm::vec3& look_from,
     emit_info.wi = glm::normalize(vec_from_lf_to_pos);
 
     const glm::vec3 hit_p = point_on_sphere;
-    const glm::vec3 hit_n = point_on_unit_sphere * -1.0f;
+    const glm::vec3 hit_n = point_on_unit_sphere;
     // for point inside the sphere direction vec from point to surface of sphere will always be back
     // face
 
@@ -47,7 +47,7 @@ std::pair<glm::vec3, EmitterInfo> Sphere::sample(const glm::vec3& look_from,
     const float u = phi / (2.f * std::numbers::pi);
     const float v = theta / std::numbers::pi;
 
-    hit = {mat, this, hit_p, hit_n, hit_n, glm::vec2(u, v), false};
+    hit = {mat, this, hit_p, hit_n, hit_n, glm::vec2(u, v)};
 
     const float sphere_sa = 4 * std::numbers::pi * radius * radius;
 
@@ -97,7 +97,7 @@ std::pair<glm::vec3, EmitterInfo> Sphere::sample(const glm::vec3& look_from,
     float u = phi / (2.f * std::numbers::pi);
     float v = theta / std::numbers::pi;
 
-    hit = {mat, this, hit_p, hit_n, hit_n, glm::vec2(u, v), true};
+    hit = {mat, this, hit_p, hit_n, hit_n, glm::vec2(u, v)};
 
     emit_info.pdf = 1.0f / (2 * std::numbers::pi * (1.0f - cos_theta_max));
     emit_info.dist = dist_lf_to_p;

@@ -68,16 +68,7 @@ std::pair<glm::vec3, EmitterInfo> Quad::sample(const glm::vec3& look_from,
   const float distance2 = glm::length2(from_lf_to_p);
   const glm::vec3 wi = glm::normalize(from_lf_to_p);
 
-  glm::vec3 hit_n = normal;
-  bool front_face;
-
-  float dot = glm::dot(wi, normal);
-
-  if (dot > 0) {
-    front_face = false;
-    hit_n *= -1.0f;
-  } else
-    front_face = true;
+  float dot = glm::dot(wi, Quad::normal);
 
   const float area = glm::length(glm::cross(u, v));
   const float cosine = std::abs(dot);
@@ -90,7 +81,7 @@ std::pair<glm::vec3, EmitterInfo> Quad::sample(const glm::vec3& look_from,
     pdf = 0.f;
   }
 
-  HitInfo hit = {mat, this, hit_p, hit_n, hit_n, glm::vec2(rand1, rand2), front_face};
+  HitInfo hit = {mat, this, hit_p, Quad::normal, Quad::normal, glm::vec2(rand1, rand2)};
 
   EmitterInfo emit_info = {wi, pdf, std::sqrtf(distance2)};
 
