@@ -32,7 +32,7 @@ glm::vec3 mis_integrator(Ray& input_ray, std::vector<size_t>& thread_stack, cons
         = hit.value().mat->sample_mat(test_ray.dir, hit.value(), hash_state);
 
     if (!scattered_mat.has_value()) {
-      return glm::vec3(0.0f);
+      return bounce_result;
     }
 
     float mat_sample_pdf
