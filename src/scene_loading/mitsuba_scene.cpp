@@ -5,6 +5,7 @@
 #include <geometry/triangle.h>
 #include <material/diffuse_light.h>
 #include <material/lambertian.h>
+#include <material/principled.h>
 #include <scene_loading/mitsuba_scene.h>
 #include <scene_loading/serialized_file.h>
 #include <tinyexr.h>
@@ -125,6 +126,32 @@ Material* mat_index_from_obj(std::shared_ptr<tinyparser_mitsuba::Object> mat_obj
               }
             }
           }
+        } else if (plugin_type == "principled") {
+          fmt::println("principled");
+          auto properties = mat_obj->properties();
+
+          tinyparser_mitsuba::Color b_c = properties["base_color"].getColor();
+          glm::vec3 base_col(b_c.r, b_c.g, b_c.b);
+
+          float roughness = properties["roughness"].getNumber();
+          float anisotropic = properties["anisotropic"].getNumber();
+          float eta = properties["eta"].getNumber();
+          float subsurface = properties["subsurface"].getNumber();
+          float metallic = properties["metallic"].getNumber();
+
+          float spec_trans = properties["spec_trans"].getNumber();
+          float specular = properties["specular"].getNumber();
+          float spec_tint = properties["spec_tint"].getNumber();
+
+          float sheen = properties["sheen"].getNumber();
+          float sheen_tint = properties["sheen_tint"].getNumber();
+
+          float clearcoat = properties["clearcoat"].getNumber();
+          float clearcoat_gloss = properties["clearcoat_gloss"].getNumber();
+
+          list_materials.push_back(std::make_unique<Principled>(
+              base_col, spec_trans, metallic, subsurface, specular, roughness, spec_tint,
+              anisotropic, sheen, sheen_tint, clearcoat, clearcoat_gloss, eta));
         } else {
           fmt::println("plugin type {} is not supported.", plugin_type);
           return nullptr;

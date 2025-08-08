@@ -11,7 +11,7 @@ struct HitInfo;
 
 struct ScatterInfo {
   glm::vec3 wo;  // outgoing direction from hit point on material. Always normalized
-  float eta;
+  float eta;     // get eta for the case with MIS and refraction
 };
 
 class Material {
