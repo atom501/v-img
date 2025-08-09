@@ -2,6 +2,7 @@
 
 #include <ray.h>
 
+#include <array>
 #include <cmath>
 #include <cstdint>
 #include <optional>
@@ -92,32 +93,29 @@ public:
    * source is https://tavianator.com/2022/ray_box_boundary.html
    * loop is manually unrolled and ray inverse calculated in bvh hit call
    */
-  inline std::optional<float> intersect(const Ray& ray, const glm::vec3& ray_inv_dir) const {
-    bool sign_x = std::signbit(ray.dir[0]);
-    bool sign_y = std::signbit(ray.dir[1]);
-    bool sign_z = std::signbit(ray.dir[2]);
-
+  inline std::optional<float> intersect(const Ray& ray, const glm::vec3& ray_inv_dir,
+                                        const std::array<bool, 3>& dir_signs) const {
     const float o_x = ray.o[0];
     const float o_y = ray.o[1];
     const float o_z = ray.o[2];
 
     // x-axis
-    const float bmin0 = this->bboxes[sign_x][0];
-    const float bmax0 = this->bboxes[!sign_x][0];
+    const float bmin0 = this->bboxes[dir_signs[0]][0];
+    const float bmax0 = this->bboxes[!dir_signs[0]][0];
 
     const float dmin_x = (bmin0 - o_x) * ray_inv_dir[0];
     const float dmax_x = (bmax0 - o_x) * ray_inv_dir[0];
 
     // y-axis
-    const float bmin1 = this->bboxes[sign_y][1];
-    const float bmax1 = this->bboxes[!sign_y][1];
+    const float bmin1 = this->bboxes[dir_signs[1]][1];
+    const float bmax1 = this->bboxes[!dir_signs[1]][1];
 
     const float dmin_y = (bmin1 - o_y) * ray_inv_dir[1];
     const float dmax_y = (bmax1 - o_y) * ray_inv_dir[1];
 
     // z-axis
-    const float bmin2 = this->bboxes[sign_z][2];
-    const float bmax2 = this->bboxes[!sign_z][2];
+    const float bmin2 = this->bboxes[dir_signs[2]][2];
+    const float bmax2 = this->bboxes[!dir_signs[2]][2];
 
     const float dmin_z = (bmin2 - o_z) * ray_inv_dir[2];
     const float dmax_z = (bmax2 - o_z) * ray_inv_dir[2];
