@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.20...3.22)
+cmake_minimum_required(VERSION 3.6...3.22)
 
 # ---- Project ----
 
@@ -37,9 +37,11 @@ CPMAddPackage(
   OPTIONS "FMT_INSTALL YES" # create an installable target
 )
 
+add_compile_definitions(GLM_ENABLE_EXPERIMENTAL)
+
 CPMAddPackage(
   NAME glm
-  GIT_TAG 0.9.9.8
+  GIT_TAG 1.0.1
   GITHUB_REPOSITORY g-truc/glm
 )
 
