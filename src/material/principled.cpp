@@ -1,6 +1,5 @@
 #include <material/disney_helpers/disney_clearcoat.h>
 #include <material/disney_helpers/disney_diffuse.h>
-#include <material/disney_helpers/disney_glass.h>
 #include <material/disney_helpers/disney_sheen.h>
 #include <material/principled.h>
 

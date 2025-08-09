@@ -24,14 +24,12 @@ inline glm::vec3 sample_sphere(const float& rand1, const float& rand2) {
   return glm::vec3(x, y, z);
 }
 
-static inline float lerp(float a, float b, float f) { return a + f * (b - a); }
-
 // give two random numbers [0,1] as input and return a point on sphere cap.
 // where pole of hemisphere is (0,0,1) and cos_theta_max starts from pole
 inline glm::vec3 sample_sphere_cap(const float& rand1, const float& rand2,
                                    const float& cos_theta_max) {
   float phi = 2 * std::numbers::pi * rand1;
-  float cos_theta = lerp(cos_theta_max, 1.0f, rand2);
+  float cos_theta = std::lerp(cos_theta_max, 1.0f, rand2);
   float sin_theta = sqrtf(1 - cos_theta * cos_theta);
 
   float x = cos(phi) * sin_theta;

@@ -60,7 +60,7 @@ endif()
 
 CPMAddPackage(
   NAME args
-  GIT_TAG 6.4.6
+  GIT_TAG 6.4.7
   GITHUB_REPOSITORY Taywee/args
 )
 
