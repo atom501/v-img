@@ -51,3 +51,18 @@ inline glm::vec3 anisotropic_sample_visible_normals(const glm::vec3& local_dir_i
   return sign
          * glm::normalize(glm::vec3{alphax * hemi_N.x, alphay * hemi_N.y, std::max(0.f, hemi_N.z)});
 }
+
+// https://seblagarde.wordpress.com/2013/04/29/memo-on-fresnel-equations/
+inline float fresnel_dielectric(float n_dot_i, float eta) {
+  float n_dot_t_sq = 1.f - (1.f - n_dot_i * n_dot_i) / (eta * eta);
+  if (n_dot_t_sq < 0) {
+    // total internal reflection
+    return 1;
+  }
+  float n_dot_t = std::sqrt(n_dot_t_sq);
+
+  float rs = (n_dot_i - eta * n_dot_t) / (n_dot_i + eta * n_dot_t);
+  float rp = (eta * n_dot_i - n_dot_t) / (eta * n_dot_i + n_dot_t);
+  float F = (rs * rs + rp * rp) / 2;
+  return F;
+}
