@@ -133,21 +133,21 @@ Material* mat_index_from_obj(std::shared_ptr<tinyparser_mitsuba::Object> mat_obj
           tinyparser_mitsuba::Color b_c = properties["base_color"].getColor();
           glm::vec3 base_col(b_c.r, b_c.g, b_c.b);
 
-          float roughness = properties["roughness"].getNumber();
+          float roughness = properties["roughness"].getNumber(0.5f);
           float anisotropic = properties["anisotropic"].getNumber();
-          float eta = properties["eta"].getNumber();
+          float eta = properties["eta"].getNumber(1.5f);
           float subsurface = properties["subsurface"].getNumber();
           float metallic = properties["metallic"].getNumber();
 
           float spec_trans = properties["spec_trans"].getNumber();
-          float specular = properties["specular"].getNumber();
+          float specular = properties["specular"].getNumber(0.5f);
           float spec_tint = properties["spec_tint"].getNumber();
 
           float sheen = properties["sheen"].getNumber();
-          float sheen_tint = properties["sheen_tint"].getNumber();
+          float sheen_tint = properties["sheen_tint"].getNumber(0.5f);
 
           float clearcoat = properties["clearcoat"].getNumber();
-          float clearcoat_gloss = properties["clearcoat_gloss"].getNumber();
+          float clearcoat_gloss = properties["clearcoat_gloss"].getNumber(1.f);
 
           list_materials.push_back(std::make_unique<Principled>(
               base_col, spec_trans, metallic, subsurface, specular, roughness, spec_tint,
