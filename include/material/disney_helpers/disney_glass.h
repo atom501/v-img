@@ -11,10 +11,10 @@ inline glm::vec3 eval_disney_rough_glass(const glm::vec3& dir_in, const glm::vec
                                          glm::vec3 half_vec, ONB normal_frame) {
   float in_geo_dot = glm::dot(dir_in, hit.hit_n_g);
 
-  bool reflect = (in_geo_dot * glm::dot(hit.hit_n_g, dir_out)) > 0;
+  bool reflect = (in_geo_dot * glm::dot(hit.hit_n_g, dir_out)) >= 0;
 
   // flip eta when going out of the surface
-  float eta = in_geo_dot > 0 ? mat_eta : 1.f / mat_eta;
+  float eta = in_geo_dot >= 0 ? mat_eta : 1.f / mat_eta;
 
   constexpr float alpha_min = 0.0001;
   float aspect = std::sqrt(1.f - 0.9f * anisotropic);
@@ -29,11 +29,6 @@ inline glm::vec3 eval_disney_rough_glass(const glm::vec3& dir_in, const glm::vec
   if (!reflect) {
     // "Generalized half-vector" from Walter et al.
     half_vec = normalize(dir_in + dir_out * eta);
-  }
-
-  // Flip half-vector if it's below surface
-  if (glm::dot(half_vec, normal_frame.w) < 0) {
-    half_vec = -half_vec;
   }
 
   float h_dot_in = glm::dot(half_vec, dir_in);
@@ -65,19 +60,14 @@ inline float pdf_disney_rough_glass(const glm::vec3& dir_in, const glm::vec3& di
                                     float roughness, glm::vec3 half_vec, ONB normal_frame) {
   float in_geo_dot = glm::dot(dir_in, hit.hit_n_g);
 
-  bool reflect = (in_geo_dot * glm::dot(hit.hit_n_g, dir_out)) > 0;
+  bool reflect = (in_geo_dot * glm::dot(hit.hit_n_g, dir_out)) >= 0;
 
   // flip eta when going out of the surface
-  float eta = in_geo_dot > 0 ? mat_eta : 1.f / mat_eta;
+  float eta = in_geo_dot >= 0 ? mat_eta : 1.f / mat_eta;
 
   if (!reflect) {
     // "Generalized half-vector" from Walter et al.
     half_vec = normalize(dir_in + dir_out * eta);
-  }
-
-  // Flip half-vector if it's below surface
-  if (glm::dot(half_vec, normal_frame.w) < 0) {
-    half_vec = -half_vec;
   }
 
   constexpr float alpha_min = 0.0001;
@@ -122,7 +112,7 @@ inline std::optional<ScatterInfo> sample_disney_rough_glass(const glm::vec3& dir
                                                             pcg32_random_t& pcg_rng) {
   // flip eta when going out of the surface
   float in_geo_dot = glm::dot(dir_in, hit.hit_n_g);
-  float eta = in_geo_dot > 0 ? mat_eta : 1.f / mat_eta;
+  float eta = in_geo_dot >= 0 ? mat_eta : 1.f / mat_eta;
 
   constexpr float alpha_min = 0.0001;
   float aspect = std::sqrt(1.f - 0.9f * anisotropic);
@@ -140,18 +130,10 @@ inline std::optional<ScatterInfo> sample_disney_rough_glass(const glm::vec3& dir
 
   glm::vec3 half_vec = xform_with_onb(normal_frame, local_micro_normal);
 
-  if (glm::dot(half_vec, normal_frame.w) < 0) {
-    half_vec = -half_vec;
-  }
-
   // Now we need to decide whether to reflect or refract.
   // We do this using the Fresnel term.
   float h_dot_in = glm::dot(half_vec, dir_in);
   float F = fresnel_dielectric(h_dot_in, eta);
-
-  if (F == 1.f) {
-    return std::nullopt;
-  }
 
   float rand = rand_float(pcg_rng);
 
@@ -159,7 +141,7 @@ inline std::optional<ScatterInfo> sample_disney_rough_glass(const glm::vec3& dir
     // Reflection
     glm::vec3 reflected = glm::normalize(-dir_in + 2 * glm::dot(dir_in, half_vec) * half_vec);
     // set eta to 0 since we are not transmitting
-    if (glm::dot(reflected, hit.hit_n_g) <= 0) {
+    if (glm::dot(reflected, hit.hit_n_g) * glm::dot(dir_in, hit.hit_n_g) < 0) {
       return std::nullopt;
     } else {
       return ScatterInfo{reflected, 0.f};
@@ -180,10 +162,10 @@ inline std::optional<ScatterInfo> sample_disney_rough_glass(const glm::vec3& dir
     }
     float h_dot_out = sqrt(h_dot_out_sq);
     glm::vec3 refracted = -dir_in / eta + (std::abs(h_dot_in) / eta - h_dot_out) * half_vec;
-    if (glm::dot(refracted, hit.hit_n_g) > 0) {
+    if (glm::dot(refracted, hit.hit_n_g) * glm::dot(dir_in, hit.hit_n_g) >= 0) {
       return std::nullopt;
     } else {
-      return ScatterInfo{refracted, 0.f};
+      return ScatterInfo{refracted, eta};
     }
   }
 }

@@ -61,6 +61,8 @@ inline float fresnel_dielectric(float n_dot_i, float eta) {
   }
   float n_dot_t = std::sqrt(n_dot_t_sq);
 
+  n_dot_i = std::abs(n_dot_i);
+
   float rs = (n_dot_i - eta * n_dot_t) / (n_dot_i + eta * n_dot_t);
   float rp = (eta * n_dot_i - n_dot_t) / (eta * n_dot_i + n_dot_t);
   float F = (rs * rs + rp * rp) / 2;
