@@ -48,12 +48,20 @@ inline glm::vec3 project_onto_onb(const ONB& onb, const glm::vec3& ray_dir) {
 
 // normal_vec must already be normalized
 inline ONB init_onb(const glm::vec3& normal_vec) {
-  glm::vec3 unit_n = normal_vec;
-  glm::vec3 a = (fabs(unit_n[0]) > 0.9) ? glm::vec3(0, 1, 0) : glm::vec3(1, 0, 0);
-  glm::vec3 v = glm::normalize(glm::cross(unit_n, a));
-  glm::vec3 u = glm::cross(unit_n, v);  // already a unit vector as unit_n and v are perpendicular
+  glm::vec3 u;
+  glm::vec3 v;
+  if (normal_vec[2] < (-1.f + 1e-6f)) {
+    u = glm::vec3(0, -1, 0);
+    v = glm::vec3(-1, 0, 0);
+  } else {
+    float a = 1.f / (1.f + normal_vec[2]);
+    float b = -normal_vec[0] * normal_vec[1] * a;
 
-  return ONB{u, v, unit_n};
+    u = glm::vec3(1.f - normal_vec[0] * normal_vec[0] * a, b, -normal_vec[0]);
+    v = glm::vec3(b, 1 - normal_vec[1] * normal_vec[1] * a, -normal_vec[1]);
+  }
+
+  return ONB{u, v, normal_vec};
 }
 
 // Axis-aligned bounding box
