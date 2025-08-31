@@ -27,23 +27,10 @@ glm::vec3 mis_integrator(Ray& input_ray, std::vector<size_t>& thread_stack, cons
 
   // If first hit does not miss or hit light
   for (d = 0; d < depth; d++) {
-    // info for next bounce
-    std::optional<ScatterInfo> scattered_mat
-        = hit.value().mat->sample_mat(test_ray.dir, hit.value(), hash_state);
-
-    if (!scattered_mat.has_value()) {
-      return bounce_result;
-    }
-
-    float mat_sample_pdf
-        = hit.value().mat->pdf(test_ray.dir, scattered_mat.value().wo, hit.value());
+    bool mat_is_delta = hit.value().mat->is_delta();
 
     // skip if light sampling handling delta functions with material pdf = 0
-    if (mat_sample_pdf != 0) {
-      if (scattered_mat.value().eta != 0.f) {
-        eta_scale /= (scattered_mat.value().eta * scattered_mat.value().eta);
-      }
-
+    if (!mat_is_delta) {
       // light sampling
       auto [light_col, l_sample_info] = lights.sample(hit.value().hit_p, hash_state);
 
@@ -65,6 +52,21 @@ glm::vec3 mis_integrator(Ray& input_ray, std::vector<size_t>& thread_stack, cons
         }
       }
     }
+
+    // info for next bounce
+    std::optional<ScatterInfo> scattered_mat
+        = hit.value().mat->sample_mat(test_ray.dir, hit.value(), hash_state);
+
+    if (!scattered_mat.has_value()) {
+      return bounce_result;
+    }
+
+    if (scattered_mat.value().eta != 0.f) {
+      eta_scale /= (scattered_mat.value().eta * scattered_mat.value().eta);
+    }
+
+    float mat_sample_pdf
+        = hit.value().mat->pdf(test_ray.dir, scattered_mat.value().wo, hit.value());
 
     // material sampling
     throughput
