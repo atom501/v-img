@@ -51,4 +51,7 @@ public:
   }
 
   virtual bool is_emissive() const { return false; }
+
+  // return true if mat is a delta function
+  virtual bool is_delta() const { return true; }
 };

@@ -30,4 +30,6 @@ public:
 
   std::pair<glm::vec3, float> eval_pdf_pair(const glm::vec3& wi, const glm::vec3& wo,
                                             const HitInfo& hit) const override;
+
+  bool is_delta() const override { return false; }
 };

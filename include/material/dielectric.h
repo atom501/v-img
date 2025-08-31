@@ -30,4 +30,5 @@ public:
   float pdf(const glm::vec3& wi, const glm::vec3& wo, const HitInfo& hit) const override;
   glm::vec3 eval_div_pdf(const glm::vec3& wi, const glm::vec3& wo,
                          const HitInfo& hit) const override;
+  bool is_delta() const override { return true; }
 };

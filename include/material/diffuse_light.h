@@ -37,4 +37,6 @@ public:
   }
 
   bool is_emissive() const override { return true; }
+
+  bool is_delta() const override { return false; }
 };
