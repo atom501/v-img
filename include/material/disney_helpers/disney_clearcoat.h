@@ -28,7 +28,7 @@ inline glm::vec3 eval_disney_clearcoat(const glm::vec3& dir_in, const glm::vec3&
   const glm::vec3 local_H = project_onto_onb(normal_frame, half_vec);
 
   float D = (alpha_g_square - 1.f)
-            / (std::numbers::pi * std::log2(alpha_g_square)
+            / (std::numbers::pi * std::log(alpha_g_square)
                * (1. + (alpha_g_square - 1.) * local_H.z * local_H.z));
 
   float clearcoat_eval = (Fresenl * D * G) / (4.f * std::abs(glm::dot(normal_frame.w, dir_in)));
@@ -51,7 +51,7 @@ inline float pdf_disney_clearcoat(const glm::vec3& dir_in, const glm::vec3& dir_
   const glm::vec3 local_H = project_onto_onb(normal_frame, half_vec);
 
   float D = (alpha_g_square - 1.f)
-            / (std::numbers::pi * std::log2(alpha_g_square)
+            / (std::numbers::pi * std::log(alpha_g_square)
                * (1.f + (alpha_g_square - 1.f) * local_H.z * local_H.z));
 
   return (D * std::abs(glm::dot(normal_frame.w, half_vec)))
@@ -95,7 +95,7 @@ inline std::optional<ScatterInfo> sample_disney_clearcoat(const glm::vec3& dir_i
   const glm::vec3 H = glm::normalize(xform_with_onb(normal_frame, local_h));
   glm::vec3 reflected = glm::normalize(-dir_in + 2 * glm::dot(dir_in, H) * H);
 
-  if (glm::dot(hit.hit_n_g, reflected) < 0) {
+  if (glm::dot(hit.hit_n_g, reflected) <= 0) {
     return std::nullopt;
   } else {
     return ScatterInfo{reflected, 0};
