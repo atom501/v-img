@@ -62,7 +62,7 @@ inline std::optional<ScatterInfo> sample_disney_diffuse(const glm::vec3& dir_in,
   glm::vec3 dir_out = xform_with_onb(normal_frame, sample_hemisphere_cosine(rand1, rand2));
 
   // check if out dir is below the surface
-  if (glm::dot(hit.hit_n_g, dir_out) < 0) {
+  if (glm::dot(hit.hit_n_g, dir_out) <= 0) {
     return std::nullopt;
   } else {
     return ScatterInfo{dir_out, 0.f};

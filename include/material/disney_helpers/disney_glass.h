@@ -165,7 +165,15 @@ inline std::optional<ScatterInfo> sample_disney_rough_glass(const glm::vec3& dir
     if (glm::dot(refracted, hit.hit_n_g) * glm::dot(dir_in, hit.hit_n_g) >= 0) {
       return std::nullopt;
     } else {
-      return ScatterInfo{refracted, eta};
+      // to avoid getting Nan in pdf when performing refraction
+      glm::vec3 generalized_h = glm::normalize(dir_in + refracted * eta);
+      float g_h_dot_in = glm::dot(generalized_h, dir_in);
+
+      if ((1 - (1 - g_h_dot_in * g_h_dot_in) / (eta * eta)) < 0) {
+        return std::nullopt;
+      } else {
+        return ScatterInfo{refracted, eta};
+      }
     }
   }
 }
