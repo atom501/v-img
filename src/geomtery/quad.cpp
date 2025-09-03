@@ -81,11 +81,9 @@ std::pair<glm::vec3, EmitterInfo> Quad::sample(const glm::vec3& look_from,
     pdf = 0.f;
   }
 
-  HitInfo hit = {mat, this, hit_p, Quad::normal, Quad::normal, glm::vec2(rand1, rand2)};
-
   EmitterInfo emit_info = {wi, pdf, std::sqrtf(distance2)};
 
-  glm::vec3 emit_col = mat->emitted(Ray(look_from, emit_info.wi), hit);
+  glm::vec3 emit_col = mat->emitted(Ray(look_from, emit_info.wi), Quad::normal, hit_p);
 
   return std::make_pair(emit_col, emit_info);
 }

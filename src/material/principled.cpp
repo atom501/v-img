@@ -8,12 +8,12 @@
 std::optional<ScatterInfo> Principled::sample_mat(const glm::vec3& wi, const HitInfo& hit,
                                                   pcg32_random_t& pcg_rng) const {
   glm::vec3 dir_in = -wi;
-  ONB normal_frame;
+  ONB normal_frame = hit.n_frame;
 
   if ((glm::dot(hit.hit_n_s, dir_in) * glm::dot(hit.hit_n_g, dir_in)) < 0) {
-    normal_frame = init_onb(-hit.hit_n_s);
-  } else {
-    normal_frame = init_onb(hit.hit_n_s);
+    normal_frame.u = -normal_frame.u;
+    normal_frame.v = -normal_frame.v;
+    normal_frame.w = -normal_frame.w;
   }
 
   if (glm::dot(hit.hit_n_g, dir_in) < 0) {
@@ -53,12 +53,12 @@ std::optional<ScatterInfo> Principled::sample_mat(const glm::vec3& wi, const Hit
 }
 glm::vec3 Principled::eval(const glm::vec3& wi, const glm::vec3& wo, const HitInfo& hit) const {
   glm::vec3 dir_in = -wi;
-  ONB normal_frame;
+  ONB normal_frame = hit.n_frame;
 
   if ((glm::dot(hit.hit_n_s, dir_in) * glm::dot(hit.hit_n_g, dir_in)) < 0) {
-    normal_frame = init_onb(-hit.hit_n_s);
-  } else {
-    normal_frame = init_onb(hit.hit_n_s);
+    normal_frame.u = -normal_frame.u;
+    normal_frame.v = -normal_frame.v;
+    normal_frame.w = -normal_frame.w;
   }
 
   glm::vec3 half_vector = glm::normalize(dir_in + wo);
@@ -89,12 +89,12 @@ glm::vec3 Principled::eval(const glm::vec3& wi, const glm::vec3& wo, const HitIn
 }
 float Principled::pdf(const glm::vec3& wi, const glm::vec3& wo, const HitInfo& hit) const {
   glm::vec3 dir_in = -wi;
-  ONB normal_frame;
+  ONB normal_frame = hit.n_frame;
 
   if ((glm::dot(hit.hit_n_s, dir_in) * glm::dot(hit.hit_n_g, dir_in)) < 0) {
-    normal_frame = init_onb(-hit.hit_n_s);
-  } else {
-    normal_frame = init_onb(hit.hit_n_s);
+    normal_frame.u = -normal_frame.u;
+    normal_frame.v = -normal_frame.v;
+    normal_frame.w = -normal_frame.w;
   }
   glm::vec3 half_vector = glm::normalize(dir_in + wo);
 

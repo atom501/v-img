@@ -27,8 +27,9 @@ public:
     }
   }
 
-  glm::vec3 emitted(const Ray& ray, const HitInfo& hit) const override {
-    bool front_face = glm::dot(hit.hit_n_s, ray.dir) < 0;
+  glm::vec3 emitted(const Ray& ray, const glm::vec3& shading_normal,
+                    const glm::vec3& hit_p) const override {
+    bool front_face = glm::dot(shading_normal, ray.dir) < 0;
     // only emit from the normal-facing side
     if (front_face)
       return emit;

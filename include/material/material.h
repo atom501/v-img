@@ -46,7 +46,7 @@ public:
   }
 
   // light emitted
-  virtual glm::vec3 emitted(const Ray& ray, const HitInfo& hit) const {
+  virtual glm::vec3 emitted(const Ray& ray, const glm::vec3& shading_normal, const glm::vec3& hit_p) const {
     return glm::vec3(0.0f, 0.0f, 0.0f);
   }
 

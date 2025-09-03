@@ -13,16 +13,6 @@
 class Material;
 class Emitter;
 
-struct HitInfo {
-  Material* mat = nullptr;
-  const Emitter* obj = nullptr;
-  glm::vec3 hit_p;    // point where hit in world coords
-  glm::vec3 hit_n_s;  // shading Normal where hit in world coords.
-  glm::vec3 hit_n_g;  // geometric Normal where hit in world coords.
-                      // Both normals faces are normalized
-  glm::vec2 uv;       // texture uv coordinates
-};
-
 struct EmitterInfo {
   glm::vec3 wi;  // direction vector from look_from to point on surface
   float pdf;     // solid angle density wrt look_from
@@ -46,23 +36,34 @@ inline glm::vec3 project_onto_onb(const ONB& onb, const glm::vec3& ray_dir) {
   return glm::vec3{glm::dot(ray_dir, onb.u), glm::dot(ray_dir, onb.v), glm::dot(ray_dir, onb.w)};
 }
 
-// normal_vec must already be normalized
-inline ONB init_onb(const glm::vec3& normal_vec) {
-  glm::vec3 u;
-  glm::vec3 v;
+inline std::pair<glm::vec3, glm::vec3> get_axis(const glm::vec3& normal_vec) {
   if (normal_vec.z < (-0.9999999f)) {
-    u = glm::vec3(0, -1, 0);
-    v = glm::vec3(-1, 0, 0);
+    return std::make_pair(glm::vec3(0, -1, 0), glm::vec3(-1, 0, 0));
   } else {
     float a = 1.f / (1.f + normal_vec.z);
     float b = -normal_vec.x * normal_vec.y * a;
 
-    u = glm::vec3(1.f - normal_vec.x * normal_vec.x * a, b, -normal_vec.x);
-    v = glm::vec3(b, 1 - normal_vec.y * normal_vec.y * a, -normal_vec.y);
+    return std::make_pair(glm::vec3(1.f - normal_vec.x * normal_vec.x * a, b, -normal_vec.x),
+                          glm::vec3(b, 1 - normal_vec.y * normal_vec.y * a, -normal_vec.y));
   }
+}
 
+// normal_vec must already be normalized
+inline ONB init_onb(const glm::vec3& normal_vec) {
+  auto [u, v] = get_axis(normal_vec);
   return ONB{u, v, normal_vec};
 }
+
+struct HitInfo {
+  Material* mat = nullptr;
+  const Emitter* obj = nullptr;
+  glm::vec3 hit_p;    // point where hit in world coords
+  glm::vec3 hit_n_s;  // shading Normal where hit in world coords.
+  glm::vec3 hit_n_g;  // geometric Normal where hit in world coords.
+                      // Both normals faces are normalized
+  glm::vec2 uv;       // texture uv coordinates
+  ONB n_frame;
+};
 
 // Axis-aligned bounding box
 class AABB {

@@ -103,7 +103,20 @@ private:
       float u = phi / (2.f * std::numbers::pi);
       float v = theta / std::numbers::pi;
 
-      HitInfo hit = {mat, this, hit_p, normal, normal, glm::vec2(u, v)};
+      glm::vec3 dpdu{-Sphere::radius * normal.y, Sphere::radius * normal.x, 0.f};
+      glm::vec3 dpdv{Sphere::radius * std::cos(u) * std::cos(v),
+                     Sphere::radius * std::sin(u) * std::cos(v), -Sphere::radius * std::sin(v)};
+      // dpdu may not be orthogonal to shading normal:
+      // subtract the projection of shading_normal onto dpdu to make them orthogonal
+      glm::vec3 tangent = glm::normalize(dpdu - normal * dot(normal, dpdu));
+
+      HitInfo hit = {mat,
+                     this,
+                     hit_p,
+                     normal,
+                     normal,
+                     glm::vec2(u, v),
+                     ONB{tangent, glm::normalize(glm::cross(normal, tangent)), normal}};
 
       return std::make_optional(std::move(hit));
     }

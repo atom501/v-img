@@ -116,7 +116,13 @@ private:
       // Ray hits the 2D shape; set the rest of the hit record,
       const glm::vec3 hit_p = intersection;
 
-      HitInfo hit = {mat, this, hit_p, Quad::normal, Quad::normal, glm::vec2(alpha, beta)};
+      HitInfo hit = {mat,
+                     this,
+                     hit_p,
+                     Quad::normal,
+                     Quad::normal,
+                     glm::vec2(alpha, beta),
+                     init_onb(Quad::normal)};
 
       return std::make_optional(std::move(hit));
     }

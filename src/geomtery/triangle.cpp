@@ -99,8 +99,6 @@ std::pair<glm::vec3, EmitterInfo> Triangle::sample(const glm::vec3& look_from,
 
   tri_normal = glm::normalize(tri_normal);
 
-  HitInfo hit = {mat, this, hit_p, hit_n, tri_normal, uv};
-
   // convert to solid angle measure
   float area = glm::length(glm::cross(edge2, edge1)) / 2.0f;
   float cosine = std::abs(normal_dir_dot);
@@ -114,7 +112,7 @@ std::pair<glm::vec3, EmitterInfo> Triangle::sample(const glm::vec3& look_from,
   }
 
   EmitterInfo emit_info = {dir_vec, pdf, std::sqrtf(dist2)};
-  glm::vec3 emit_col = mat->emitted(Ray(look_from, emit_info.wi), hit);
+  glm::vec3 emit_col = mat->emitted(Ray(look_from, emit_info.wi), hit_n, hit_p);
 
   return std::make_pair(emit_col, emit_info);
 }

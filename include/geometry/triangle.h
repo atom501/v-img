@@ -194,6 +194,7 @@ private:
       const auto& texcoords_list = obj_mesh->texcoords;
 
       glm::vec2 uv = glm::vec2(u, v);
+      glm::vec2 diff_uvs[3];
       if (tri_texcoords_list[3 * tri_index] != -1 && tri_texcoords_list[3 * tri_index + 1] != -1
           && tri_texcoords_list[3 * tri_index + 2] != -1) {
         glm::vec2 uv0 = texcoords_list[tri_texcoords_list[3 * tri_index]],
@@ -201,9 +202,59 @@ private:
                   uv2 = texcoords_list[tri_texcoords_list[3 * tri_index + 2]];
 
         uv = u * uv0 + v * uv1 + w * uv2;
+
+        diff_uvs[0] = uv0;
+        diff_uvs[1] = uv1;
+        diff_uvs[2] = uv2;
+      } else {
+        diff_uvs[0] = glm::vec2{0, 0};
+        diff_uvs[1] = glm::vec2{1, 0};
+        diff_uvs[2] = glm::vec2{1, 1};
       }
 
-      HitInfo hit = {mat, this, hit_p, shading_normal, tri_normal, uv};
+      // calculating surface differential
+      glm::vec2 duvds = diff_uvs[2] - diff_uvs[0];
+      glm::vec2 duvdt = diff_uvs[2] - diff_uvs[1];
+
+      float det = duvds[0] * duvdt[1] - duvdt[0] * duvds[1];
+      float dsdu = duvdt[1] / det;
+      float dtdu = -duvds[1] / det;
+      float dsdv = duvdt[0] / det;
+      float dtdv = -duvds[0] / det;
+
+      glm::vec3 dpdu, dpdv;
+      if (std::abs(det) > 1e-8f) {
+        // Now we just need to do the matrix multiplication
+        glm::vec3 dpds = p2 - p0;
+        glm::vec3 dpdt = p2 - p1;
+        dpdu = dpds * dsdu + dpdt * dtdu;
+        dpdv = dpds * dsdv + dpdt * dtdv;
+      } else {
+        // degenerate uvs. Use an arbitrary coordinate system
+        std::tie(dpdu, dpdv) = get_axis(tri_normal);
+      }
+
+      // dpdu may not be orthogonal to shading normal:
+      // subtract the projection of shading_normal onto dpdu to make them orthogonal
+      glm::vec3 tangent = normalize(dpdu - shading_normal * dot(shading_normal, dpdu));
+
+      // We want to compute dn/du & dn/dv for mean curvature.
+      // This is computed in a similar way to dpdu.
+      // dn/duv = dn/dst * dst/duv = dn/dst * (duv/dst)^{-1}
+      glm::vec3 dnds = n2 - n0;
+      glm::vec3 dndt = n2 - n1;
+      glm::vec3 dndu = dnds * dsdu + dndt * dtdu;
+      glm::vec3 dndv = dnds * dsdv + dndt * dtdv;
+      glm::vec3 bitangent = glm::normalize(glm::cross(shading_normal, tangent));
+      float mean_curvature = (glm::dot(dndu, tangent) + glm::dot(dndv, bitangent)) / 2.f;
+
+      HitInfo hit = {mat,
+                     this,
+                     hit_p,
+                     shading_normal,
+                     tri_normal,
+                     uv,
+                     ONB{tangent, bitangent, shading_normal}};
 
       return std::make_optional(std::move(hit));
     }

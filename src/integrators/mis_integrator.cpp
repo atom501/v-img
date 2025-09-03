@@ -22,7 +22,7 @@ glm::vec3 mis_integrator(Ray& input_ray, std::vector<size_t>& thread_stack, cons
     return background->background_emit(test_ray);
   } else if (hit.value().mat->is_emissive()) {
     // if first hit is emissive
-    return hit.value().mat->emitted(test_ray, hit.value());
+    return hit.value().mat->emitted(test_ray, hit.value().hit_n_s, hit.value().hit_p);
   }
 
   // If first hit does not miss or hit light
@@ -89,13 +89,15 @@ glm::vec3 mis_integrator(Ray& input_ray, std::vector<size_t>& thread_stack, cons
 
           float mis_weight = mat_sample_pdf / (light_pdf + mat_sample_pdf);
 
-          bounce_result
-              += throughput * mis_weight
-                 * hit_next_bounce.value().mat->emitted(direct_light_ray, hit_next_bounce.value());
+          bounce_result += throughput * mis_weight
+                           * hit_next_bounce.value().mat->emitted(direct_light_ray,
+                                                                  hit_next_bounce.value().hit_n_s,
+                                                                  hit_next_bounce.value().hit_p);
         } else {
-          bounce_result
-              += throughput
-                 * hit_next_bounce.value().mat->emitted(direct_light_ray, hit_next_bounce.value());
+          bounce_result += throughput
+                           * hit_next_bounce.value().mat->emitted(direct_light_ray,
+                                                                  hit_next_bounce.value().hit_n_s,
+                                                                  hit_next_bounce.value().hit_p);
         }
         // stop bounce since emit encountered
         return bounce_result;
