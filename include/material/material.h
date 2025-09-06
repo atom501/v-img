@@ -10,8 +10,8 @@
 struct HitInfo;
 
 struct ScatterInfo {
-  glm::vec3 attenuation;
   glm::vec3 wo;  // outgoing direction from hit point on material. Always normalized
+  float eta;     // get eta for the case with MIS and refraction
 };
 
 class Material {
@@ -46,9 +46,12 @@ public:
   }
 
   // light emitted
-  virtual glm::vec3 emitted(const Ray& ray, const HitInfo& hit) const {
+  virtual glm::vec3 emitted(const Ray& ray, const glm::vec3& shading_normal, const glm::vec3& hit_p) const {
     return glm::vec3(0.0f, 0.0f, 0.0f);
   }
 
   virtual bool is_emissive() const { return false; }
+
+  // return true if mat pdf is a delta function
+  virtual bool is_delta() const { return true; }
 };

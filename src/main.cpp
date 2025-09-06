@@ -90,7 +90,7 @@ int main(int argc, char* argv[]) {
     this
   */
   std::filesystem::path extension = scene_file_path.extension();
-  bool scene_load_check;
+  bool scene_load_check = false;
 
   if (extension.string() == ".json") {
     scene_load_check = set_scene_from_json(scene_file_path, rendering_settings, list_objects,

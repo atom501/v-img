@@ -115,10 +115,14 @@ private:
     } else if constexpr (std::is_same_v<T, std::optional<HitInfo>>) {
       // Ray hits the 2D shape; set the rest of the hit record,
       const glm::vec3 hit_p = intersection;
-      const bool front_face = glm::dot(r.dir, normal) < 0;
-      const glm::vec3 hit_n = front_face ? normal : -normal;
 
-      HitInfo hit = {mat, this, hit_p, hit_n, hit_n, glm::vec2(alpha, beta), front_face};
+      HitInfo hit = {mat,
+                     this,
+                     hit_p,
+                     Quad::normal,
+                     Quad::normal,
+                     glm::vec2(alpha, beta),
+                     init_onb(Quad::normal)};
 
       return std::make_optional(std::move(hit));
     }

@@ -15,7 +15,8 @@ glm::vec3 material_integrator(Ray& input_ray, std::vector<size_t>& thread_stack,
 
     // if ray hits the scene
     if (hit.has_value()) {
-      glm::vec3 emitted_col = hit.value().mat->emitted(test_ray, hit.value());
+      glm::vec3 emitted_col
+          = hit.value().mat->emitted(test_ray, hit.value().hit_n_s, hit.value().hit_p);
       // get information on scattered ray from material
 
       std::optional<ScatterInfo> scattered_ray

@@ -27,13 +27,17 @@ public:
     }
   }
 
-  glm::vec3 emitted(const Ray& ray, const HitInfo& hit) const override {
+  glm::vec3 emitted(const Ray& ray, const glm::vec3& shading_normal,
+                    const glm::vec3& hit_p) const override {
+    bool front_face = glm::dot(shading_normal, ray.dir) < 0;
     // only emit from the normal-facing side
-    if (hit.front_face)
+    if (front_face)
       return emit;
     else
       return glm::vec3(0.0f, 0.0f, 0.0f);
   }
 
   bool is_emissive() const override { return true; }
+
+  bool is_delta() const override { return false; }
 };

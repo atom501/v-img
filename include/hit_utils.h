@@ -2,6 +2,7 @@
 
 #include <ray.h>
 
+#include <array>
 #include <cmath>
 #include <cstdint>
 #include <optional>
@@ -11,17 +12,6 @@
 
 class Material;
 class Emitter;
-
-struct HitInfo {
-  Material* mat = nullptr;
-  const Emitter* obj = nullptr;
-  glm::vec3 hit_p;    // point where hit in world coords
-  glm::vec3 hit_n_s;  // shading Normal where hit in world coords.
-  glm::vec3 hit_n_g;  // geometric Normal where hit in world coords.
-                      // Both normals faces towards the incoming ray and are normalized
-  glm::vec2 uv;       // texture uv coordinates
-  bool front_face;    // tell if hit front face or not. normal flipped if false
-};
 
 struct EmitterInfo {
   glm::vec3 wi;  // direction vector from look_from to point on surface
@@ -46,15 +36,34 @@ inline glm::vec3 project_onto_onb(const ONB& onb, const glm::vec3& ray_dir) {
   return glm::vec3{glm::dot(ray_dir, onb.u), glm::dot(ray_dir, onb.v), glm::dot(ray_dir, onb.w)};
 }
 
+inline std::pair<glm::vec3, glm::vec3> get_axis(const glm::vec3& normal_vec) {
+  if (normal_vec.z < (-0.9999999f)) {
+    return std::make_pair(glm::vec3(0, -1, 0), glm::vec3(-1, 0, 0));
+  } else {
+    float a = 1.f / (1.f + normal_vec.z);
+    float b = -normal_vec.x * normal_vec.y * a;
+
+    return std::make_pair(glm::vec3(1.f - normal_vec.x * normal_vec.x * a, b, -normal_vec.x),
+                          glm::vec3(b, 1 - normal_vec.y * normal_vec.y * a, -normal_vec.y));
+  }
+}
+
 // normal_vec must already be normalized
 inline ONB init_onb(const glm::vec3& normal_vec) {
-  glm::vec3 unit_n = normal_vec;
-  glm::vec3 a = (fabs(unit_n[0]) > 0.9) ? glm::vec3(0, 1, 0) : glm::vec3(1, 0, 0);
-  glm::vec3 v = glm::normalize(glm::cross(unit_n, a));
-  glm::vec3 u = glm::cross(unit_n, v);  // already a unit vector as unit_n and v are perpendicular
-
-  return ONB{u, v, unit_n};
+  auto [u, v] = get_axis(normal_vec);
+  return ONB{u, v, normal_vec};
 }
+
+struct HitInfo {
+  Material* mat = nullptr;
+  const Emitter* obj = nullptr;
+  glm::vec3 hit_p;    // point where hit in world coords
+  glm::vec3 hit_n_s;  // shading Normal where hit in world coords.
+  glm::vec3 hit_n_g;  // geometric Normal where hit in world coords.
+                      // Both normals faces are normalized
+  glm::vec2 uv;       // texture uv coordinates
+  ONB n_frame;
+};
 
 // Axis-aligned bounding box
 class AABB {
@@ -93,32 +102,29 @@ public:
    * source is https://tavianator.com/2022/ray_box_boundary.html
    * loop is manually unrolled and ray inverse calculated in bvh hit call
    */
-  inline std::optional<float> intersect(const Ray& ray, const glm::vec3& ray_inv_dir) const {
-    bool sign_x = std::signbit(ray.dir[0]);
-    bool sign_y = std::signbit(ray.dir[1]);
-    bool sign_z = std::signbit(ray.dir[2]);
-
+  inline std::optional<float> intersect(const Ray& ray, const glm::vec3& ray_inv_dir,
+                                        const std::array<bool, 3>& dir_signs) const {
     const float o_x = ray.o[0];
     const float o_y = ray.o[1];
     const float o_z = ray.o[2];
 
     // x-axis
-    const float bmin0 = this->bboxes[sign_x][0];
-    const float bmax0 = this->bboxes[!sign_x][0];
+    const float bmin0 = this->bboxes[dir_signs[0]][0];
+    const float bmax0 = this->bboxes[!dir_signs[0]][0];
 
     const float dmin_x = (bmin0 - o_x) * ray_inv_dir[0];
     const float dmax_x = (bmax0 - o_x) * ray_inv_dir[0];
 
     // y-axis
-    const float bmin1 = this->bboxes[sign_y][1];
-    const float bmax1 = this->bboxes[!sign_y][1];
+    const float bmin1 = this->bboxes[dir_signs[1]][1];
+    const float bmax1 = this->bboxes[!dir_signs[1]][1];
 
     const float dmin_y = (bmin1 - o_y) * ray_inv_dir[1];
     const float dmax_y = (bmax1 - o_y) * ray_inv_dir[1];
 
     // z-axis
-    const float bmin2 = this->bboxes[sign_z][2];
-    const float bmax2 = this->bboxes[!sign_z][2];
+    const float bmin2 = this->bboxes[dir_signs[2]][2];
+    const float bmax2 = this->bboxes[!dir_signs[2]][2];
 
     const float dmin_z = (bmin2 - o_z) * ray_inv_dir[2];
     const float dmax_z = (bmax2 - o_z) * ray_inv_dir[2];

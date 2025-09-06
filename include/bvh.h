@@ -3,6 +3,7 @@
 #include <geometry/surface.h>
 #include <hit_utils.h>
 
+#include <array>
 #include <cstdint>
 #include <glm/vec3.hpp>
 #include <memory>
@@ -95,7 +96,10 @@ public:
     ray_inv_dir[1] = 1.0f / ray.dir[1];
     ray_inv_dir[2] = 1.0f / ray.dir[2];
 
-    if (!root_node.aabb.intersect(ray, ray_inv_dir)) {
+    const std::array<bool, 3> dir_signs
+        = {std::signbit(ray.dir[0]), std::signbit(ray.dir[1]), std::signbit(ray.dir[2])};
+
+    if (!root_node.aabb.intersect(ray, ray_inv_dir, dir_signs)) {
       if constexpr (std::is_same_v<T, std::optional<HitInfo>>) {
         return std::nullopt;
       } else if constexpr (std::is_same_v<T, uint32_t>) {
@@ -136,8 +140,8 @@ public:
         size_t first_child = node.first_index;
         size_t sec_child = node.first_index + 1;
 
-        bb_hit1 = nodes[first_child].aabb.intersect(ray, ray_inv_dir);
-        bb_hit2 = nodes[sec_child].aabb.intersect(ray, ray_inv_dir);
+        bb_hit1 = nodes[first_child].aabb.intersect(ray, ray_inv_dir, dir_signs);
+        bb_hit2 = nodes[sec_child].aabb.intersect(ray, ray_inv_dir, dir_signs);
 
         if constexpr (std::is_same_v<T, bool>) {
           // don't care about order in hitcheck. as exit on first hit

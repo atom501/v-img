@@ -27,25 +27,33 @@ static inline glm::vec3 refract_dir(const glm::vec3& wi, const glm::vec3& hit_p,
 std::optional<ScatterInfo> Dielectric::sample_mat(const glm::vec3& wi, const HitInfo& hit,
                                                   pcg32_random_t& pcg_rng) const {
   glm::vec3 wo;  // ray direction after hit
+  float eta;
 
-  const float cos_thetaI = -1.f * (glm::dot(wi, hit.hit_n_s));
+  bool front_face = glm::dot(wi, hit.hit_n_s) < 0;
+
+  glm::vec3 shading_normal = front_face ? hit.hit_n_s : -hit.hit_n_s;
+
+  const float cos_thetaI = -1.f * (glm::dot(wi, shading_normal));
   float randf = rand_float(pcg_rng);
 
   // from air to dielectric
-  if (hit.front_face) {
+  if (front_face) {
+    eta = ior;
     const float schlick = schlick_apprx(cos_thetaI, 1.0f, ior);
 
     if (schlick > randf) {
-      wo = reflect_dir(wi, hit.hit_p, hit.hit_n_s);
+      wo = reflect_dir(wi, hit.hit_p, shading_normal);
     } else {
       const auto iIndex_over_oIndex = 1.f / ior;
       const auto sin_thetaT_square
           = (iIndex_over_oIndex * iIndex_over_oIndex) * (1.f - (cos_thetaI * cos_thetaI));
-      wo = refract_dir(wi, hit.hit_p, hit.hit_n_s, iIndex_over_oIndex, cos_thetaI,
+      wo = refract_dir(wi, hit.hit_p, shading_normal, iIndex_over_oIndex, cos_thetaI,
                        sin_thetaT_square);
     }
   } else {
     // dielectric to air
+    eta = 1.f / ior;
+
     const auto iIndex_over_oIndex = ior;
     const auto sin_thetaT_square
         = (iIndex_over_oIndex * iIndex_over_oIndex) * (1.f - (cos_thetaI * cos_thetaI));
@@ -53,15 +61,15 @@ std::optional<ScatterInfo> Dielectric::sample_mat(const glm::vec3& wi, const Hit
     // total internal reflection or reflection by schlick approx
     if ((sin_thetaT_square > 1.f)
         || (schlick_apprx(std::sqrtf(1.f - sin_thetaT_square), ior, 1.f) > randf)) {
-      wo = reflect_dir(wi, hit.hit_p, hit.hit_n_s);
+      wo = reflect_dir(wi, hit.hit_p, shading_normal);
     } else {
       // refracted
-      wo = refract_dir(wi, hit.hit_p, hit.hit_n_s, iIndex_over_oIndex, cos_thetaI,
+      wo = refract_dir(wi, hit.hit_p, shading_normal, iIndex_over_oIndex, cos_thetaI,
                        sin_thetaT_square);
     }
   }
 
-  ScatterInfo ret_inf = {glm::vec3(1.f), wo};
+  ScatterInfo ret_inf = {wo, eta};
   return std::make_optional(std::move(ret_inf));
 }
 
