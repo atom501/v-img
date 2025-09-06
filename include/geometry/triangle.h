@@ -231,7 +231,7 @@ private:
         dpdv = dpds * dsdv + dpdt * dtdv;
       } else {
         // degenerate uvs. Use an arbitrary coordinate system
-        std::tie(dpdu, dpdv) = get_axis(tri_normal);
+        std::tie(dpdu, dpdv) = get_axis(shading_normal);
       }
 
       // dpdu may not be orthogonal to shading normal:
