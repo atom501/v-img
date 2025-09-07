@@ -30,6 +30,7 @@ struct integrator_data {
   uint32_t depth;
   std::unique_ptr<Background> background;
   TLCam camera;
+  int16_t num_threads;
 };
 
 template <typename F>
@@ -42,7 +43,10 @@ std::vector<glm::vec3> scene_integrator(const integrator_data& render_data, BVH&
   std::atomic_uint pixels_done = 0;
   const unsigned int total_pixels = image_width * image_height;
 
-  const unsigned int num_cores = std::thread::hardware_concurrency();
+  const unsigned int num_cores
+      = render_data.num_threads > 0 ? render_data.num_threads : std::thread::hardware_concurrency();
+
+  fmt::println("Number of threads: {}", num_cores);
 
   std::vector<glm::vec3> image_accumulated(total_pixels);
   std::vector<std::thread> workers;

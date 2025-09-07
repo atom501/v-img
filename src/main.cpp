@@ -39,6 +39,7 @@ int main(int argc, char* argv[]) {
   integrator_data rendering_settings;
 
   int heatmap_max = -1;
+  int16_t num_threads = -1;
 
   std::vector<std::unique_ptr<Material>> mat_list;
   std::vector<std::unique_ptr<Surface>> list_objects;
@@ -57,6 +58,7 @@ int main(int argc, char* argv[]) {
       parser, "heatmap",
       "Enable heatmap mode. Number of primitives to set as the max. 0 uses maximum from scene",
       {'m'});
+  args::ValueFlag<int16_t> numthreads(parser, "threads", "Number of threads to be used", {'t'});
 
   try {
     parser.ParseCLI(argc, argv);
@@ -80,6 +82,10 @@ int main(int argc, char* argv[]) {
 
   if (heatmap) {
     heatmap_max = args::get(heatmap);
+  }
+
+  if (numthreads) {
+    num_threads = args::get(numthreads);
   }
 
   std::filesystem::path scene_file_path = args::get(filename);
@@ -106,6 +112,8 @@ int main(int argc, char* argv[]) {
   }
 
   GroupOfEmitters lights = GroupOfEmitters(list_lights);
+
+  rendering_settings.num_threads = num_threads;
 
   fmt::println("\nNumber of lights loaded {}", lights.num_lights());
   fmt::println("Number of Textures loaded {}", texture_list.size());
