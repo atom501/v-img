@@ -2,6 +2,7 @@
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include <bvh.h>
+#include <color_utils.h>
 #include <fmt/chrono.h>
 #include <fmt/core.h>
 #include <geometry/emitters.h>
@@ -14,7 +15,6 @@
 #include <stb_image_write.h>
 #include <texture.h>
 #include <tl_camera.h>
-#include <tonemapper.h>
 
 #include <algorithm>
 #include <args.hxx>
@@ -40,6 +40,7 @@ int main(int argc, char* argv[]) {
 
   int heatmap_max = -1;
   int16_t num_threads = -1;
+  tonemapper tonemapping_func = tonemapper::clamp;
 
   std::vector<std::unique_ptr<Material>> mat_list;
   std::vector<std::unique_ptr<Surface>> list_objects;
@@ -59,6 +60,8 @@ int main(int argc, char* argv[]) {
       "Enable heatmap mode. Number of primitives to set as the max. 0 uses maximum from scene",
       {'m'});
   args::ValueFlag<int16_t> numthreads(parser, "threads", "Number of threads to be used", {'t'});
+  args::ValueFlag<int16_t> set_tonemapper(
+      parser, "tonemapper", "Set tonemapper to be used. 0 for clamp, 1 for agx", {'c'});
 
   try {
     parser.ParseCLI(argc, argv);
@@ -86,6 +89,15 @@ int main(int argc, char* argv[]) {
 
   if (numthreads) {
     num_threads = args::get(numthreads);
+  }
+
+  if (set_tonemapper) {
+    int16_t val = args::get(set_tonemapper);
+    fmt::println("val us {}", val);
+
+    if (val >= 0 && val < static_cast<int16_t>(tonemapper::COUNT)) {
+      tonemapping_func = static_cast<tonemapper>(val);
+    }
   }
 
   std::filesystem::path scene_file_path = args::get(filename);
@@ -175,7 +187,16 @@ int main(int argc, char* argv[]) {
 
   fmt::print("Render time: {} {} {}\n", duration_mins, duration_secs, duration_ms);
 
-  // TODO apply tone mapper
+  // apply tonemapper
+  if (tonemapping_func == tonemapper::clamp) {
+    fmt::println("Render image clamped");
+    simple_clamp(acc_image);
+  } else if (tonemapping_func == tonemapper::agx) {
+    fmt::println("agx tonemapper applied");
+    agx(acc_image);
+  }
+
+  // apply gamma correction
   sRGB_gamma_correction(acc_image);
 
   // buffer for image writing

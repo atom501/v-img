@@ -1,8 +1,4 @@
-#include <tonemapper.h>
-
-static inline float luminance(const glm::vec3& v) {
-  return glm::dot(v, glm::vec3(0.2126f, 0.7152f, 0.0722f));
-}
+#include <color_utils.h>
 
 float largest_luminance(const std::vector<glm::vec3>& input_col) {
   float largest_L = 0.0f;

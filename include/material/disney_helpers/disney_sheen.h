@@ -1,5 +1,6 @@
 #pragma once
 
+#include <color_utils.h>
 #include <material/disney_helpers/disney_common.h>
 #include <material/disney_helpers/disney_diffuse.h>
 
@@ -14,7 +15,7 @@ inline glm::vec3 eval_disney_sheen(const glm::vec3& dir_in, const glm::vec3& dir
     return glm::vec3(0);
   }
 
-  const float base_lum = base_col.x * 0.212671f + base_col.y * 0.715160f + base_col.z * 0.072169f;
+  const float base_lum = luminance(base_col);
 
   glm::vec3 C_tint = base_lum > 0 ? base_col / base_lum : glm::vec3(1.f);
 

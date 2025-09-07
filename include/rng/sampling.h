@@ -1,14 +1,15 @@
 #pragma once
 
+#include <color_utils.h>
 #include <rng/pcg_rand.h>
 
 #include <algorithm>
 #include <bit>
 #include <cmath>
 #include <glm/vec3.hpp>
+#include <numbers>
 #include <span>
 #include <vector>
-#include <numbers>
 
 // give two random numbers [0,1] as input and return a point on sphere.
 // where pole of hemisphere is (0,0,1)
@@ -166,8 +167,7 @@ public:
       float sin_elevation = std::sin(std::numbers::pi * v);
 
       for (size_t x = 0; x < width; x++) {
-        image_luminance[(y * width) + x]
-            = glm::dot(image[(y * width) + x], lum_const) * sin_elevation;
+        image_luminance[(y * width) + x] = luminance(image[(y * width) + x]) * sin_elevation;
       }
     }
 

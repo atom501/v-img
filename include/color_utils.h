@@ -4,10 +4,25 @@
 #include <glm/vec3.hpp>
 #include <vector>
 
+enum class tonemapper { clamp, agx, COUNT };
+
+static inline float luminance(const glm::vec3& v) {
+  return glm::dot(v, glm::vec3(0.212671f, 0.715160f, 0.072169f));
+}
+
 // Input image given. Image changed by tone mapper
 void reinhard_tonemapper(std::vector<glm::vec3>& input_col);
 
 void aces_approx(std::vector<glm::vec3>& input_col);
+
+void agx(std::vector<glm::vec3>& input_col);
+
+// clamping colors to [0,1]
+inline void simple_clamp(std::vector<glm::vec3>& input_col) {
+  for (glm::vec3& col : input_col) {
+    col = glm::clamp(col, 0.f, 1.f);
+  }
+}
 
 inline void sRGB_gamma_correction(std::vector<glm::vec3>& input_col) {
   for (glm::vec3& pixel : input_col) {

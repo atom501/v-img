@@ -1,5 +1,6 @@
 #pragma once
 
+#include <color_utils.h>
 #include <material/disney_helpers/disney_common.h>
 
 #include <algorithm>
@@ -13,7 +14,7 @@ inline glm::vec3 eval_disney_metal(const glm::vec3& dir_in, const glm::vec3& dir
     return glm::vec3{0, 0, 0};
   }
 
-  float base_lum = base_col.x * 0.212671f + base_col.y * 0.715160f + base_col.z * 0.072169f;
+  float base_lum = luminance(base_col);
   glm::vec3 C_tint = base_lum > 0 ? base_col / base_lum : glm::vec3(1.f);
   glm::vec3 K_s = (glm::vec3(1.f) - glm::vec3(spec_tint)) + spec_tint * C_tint;
   float R0 = ((eta - 1.f) * (eta - 1.f)) / ((eta + 1.f) * (eta + 1.f));
