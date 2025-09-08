@@ -4,16 +4,16 @@
 #include <glm/vec3.hpp>
 #include <vector>
 
-enum class tonemapper { clamp, agx, COUNT };
+enum class tonemapper { clamp, agx, reinhard, aces, COUNT };
 
 static inline float luminance(const glm::vec3& v) {
   return glm::dot(v, glm::vec3(0.212671f, 0.715160f, 0.072169f));
 }
 
-// Input image given. Image changed by tone mapper
-void reinhard_tonemapper(std::vector<glm::vec3>& input_col);
+// Reinhard using the maximum luminance
+void reinhard_lum(std::vector<glm::vec3>& input_col);
 
-void aces_approx(std::vector<glm::vec3>& input_col);
+void aces(std::vector<glm::vec3>& input_col);
 
 void agx(std::vector<glm::vec3>& input_col);
 

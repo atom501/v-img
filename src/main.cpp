@@ -61,7 +61,8 @@ int main(int argc, char* argv[]) {
       {'m'});
   args::ValueFlag<int16_t> numthreads(parser, "threads", "Number of threads to be used", {'t'});
   args::ValueFlag<int16_t> set_tonemapper(
-      parser, "tonemapper", "Set tonemapper to be used. 0 for clamp, 1 for agx", {'c'});
+      parser, "tonemapper",
+      "Set tonemapper to be used. 0 for clamp, 1 for agx, 2 for reinhard, 3 for aces", {'c'});
 
   try {
     parser.ParseCLI(argc, argv);
@@ -188,12 +189,27 @@ int main(int argc, char* argv[]) {
   fmt::print("Render time: {} {} {}\n", duration_mins, duration_secs, duration_ms);
 
   // apply tonemapper
-  if (tonemapping_func == tonemapper::clamp) {
-    fmt::println("Render image clamped");
-    simple_clamp(acc_image);
-  } else if (tonemapping_func == tonemapper::agx) {
-    fmt::println("agx tonemapper applied");
-    agx(acc_image);
+  switch (tonemapping_func) {
+    case tonemapper::clamp:
+      fmt::println("Render image clamped");
+      simple_clamp(acc_image);
+      break;
+    case tonemapper::agx:
+      fmt::println("agx tonemapper applied");
+      agx(acc_image);
+      break;
+    case tonemapper::reinhard:
+      fmt::println("reinhard tonemapper applied");
+      reinhard_lum(acc_image);
+      break;
+    case tonemapper::aces:
+      fmt::println("aces tonemapper applied");
+      aces(acc_image);
+      break;
+
+    default:
+      fmt::println("No tonemapper applied");
+      break;
   }
 
   // apply gamma correction
