@@ -44,8 +44,8 @@ public:
   std::pair<glm::vec3, EmitterInfo> sample(const glm::vec3& look_from,
                                            pcg32_random_t& pcg_rng) const override;
 
-  float pdf(const glm::vec3& look_from, const glm::vec3& look_at,
-            const glm::vec3& dir) const override;
+  float surf_pdf(const glm::vec3& look_from, const glm::vec3& look_at,
+                 const glm::vec3& dir) const override;
 
 private:
   // intersection test from ray tracing gems 1, chapter 7

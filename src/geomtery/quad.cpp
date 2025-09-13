@@ -34,18 +34,18 @@ AABB Quad::bounds() const {
   constexpr float delta = 0.0001;
 
   if (std::fabs(bbox.bboxes[0].x - bbox.bboxes[1].x) >= delta) {
-    bbox.bboxes[0].x -= delta / 2;
-    bbox.bboxes[1].x += delta / 2;
+    bbox.bboxes[0].x -= delta / 2.f;
+    bbox.bboxes[1].x += delta / 2.f;
   }
 
   if (std::fabs(bbox.bboxes[0].y - bbox.bboxes[1].y) >= delta) {
-    bbox.bboxes[0].y -= delta / 2;
-    bbox.bboxes[1].y += delta / 2;
+    bbox.bboxes[0].y -= delta / 2.f;
+    bbox.bboxes[1].y += delta / 2.f;
   }
 
   if (std::fabs(bbox.bboxes[0].z - bbox.bboxes[1].z) >= delta) {
-    bbox.bboxes[0].z -= delta / 2;
-    bbox.bboxes[1].z += delta / 2;
+    bbox.bboxes[0].z -= delta / 2.f;
+    bbox.bboxes[1].z += delta / 2.f;
   }
 
   return bbox;
@@ -63,36 +63,25 @@ std::pair<glm::vec3, EmitterInfo> Quad::sample(const glm::vec3& look_from,
 
   // random point on the quad
   const glm::vec3 hit_p = l_corner + u * rand1 + v * rand2;
-
   const glm::vec3 from_lf_to_p = hit_p - look_from;
-  const float distance2 = glm::length2(from_lf_to_p);
+  const float dist2 = glm::length2(from_lf_to_p);
   const glm::vec3 wi = glm::normalize(from_lf_to_p);
 
-  float dot = glm::dot(wi, Quad::normal);
-
   const float area = glm::length(glm::cross(u, v));
-  const float cosine = std::abs(dot);
 
-  float pdf;
-  // for the case where parallel ray hits quad on the edge
-  if (cosine > 1e-8) {
-    pdf = distance2 / (cosine * area);
-  } else {
-    pdf = 0.f;
-  }
+  float cosine = std::abs(glm::dot(Quad::normal, -wi));
 
-  EmitterInfo emit_info = {wi, pdf, std::sqrtf(distance2)};
+  const float G = cosine / dist2;
 
+  EmitterInfo emit_info = {wi, 1.f / area, std::sqrtf(dist2), G};
   glm::vec3 emit_col = mat->emitted(Ray(look_from, emit_info.wi), Quad::normal, hit_p);
 
   return std::make_pair(emit_col, emit_info);
 }
 
-float Quad::pdf(const glm::vec3& look_from, const glm::vec3& look_at, const glm::vec3& dir) const {
-  const glm::vec3 from_lf_to_p = look_at - look_from;
-  const float distance2 = glm::length2(from_lf_to_p);
+float Quad::surf_pdf(const glm::vec3& look_from, const glm::vec3& look_at,
+                     const glm::vec3& dir) const {
   const float area = glm::length(glm::cross(u, v));
-  const float cosine = std::abs(glm::dot(normal, dir)) / glm::length(dir);
 
-  return distance2 / (cosine * area);
+  return 1.f / area;
 }

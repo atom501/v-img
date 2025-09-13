@@ -12,7 +12,7 @@
 inline static bool is_interior(float a, float b) {
   // Given the hit point in plane coordinates, return false if it is outside the primitive
 
-  if ((a < 0) || (1 < a) || (b < 0) || (1 < b)) return false;
+  if ((a < 0.f) || (1.f < a) || (b < 0.f) || (1.f < b)) return false;
 
   return true;
 }
@@ -62,8 +62,8 @@ public:
   std::pair<glm::vec3, EmitterInfo> sample(const glm::vec3& look_from,
                                            pcg32_random_t& pcg_rng) const override;
 
-  float pdf(const glm::vec3& look_from, const glm::vec3& look_at,
-            const glm::vec3& dir) const override;
+  float surf_pdf(const glm::vec3& look_from, const glm::vec3& look_at,
+                 const glm::vec3& dir) const override;
 
 private:
   template <
@@ -74,7 +74,7 @@ private:
     auto denominator = glm::dot(normal, r.dir);
 
     // No hit if the ray is parallel to the plane.
-    if (std::fabs(denominator) < 1e-8) {
+    if (std::fabs(denominator) == 0) {
       if constexpr (std::is_same_v<T, bool>) {
         return false;
       } else if constexpr (std::is_same_v<T, std::optional<HitInfo>>) {
@@ -114,7 +114,7 @@ private:
       return true;
     } else if constexpr (std::is_same_v<T, std::optional<HitInfo>>) {
       // Ray hits the 2D shape; set the rest of the hit record,
-      const glm::vec3 hit_p = intersection;
+      const glm::vec3 hit_p = Quad::l_corner + alpha * Quad::u + beta * Quad::v;
 
       HitInfo hit = {mat,
                      this,

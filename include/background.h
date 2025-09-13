@@ -38,9 +38,8 @@ public:
 
     constexpr float pdf = 1.f / (4 * std::numbers::pi);
 
-    constexpr float dist = std::numeric_limits<float>::infinity();
-
-    return std::make_pair(ConstBackground::col, EmitterInfo{wi, pdf, dist});
+    return std::make_pair(ConstBackground::col,
+                          EmitterInfo{wi, pdf, std::numeric_limits<float>::infinity(), 1.f});
   }
 
   float background_pdf(const glm::vec3& dir) const override { return 1.f / (4 * std::numbers::pi); }
@@ -54,8 +53,8 @@ public:
 
   bool is_background() const override { return true; }
 
-  float pdf(const glm::vec3& look_from, const glm::vec3& look_at,
-            const glm::vec3& dir) const override {
+  float surf_pdf(const glm::vec3& look_from, const glm::vec3& look_at,
+                 const glm::vec3& dir) const override {
     return 0.f;
   }
 };
@@ -152,7 +151,8 @@ public:
     float pdf = (choose_sample_pdf * width * height)
                 / (2.f * std::numbers::pi * std::numbers::pi * sin_elevation);
 
-    return std::make_pair(col_from_uv(u_env, v_env) * radiance_scale, EmitterInfo{wi, pdf, dist});
+    return std::make_pair(col_from_uv(u_env, v_env) * radiance_scale,
+                          EmitterInfo{wi, pdf, std::numeric_limits<float>::infinity(), 1.f});
   }
 
   float background_pdf(const glm::vec3& in_dir) const override {
@@ -185,8 +185,8 @@ public:
     return pdf;
   }
 
-  float pdf(const glm::vec3& look_from, const glm::vec3& look_at,
-            const glm::vec3& dir) const override {
+  float surf_pdf(const glm::vec3& look_from, const glm::vec3& look_at,
+                 const glm::vec3& dir) const override {
     return 0.f;
   }
 

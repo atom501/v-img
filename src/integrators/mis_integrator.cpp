@@ -1,5 +1,20 @@
 #include <integrators.h>
 
+#include <glm/gtx/norm.hpp>
+
+static inline float balance_heuristic(float pdf1, float pdf2) { return pdf1 / (pdf1 + pdf2); }
+
+static inline float geometric_term(const glm::vec3& look_from, const glm::vec3& point_on_surface,
+                                   const glm::vec3& surface_normal) {
+  glm::vec3 dir_from_surf = look_from - point_on_surface;
+  float distance2 = glm::length2(dir_from_surf);
+  dir_from_surf = glm::normalize(dir_from_surf);
+
+  float cosine = std::abs(glm::dot(surface_normal, dir_from_surf));
+
+  return cosine / distance2;
+}
+
 glm::vec3 mis_integrator(Ray& input_ray, std::vector<size_t>& thread_stack, const BVH& bvh,
                          const std::vector<std::unique_ptr<Surface>>& prims,
                          const GroupOfEmitters& lights, pcg32_random_t& hash_state, uint32_t depth,
@@ -29,7 +44,7 @@ glm::vec3 mis_integrator(Ray& input_ray, std::vector<size_t>& thread_stack, cons
   for (d = 0; d < depth; d++) {
     bool mat_is_delta = hit.value().mat->is_delta();
 
-    // skip if light sampling handling delta functions with material pdf = 0
+    // skip if light sampling material with a delta functions where material pdf = 0
     if (!mat_is_delta) {
       // light sampling
       auto [light_col, l_sample_info] = lights.sample(hit.value().hit_p, hash_state);
@@ -40,15 +55,16 @@ glm::vec3 mis_integrator(Ray& input_ray, std::vector<size_t>& thread_stack, cons
         shadow_ray.maxT = l_sample_info.dist - 0.0001f;
 
         // check if ray hits anything between ray origin and the point on light
-        bool l_visibility_check = bvh.occlude(shadow_ray, thread_stack, prims);
+        bool light_is_occluded = bvh.occlude(shadow_ray, thread_stack, prims);
 
         // if light visible from point
-        if (!l_visibility_check) {
+        if (!light_is_occluded) {
           const auto [mat_eval, mat_pdf]
               = hit.value().mat->eval_pdf_pair(test_ray.dir, l_sample_info.wi, hit.value());
 
-          float mis_weight = l_sample_info.pdf / (l_sample_info.pdf + mat_pdf);
-          bounce_result += throughput * mat_eval * mis_weight * light_col / l_sample_info.pdf;
+          float G = l_sample_info.G;
+          float mis_weight = balance_heuristic(l_sample_info.pdf, mat_pdf * G);
+          bounce_result += throughput * mat_eval * mis_weight * G * light_col / l_sample_info.pdf;
         }
       }
     }
@@ -83,17 +99,21 @@ glm::vec3 mis_integrator(Ray& input_ray, std::vector<size_t>& thread_stack, cons
       if (hit_next_bounce.value().mat->is_emissive()) {
         if (mat_sample_pdf != 0) {
           light_pdf
-              = hit_next_bounce.value().obj->pdf(hit.value().hit_p, hit_next_bounce.value().hit_p,
-                                                 scattered_mat.value().wo)
+              = hit_next_bounce.value().obj->surf_pdf(
+                    hit.value().hit_p, hit_next_bounce.value().hit_p, scattered_mat.value().wo)
                 / lights.num_lights();
 
-          float mis_weight = mat_sample_pdf / (light_pdf + mat_sample_pdf);
+          float G = geometric_term(hit.value().hit_p, hit_next_bounce.value().hit_p,
+                                   hit_next_bounce.value().hit_n_g);
+
+          float mis_weight = balance_heuristic(mat_sample_pdf * G, light_pdf);
 
           bounce_result += throughput * mis_weight
                            * hit_next_bounce.value().mat->emitted(direct_light_ray,
                                                                   hit_next_bounce.value().hit_n_s,
                                                                   hit_next_bounce.value().hit_p);
         } else {
+          // don't MIS sample for delta function
           bounce_result += throughput
                            * hit_next_bounce.value().mat->emitted(direct_light_ray,
                                                                   hit_next_bounce.value().hit_n_s,
@@ -127,7 +147,8 @@ glm::vec3 mis_integrator(Ray& input_ray, std::vector<size_t>& thread_stack, cons
       if (mat_sample_pdf != 0 && background->is_emissive()) {
         light_pdf = background->background_pdf(direct_light_ray.dir) / lights.num_lights();
 
-        float mis_weight = mat_sample_pdf / (light_pdf + mat_sample_pdf);
+        // G = 1
+        float mis_weight = balance_heuristic(mat_sample_pdf, light_pdf);
 
         bounce_result += throughput * mis_weight * background->background_emit(direct_light_ray);
       }

@@ -64,8 +64,8 @@ public:
   std::pair<glm::vec3, EmitterInfo> sample(const glm::vec3& look_from,
                                            pcg32_random_t& pcg_rng) const override;
 
-  float pdf(const glm::vec3& look_from, const glm::vec3& look_at,
-            const glm::vec3& dir) const override;
+  float surf_pdf(const glm::vec3& look_from, const glm::vec3& look_at,
+                 const glm::vec3& dir) const override;
 
 private:
   /*
@@ -117,7 +117,7 @@ private:
     // apply shear
     float Sx = -d.x / d.z;
     float Sy = -d.y / d.z;
-    float Sz = 1 / d.z;
+    float Sz = 1.f / d.z;
     p0t.x += Sx * p0t.z;
     p0t.y += Sy * p0t.z;
     p1t.x += Sx * p1t.z;
@@ -170,7 +170,7 @@ private:
       }
     }
 
-    float invDet = 1 / det;
+    float invDet = 1.f / det;
     float t = tScaled * invDet;
     ray.maxT = t;
 

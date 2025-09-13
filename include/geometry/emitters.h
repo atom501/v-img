@@ -18,8 +18,8 @@ public:
   virtual std::pair<glm::vec3, EmitterInfo> sample(const glm::vec3& look_from,
                                                    pcg32_random_t& pcg_rng) const
       = 0;
-  virtual float pdf(const glm::vec3& look_from, const glm::vec3& look_at,
-                    const glm::vec3& dir) const
+  virtual float surf_pdf(const glm::vec3& look_from, const glm::vec3& look_at,
+                         const glm::vec3& dir) const
       = 0;
 
   virtual bool is_background() const { return false; }
@@ -45,7 +45,7 @@ public:
     const int index_obj = std::clamp((int)sx, 0, (int)list_of_emitters.size() - 1);
 
     // probability of choosing the light object
-    const float prob_obj = 1 / list_of_emitters.size();
+    const float prob_obj = 1.f / list_of_emitters.size();
 
     auto emitCol_emitInfo = list_of_emitters[index_obj]->sample(look_from, pcg_rng);
 

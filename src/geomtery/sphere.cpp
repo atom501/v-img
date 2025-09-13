@@ -35,44 +35,46 @@ std::pair<glm::vec3, EmitterInfo> Sphere::sample(const glm::vec3& look_from,
     auto point_on_sphere = (point_on_unit_sphere * radius) + center;
     auto vec_from_lf_to_pos = point_on_sphere - look_from;
 
-    emit_info.wi = glm::normalize(vec_from_lf_to_pos);
-
     hit_p = point_on_sphere;
     shading_normal = point_on_unit_sphere;
     // for point inside the sphere direction vec from point to surface of sphere will always be back
     // face
 
-    const float sphere_sa = 4 * std::numbers::pi * radius * radius;
+    const float sphere_sa = 4.f * std::numbers::pi * radius * radius;
 
-    emit_info.dist = glm::length(vec_from_lf_to_pos);
+    glm::vec3 dir_to_surf = glm::normalize(vec_from_lf_to_pos);
+    float dist2 = glm::length2(vec_from_lf_to_pos);
+    float cosine = std::abs(glm::dot(shading_normal, -dir_to_surf));
 
-    if (glm::length2(emit_info.wi) == 0)
-      emit_info.pdf = 0;
-    else {
-      emit_info.pdf = sphere_sa * glm::length2(vec_from_lf_to_pos)
-                      / std::abs(glm::dot(shading_normal, -emit_info.wi));
-    }
+    float G = cosine / dist2;
+
+    float pdf = 1.f / sphere_sa;
+    emit_info = EmitterInfo{dir_to_surf, pdf, std::sqrtf(dist2), G};
   } else {
     // if look from point is outside the sphere
     float cos_theta_max = sqrt(1.0f - ((radius * radius) / length2(look_from - center)));
-    glm::vec3 dir_lf_to_center = glm::normalize(center - look_from);
+    glm::vec3 dir_center_to_lf = glm::normalize(look_from - center);
 
     // sample direction
-
-    auto onb = init_onb(dir_lf_to_center);
+    auto onb = init_onb(dir_center_to_lf);
     auto sample_z_dir = sample_sphere_cap(rand1, rand2, cos_theta_max);
-    auto sampler_dir = glm::normalize(xform_with_onb(onb, sample_z_dir));
+    auto sampled_point = glm::normalize(xform_with_onb(onb, sample_z_dir)) * radius + center;
 
-    emit_info.wi = sampler_dir;
-    float dist_lf_to_center = glm::length(center - look_from);
-    float dist_lf_to_p = dist_lf_to_center - radius;
+    float dist2 = glm::length2(sampled_point - look_from);
 
-    hit_p = look_from + sampler_dir * dist_lf_to_p;
-    shading_normal = glm::normalize(hit_p - center);
-    // for a point outside the sphere the direction vec will always front face
+    shading_normal = glm::normalize(sampled_point - center);
 
-    emit_info.pdf = 1.0f / (2 * std::numbers::pi * (1.0f - cos_theta_max));
-    emit_info.dist = dist_lf_to_p;
+    glm::vec3 sampled_dir = glm::normalize(sampled_point - look_from);
+
+    float cosine = std::abs(glm::dot(shading_normal, -sampled_dir));
+    float G = cosine / dist2;
+
+    // Uniform sampling PDF of a cone
+    float pdf_solid_angle = 1.0f / (2.f * std::numbers::pi * (1.0f - cos_theta_max));
+    // Convert it back to area measure. Same as other shapes
+    float pdf = pdf_solid_angle * G;
+
+    emit_info = EmitterInfo{sampled_dir, pdf, std::sqrtf(dist2), G};
   }
 
   glm::vec3 emit_col = mat->emitted(Ray(look_from, emit_info.wi), shading_normal, hit_p);
@@ -80,22 +82,23 @@ std::pair<glm::vec3, EmitterInfo> Sphere::sample(const glm::vec3& look_from,
   return std::make_pair(emit_col, emit_info);
 }
 
-float Sphere::pdf(const glm::vec3& look_from, const glm::vec3& look_at,
-                  const glm::vec3& dir) const {
+float Sphere::surf_pdf(const glm::vec3& look_from, const glm::vec3& point_on_light,
+                       const glm::vec3& dir) const {
   // if look from point is inside the sphere
   if (glm::length2(look_from - center) <= radius * radius) {
-    if (glm::length2(dir) == 0)
-      return 0;
-    else {
-      const auto vec_from_lf_to_pos = look_at - look_from;
-      const float sphere_sa = 4 * std::numbers::pi * radius * radius;
-      const glm::vec3 surface_norm = glm::normalize(look_at - center);
-
-      return sphere_sa * glm::length2(vec_from_lf_to_pos) / std::abs(glm::dot(surface_norm, -dir));
-    }
+    const float sphere_sa = 4.f * std::numbers::pi * radius * radius;
+    return 1.f / sphere_sa;
   } else {
+    // if look from point is outside the sphere
     float cos_theta_max = sqrt(1.0f - ((radius * radius) / length2(look_from - center)));
 
-    return 1.0f / (2 * std::numbers::pi * (1.0f - cos_theta_max));
+    // Uniform sampling PDF of a cone
+    float pdf_solid_angle = 1.0f / (2.f * std::numbers::pi * (1.0f - cos_theta_max));
+    // Convert it back to area measure. Same as other shapes
+    glm::vec3 shading_normal = glm::normalize(point_on_light - center);
+    float cosine = std::abs(glm::dot(shading_normal, -dir));
+    float dist2 = glm::length2(point_on_light - look_from);
+
+    return pdf_solid_angle * cosine / dist2;
   }
 }
