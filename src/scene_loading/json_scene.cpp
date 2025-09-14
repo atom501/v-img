@@ -6,6 +6,7 @@
 #include <material/dielectric.h>
 #include <material/diffuse_light.h>
 #include <material/lambertian.h>
+#include <material/principled.h>
 #include <scene_loading/json_scene.h>
 #include <texture.h>
 #define TINYOBJLOADER_IMPLEMENTATION
@@ -290,22 +291,40 @@ bool set_list_of_materials(const nlohmann::json& json_settings,
     for (auto& mat_data : json_mat_list) {
       if (mat_data["type"] == "lambertian") {
         Texture* t = json_to_texture(mat_data, texture_list);
-        auto temp_lambertian = Lambertian(t);
 
-        // add material to list and associate a name with the index
-        list_materials.push_back(std::make_unique<Lambertian>(temp_lambertian));
+        list_materials.push_back(std::make_unique<Lambertian>(t));
         name_to_index[mat_data["name"]] = list_materials.size() - 1;
+
       } else if (mat_data["type"] == "diffuse_light") {
-        auto temp_light = DiffuseLight(mat_data);
-
-        // add material to list and associate a name with the index
-        list_materials.push_back(std::make_unique<DiffuseLight>(temp_light));
+        list_materials.push_back(std::make_unique<DiffuseLight>(mat_data));
         name_to_index[mat_data["name"]] = list_materials.size() - 1;
-      } else if (mat_data["type"] == "dielectric") {
-        auto temp_dielectric = Dielectric(mat_data);
 
-        // add material to list and associate a name with the index
-        list_materials.push_back(std::make_unique<Dielectric>(temp_dielectric));
+      } else if (mat_data["type"] == "dielectric") {
+        list_materials.push_back(std::make_unique<Dielectric>(mat_data));
+        name_to_index[mat_data["name"]] = list_materials.size() - 1;
+
+      } else if (mat_data["type"] == "principled") {
+        glm::vec3 base_col = mat_data["base_color"].template get<glm::vec3>();
+
+        float roughness = mat_data.value("roughness", 0.5f);
+        float anisotropic = mat_data.value("anisotropic", 0.f);
+        float eta = mat_data.value("eta", 1.5f);
+        float subsurface = mat_data.value("subsurface", 0.f);
+        float metallic = mat_data.value("metallic", 0.f);
+
+        float spec_trans = mat_data.value("spec_trans", 0.f);
+        float specular = mat_data.value("specular", 0.5f);
+        float spec_tint = mat_data.value("spec_tint", 0.f);
+
+        float sheen = mat_data.value("sheen", 0.f);
+        float sheen_tint = mat_data.value("sheen_tint", 0.5f);
+
+        float clearcoat = mat_data.value("clearcoat", 0.f);
+        float clearcoat_gloss = mat_data.value("clearcoat_gloss", 1.f);
+
+        list_materials.push_back(std::make_unique<Principled>(
+            base_col, spec_trans, metallic, subsurface, specular, roughness, spec_tint, anisotropic,
+            sheen, sheen_tint, clearcoat, clearcoat_gloss, eta));
         name_to_index[mat_data["name"]] = list_materials.size() - 1;
       } else {
         std::string surf_name = mat_data["type"];
