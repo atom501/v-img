@@ -1,5 +1,11 @@
 #pragma once
 
+#include <algorithm>
+#include <filesystem>
+#include <utility>
+#include <vector>
+
+#include "glm/common.hpp"
 #include "glm/vec2.hpp"
 #include "glm/vec3.hpp"
 
@@ -44,3 +50,22 @@ public:
       return col_b;
   }
 };
+
+class ImageTexture : public Texture {
+private:
+  uint32_t width;
+  uint32_t height;
+  std::vector<std::vector<glm::vec3>> mipmap;  // flattened size width * height. Top left corner is
+                                               // 0,0 index. mipmap level 0 is oriignal image
+public:
+  ImageTexture() = default;
+  ~ImageTexture() = default;
+
+  ImageTexture(const std::vector<glm::vec3>& image, uint32_t width, uint32_t height);
+
+  glm::vec3 col_at_uv(const glm::vec2& uv) const override;
+
+  void debug_mipmaps_to_file();
+};
+
+ImageTexture load_imagetexture(const std::filesystem::path& ImageTexture_file);
