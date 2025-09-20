@@ -62,9 +62,11 @@ glm::vec3 mis_integrator(Ray& input_ray, std::vector<size_t>& thread_stack, cons
           const auto [mat_eval, mat_pdf]
               = hit.value().mat->eval_pdf_pair(test_ray.dir, l_sample_info.wi, hit.value());
 
-          float G = l_sample_info.G;
-          float mis_weight = balance_heuristic(l_sample_info.pdf, mat_pdf * G);
-          bounce_result += throughput * mat_eval * mis_weight * G * light_col / l_sample_info.pdf;
+          if (mat_pdf != 0 && !std::isnan(mat_pdf)) {
+            float G = l_sample_info.G;
+            float mis_weight = balance_heuristic(l_sample_info.pdf, mat_pdf * G);
+            bounce_result += throughput * mat_eval * mis_weight * G * light_col / l_sample_info.pdf;
+          }
         }
       }
     }
