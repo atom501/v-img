@@ -1,0 +1,271 @@
+{
+    "camera": {
+        "transform": {
+            "from": [0, 20, 1600],
+            "at": [0, -4, 0],
+            "up": [0, 1, 0]
+        },
+        "vfov": 25,
+        "resolution": [1800, 800]
+    },
+    "sampler": {
+        "depth": -1,
+        "samples": 256
+    },
+    "background": [0, 0, 0],
+    "integrator": {
+        "type": "mis"
+    },
+    "materials": [
+        {
+            "type": "lambertian",
+            "name": "white",
+            "albedo": [0.73, 0.73, 0.73]
+        },
+        {
+            "type": "lambertian",
+            "name": "red",
+            "albedo": [0.65, 0.05, 0.05]
+        },
+        {
+            "type": "lambertian",
+            "name": "green",
+            "albedo": [0.12, 0.45, 0.15]
+        },
+        {
+            "type": "diffuse_light",
+            "name": "light",
+            "albedo": [2.0, 2.0, 2.0]
+        },
+        {
+            "type": "principled",
+            "name": "d_1",
+            "base_color": [0.15, 0.15, 0.65],
+            "spec_trans":0.0,
+            "metallic": 0.0,
+            "subsurface": 0.5,
+            "specular": 0.5,
+            "roughness": 0.5,
+            "spec_tint": 0.5,
+            "anisotropic": 0.0,
+            "sheen": 0.0,
+            "sheen_tint": 0.5,
+            "clearcoat": 0.0,
+            "clearcoat_gloss": 0.5,
+            "eta": 1.5
+        },
+        {
+            "type": "principled",
+            "name": "d_2",
+            "base_color": [0.15, 0.15, 0.65],
+            "spec_trans": 0.0,
+            "metallic": 0.8,
+            "subsurface": 0.5,
+            "specular": 0.5,
+            "roughness": 0.5,
+            "spec_tint": 0.5,
+            "anisotropic": 0.0,
+            "sheen": 0.0,
+            "sheen_tint": 0.5,
+            "clearcoat": 1.0,
+            "clearcoat_gloss": 0.5,
+            "eta": 1.5
+        },
+        {
+            "type": "principled",
+            "name": "d_3",
+            "base_color": [0.15, 0.15, 0.65],
+            "spec_trans": 0.0,
+            "metallic": 0.5,
+            "subsurface": 1.0,
+            "specular": 1.0,
+            "roughness": 0.5,
+            "spec_tint": 0.5,
+            "anisotropic": 0.1,
+            "sheen": 0.5,
+            "sheen_tint": 0.5,
+            "clearcoat": 0.5,
+            "clearcoat_gloss": 0.5,
+            "eta": 1.5
+        },
+        {
+            "type": "principled",
+            "name": "d_4",
+            "base_color": [0.15, 0.15, 0.65],
+            "spec_trans": 1.0,
+            "metallic": 0.9,
+            "subsurface": 0.8,
+            "specular": 0.3,
+            "roughness": 0.2,
+            "spec_tint": 0.0,
+            "anisotropic": 0.3,
+            "sheen": 1.0,
+            "sheen_tint": 0.5,
+            "clearcoat": 1.0,
+            "clearcoat_gloss": 0.5,
+            "eta": 1.5
+        },
+        {
+            "type": "principled",
+            "name": "d_5",
+            "base_color": [0.3, 0.3, 0.9],
+            "spec_trans": 1.0,
+            "metallic": 0.0,
+            "subsurface": 1.0,
+            "specular": 1.0,
+            "roughness": 0.1,
+            "spec_tint": 0.5,
+            "anisotropic": 0.1,
+            "sheen": 0.5,
+            "sheen_tint": 0.5,
+            "clearcoat": 0.5,
+            "clearcoat_gloss": 0.5,
+            "eta": 1.5
+        },
+        {
+            "type": "principled",
+            "name": "d_6",
+            "base_color": [0.15, 0.15, 0.65],
+            "spec_trans": 0.0,
+            "metallic": 0.0,
+            "subsurface": 0.5,
+            "specular": 0.3,
+            "roughness": 0.1,
+            "spec_tint": 0.0,
+            "anisotropic": 0.0,
+            "sheen": 1.0,
+            "sheen_tint": 0.5,
+            "clearcoat": 1.0,
+            "clearcoat_gloss": 0.5,
+            "eta": 1.5
+        }
+    ],
+    "surfaces": [
+        {
+            "type": "mesh",
+            "filename": "../assets/plane.obj",
+            "mat_name": "white",
+            "transform": [
+                {
+                    "scale": [650, 277.5, 1]
+                },
+                {
+                    "rotate": [ 0, 1, 0, 0 ]
+                },
+                {
+                    "translate": [0, 0, -277.5]
+                }
+            ]
+        },
+        {
+            "type": "mesh",
+            "filename": "../assets/plane.obj",
+            "mat_name": "white",
+            "transform": [
+                {
+                    "scale": [650, 277.5, 1]
+                },
+                {
+                    "rotate": [ -0.7071068, 0, 0, 0.7071068 ]
+                }, 
+                {
+                    "translate": [0, 277.5, 0]
+                }
+            ]
+        },
+        {
+            "type": "mesh",
+            "filename": "../assets/plane.obj",
+            "mat_name": "white",
+            "transform": [
+                {
+                    "scale": [650, 277.5, 1]
+                },
+                {
+                    "rotate": [ 0.7071068, 0, 0, 0.7071068 ]
+                },
+                {
+                    "translate": [0, -277.5, 0]
+                }
+            ]
+        },
+        {
+            "type": "mesh",
+            "filename": "../assets/plane.obj",
+            "mat_name": "green",
+            "transform": [
+                {
+                    "scale": [277.5, 277.5, 1]
+                },
+                {
+                    "rotate": [ 0, -0.7071068, 0, 0.7071068 ]
+                },
+                {
+                    "translate": [-650, 0, 0]
+                }
+            ]
+        },
+        {
+            "type": "mesh",
+            "filename": "../assets/plane.obj",
+            "mat_name": "red",
+            "transform": [
+                {
+                    "scale": [277.5, 277.5, 1]
+                },
+                {
+                    "rotate": [ 0, 0.7071068, 0, 0.7071068 ]
+                },
+                {
+                    "translate": [650, 0, 0]
+                }
+            ]
+        },
+        {
+            "type": "mesh",
+            "filename": "../assets/plane.obj",
+            "mat_name": "light",
+            "transform": [
+                {
+                    "scale": [500, 250, 1]
+                },
+                {
+                    "rotate": [ -0.7071068, 0, 0, 0.7071068 ]
+                },
+                {
+                    "translate": [0, 277, 0]
+                }
+            ]
+        }, {
+            "type": "sphere",
+            "center": [-500, -177.5, -200],
+            "radius": 100,
+            "mat_name": "d_1"
+        }, {
+            "type": "sphere",
+            "center": [-300, -177.5, -120],
+            "radius": 100,
+            "mat_name": "d_2"
+        }, {
+            "type": "sphere",
+            "center": [-100, -177.5, -40],
+            "radius": 100,
+            "mat_name": "d_3"
+        }, {
+            "type": "sphere",
+            "center": [100, -177.5, 40],
+            "radius": 100,
+            "mat_name": "d_4"
+        }, {
+            "type": "sphere",
+            "center": [300, -177.5, 120],
+            "radius": 100,
+            "mat_name": "d_5"
+        }, {
+            "type": "sphere",
+            "center": [500, -177.5, 200],
+            "radius": 100,
+            "mat_name": "d_6"
+        }
+    ]
+}
