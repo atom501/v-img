@@ -8,6 +8,7 @@
 #include <material/principled.h>
 #include <scene_loading/mitsuba_scene.h>
 #include <scene_loading/serialized_file.h>
+#include <tiny_obj_loader.h>
 #include <tinyexr.h>
 
 #include <numbers>
@@ -552,6 +553,140 @@ bool set_scene_from_xml(const std::filesystem::path& path_file, integrator_data&
           if (mat_ptr->is_emissive()) {
             Sphere* s_ptr = static_cast<Sphere*>(list_surfaces[list_surfaces.size() - 1].get());
             list_lights.push_back(s_ptr);
+          }
+        } else if (obj->pluginType() == "obj") {
+          tinyobj::attrib_t attrib;
+          std::vector<tinyobj::shape_t> shapes;
+          std::vector<tinyobj::material_t> materials;
+          std::string warnings;
+          std::string errors;
+
+          std::string s_file = properties["filename"].getString();
+          std::filesystem::path model_filename = properties["filename"].getString();
+          std::filesystem::path scene_filename = path_file;
+
+          const auto model_path_rel_file = scene_filename.remove_filename() / model_filename;
+
+          if (tinyobj::LoadObj(&attrib, &shapes, &materials, &warnings, &errors,
+                               model_path_rel_file.string().c_str())
+              == false) {
+            fmt::println("Tinyobj failed to load the mesh \n {}", errors);
+            return false;
+          }
+
+          // data for mesh object
+          std::vector<glm::vec3> vertices;
+          std::vector<glm::vec3> normals;
+          std::vector<glm::vec2> texcoords;
+
+          std::vector<uint32_t> tri_vertex;
+          std::vector<uint32_t> tri_normal;
+          std::vector<int> tri_uv;
+
+          // read vertices and normals, also transform them
+          for (size_t i = 0; i < attrib.vertices.size(); i += 3) {
+            auto vec
+                = glm::vec3(attrib.vertices[i], attrib.vertices[i + 1], attrib.vertices[i + 2]);
+            glm::vec4 result = transform * glm::vec4(vec, 1);
+            result /= result.w;
+            vertices.push_back(glm::vec3(result));
+          }
+
+          const glm::mat4 normal_xform = glm::transpose(glm::inverse(transform));
+          for (size_t i = 0; i < attrib.normals.size(); i += 3) {
+            auto norm = glm::vec3(attrib.normals[i], attrib.normals[i + 1], attrib.normals[i + 2]);
+            glm::vec4 result = normal_xform * glm::vec4(norm, 0);
+            normals.push_back(glm::normalize(glm::vec3(result)));
+          }
+
+          for (size_t i = 0; i < attrib.texcoords.size(); i += 2) {
+            auto uv = glm::vec2(attrib.texcoords[i], attrib.texcoords[i + 1]);
+            texcoords.push_back(uv);
+          }
+
+          vertices.shrink_to_fit();
+          normals.shrink_to_fit();
+          texcoords.shrink_to_fit();
+
+          for (const auto& shape : shapes) {
+            const std::vector<tinyobj::index_t>& indices = shape.mesh.indices;
+            const std::vector<int>& material_ids = shape.mesh.material_ids;
+
+            // for each triangle get the index in vector of vertices for a vertex
+            for (size_t i = 0; i < material_ids.size(); i++) {
+              // for ith triangle
+
+              // get index for each vertex
+              tri_vertex.push_back(indices[3 * i].vertex_index);
+              tri_vertex.push_back(indices[3 * i + 1].vertex_index);
+              tri_vertex.push_back(indices[3 * i + 2].vertex_index);
+
+              auto tri_min_point = glm::min(
+                  vertices[tri_vertex[3 * i]],
+                  glm::min(vertices[tri_vertex[3 * i + 1]], vertices[tri_vertex[(3 * i) + 2]]));
+
+              auto tri_max_point = glm::max(
+                  vertices[tri_vertex[3 * i]],
+                  glm::max(vertices[tri_vertex[3 * i + 1]], vertices[tri_vertex[(3 * i) + 2]]));
+
+              // get index for each vertex normal
+
+              // if one of the vertex normals don't exist use face normal
+              if (indices[3 * i].normal_index == -1 || indices[3 * i + 1].normal_index == -1
+                  || indices[3 * i + 2].normal_index == -1) {
+                glm::vec3 p0 = vertices[tri_vertex[3 * i]], p1 = vertices[tri_vertex[3 * i + 1]],
+                          p2 = vertices[tri_vertex[3 * i + 2]];
+                auto edge1 = p1 - p0;
+                auto edge2 = p2 - p0;
+
+                glm::vec3 face_normal = glm::normalize(glm::cross(edge1, edge2));
+
+                normals.push_back(face_normal);
+
+                // calculate face normal and assign it to all normal index for triangle
+                tri_normal.push_back(normals.size() - 1);
+                tri_normal.push_back(normals.size() - 1);
+                tri_normal.push_back(normals.size() - 1);
+              } else {
+                tri_normal.push_back(indices[3 * i].normal_index);
+                tri_normal.push_back(indices[3 * i + 1].normal_index);
+                tri_normal.push_back(indices[3 * i + 2].normal_index);
+              }
+
+              // if one of the vertex uv don't exist, don't pass anything
+              if (indices[3 * i].texcoord_index == -1 || indices[3 * i + 1].texcoord_index == -1
+                  || indices[3 * i + 2].texcoord_index == -1) {
+                // set the uvs for vertices tp -1
+                tri_uv.push_back(-1);
+                tri_uv.push_back(-1);
+                tri_uv.push_back(-1);
+              } else {
+                tri_uv.push_back(indices[3 * i].texcoord_index);
+                tri_uv.push_back(indices[3 * i + 1].texcoord_index);
+                tri_uv.push_back(indices[3 * i + 2].texcoord_index);
+              }
+            }
+          }
+
+          auto tri_mesh = Mesh(vertices, tri_vertex, normals, tri_normal, texcoords, tri_uv);
+          list_meshes.push_back(std::make_unique<Mesh>(tri_mesh));
+
+          int num_tri = tri_vertex.size() / 3;
+
+          // add to list of surfaces
+          for (size_t i = 0; i < num_tri; i++) {
+            auto tri = Triangle(list_meshes[list_meshes.size() - 1].get(), i, mat_ptr);
+            list_surfaces.push_back(std::make_unique<Triangle>(tri));
+          }
+
+          // add to list of lights if needed
+          size_t rev_count_index = list_surfaces.size() - 1;
+
+          if (mat_ptr->is_emissive()) {
+            for (size_t i = 0; i < num_tri; i++, rev_count_index--) {
+              Triangle* s_ptr = static_cast<Triangle*>(list_surfaces[rev_count_index].get());
+              list_lights.push_back(s_ptr);
+            }
           }
         } else {
           fmt::println("shape plugin {} is not supported", obj->pluginType());
