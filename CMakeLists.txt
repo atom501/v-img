@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.6...3.22)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 # ---- Project ----
 
 # Note: update this to your new project's name and version
