@@ -1,0 +1,5 @@
+CompileFlags:
+  Add:
+    - "--include-directory=/include"
+Diagnostics:
+  UnusedIncludes: Strict

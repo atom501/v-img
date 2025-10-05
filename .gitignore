@@ -4,3 +4,6 @@
 /assets
 /out
 .DS_Store
+/.cache
+compile_commands.json
+/.zed
