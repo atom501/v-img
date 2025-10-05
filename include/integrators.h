@@ -21,7 +21,7 @@
 #include <utility>
 #include <vector>
 
-enum class integrator_func { s_normal, g_normal, material, mis };
+enum class integrator_func { s_normal, g_normal, material, mis, COUNT };
 
 struct integrator_data {
   integrator_func func;
