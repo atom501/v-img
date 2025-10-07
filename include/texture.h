@@ -56,7 +56,7 @@ private:
   uint32_t width;
   uint32_t height;
   std::vector<std::vector<glm::vec3>> mipmap;  // flattened size width * height. Top left corner is
-                                               // 0,0 index. mipmap level 0 is oriignal image
+                                               // 0,0 index. mipmap level 0 is original image
 public:
   ImageTexture() = default;
   ~ImageTexture() = default;

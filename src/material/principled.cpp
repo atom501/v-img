@@ -61,6 +61,8 @@ glm::vec3 Principled::eval(const glm::vec3& wi, const glm::vec3& wo, const HitIn
     normal_frame.w = -normal_frame.w;
   }
 
+  glm::vec3 base_color = Principled::tex->col_at_uv(hit.uv);
+
   glm::vec3 half_vector = glm::normalize(dir_in + wo);
   glm::vec3 eval_glass = eval_disney_rough_glass(dir_in, wo, hit, base_color, eta, anisotropic,
                                                  roughness, half_vector, normal_frame);
@@ -117,8 +119,8 @@ float Principled::pdf(const glm::vec3& wi, const glm::vec3& wo, const HitInfo& h
   float choose_glass = glass_weight / total_w;
 
   float diff_pdf = pdf_disney_diffuse(dir_in, wo, hit, normal_frame);
-  float clearcoat_pdf = pdf_disney_clearcoat(dir_in, wo, hit, base_color, clearcoat_gloss,
-                                             half_vector, normal_frame);
+  float clearcoat_pdf
+      = pdf_disney_clearcoat(dir_in, wo, hit, clearcoat_gloss, half_vector, normal_frame);
   float metal_pdf
       = pdf_disney_metal(dir_in, wo, hit, roughness, anisotropic, half_vector, normal_frame);
 

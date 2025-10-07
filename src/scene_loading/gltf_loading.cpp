@@ -12,6 +12,7 @@
 #include <variant>
 
 #include "fastgltf/types.hpp"
+#include "stb_image.h"
 
 static inline glm::mat4 get_mat_transform(
     std::variant<fastgltf::TRS, fastgltf::math::fmat4x4>& gltf_xform) {
@@ -102,6 +103,58 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
   integrator_data.camera
       = TLCam(camToWorld, integrator_data.resolution, vfov_rad * (180.f / fastgltf::math::pi));
 
+  // load images
+  std::vector<uint32_t> img_list_idx;
+  for (auto& img : asset->images) {
+    float* image_array;
+    int width, height, nrChannels;
+
+    std::visit(
+        fastgltf::visitor{
+            [](auto& arg) {},
+            [&](fastgltf::sources::URI& filePath) {
+              assert(filePath.fileByteOffset == 0);
+              assert(filePath.uri.isLocalPath());
+
+              const std::string path(filePath.uri.path().begin(), filePath.uri.path().end());
+              image_array = stbi_loadf(path.c_str(), &width, &height, &nrChannels, STBI_rgb);
+            },
+            [&](fastgltf::sources::Array& vector) {
+              image_array = stbi_loadf_from_memory(
+                  reinterpret_cast<const stbi_uc*>(vector.bytes.data()),
+                  static_cast<int>(vector.bytes.size()), &width, &height, &nrChannels, STBI_rgb);
+            },
+            [&](fastgltf::sources::BufferView& view) {
+              auto& bufferView = asset->bufferViews[view.bufferViewIndex];
+              auto& buffer = asset->buffers[bufferView.bufferIndex];
+
+              std::visit(fastgltf::visitor{[](auto& arg) {},
+                                           [&](fastgltf::sources::Array& vector) {
+                                             image_array = stbi_loadf_from_memory(
+                                                 reinterpret_cast<const stbi_uc*>(
+                                                     vector.bytes.data() + bufferView.byteOffset),
+                                                 static_cast<int>(bufferView.byteLength), &width,
+                                                 &height, &nrChannels, STBI_rgb);
+                                           }},
+                         buffer.data);
+            },
+        },
+        img.data);
+
+    std::vector<glm::vec3> image(width * height);
+
+    size_t arr_index = 0;
+    for (size_t i = 0; i < width * height; i++) {
+      image[i].r = image_array[arr_index++];
+      image[i].g = image_array[arr_index++];
+      image[i].b = image_array[arr_index++];
+    }
+
+    stbi_image_free(image_array);
+    texture_list.push_back(std::make_unique<ImageTexture>(image, width, height));
+    img_list_idx.push_back(texture_list.size() - 1);
+  }
+
   // load material
   for (auto& mat : asset->materials) {
     // check if material is emissive
@@ -145,8 +198,29 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
 
       static constexpr float subsurface = 0.f;
       static constexpr float spec_tint = 0.f;
+
+      // get texture for material
+      auto& baseColorTexture = mat.pbrData.baseColorTexture;
+      Texture* img_tex = nullptr;
+      if (baseColorTexture.has_value()) {
+        // add image texture
+        auto& texture = asset->textures[baseColorTexture->textureIndex];
+        if (!texture.imageIndex.has_value()) return false;
+
+        img_tex = texture_list[img_list_idx[texture.imageIndex.value()]].get();
+        fmt::println("given img text");
+      } else {
+        // add constant texture
+        texture_list.push_back(std::make_unique<ConstColor>(
+            glm::vec3(mat.pbrData.baseColorFactor.x(), mat.pbrData.baseColorFactor.y(),
+                      mat.pbrData.baseColorFactor.z())));
+
+        fmt::println("given const text");
+        img_tex = texture_list.back().get();
+      }
+
       list_materials.push_back(std::make_unique<Principled>(
-          base_color, specular_transmission, metallic, subsurface, specular, roughness, spec_tint,
+          img_tex, specular_transmission, metallic, subsurface, specular, roughness, spec_tint,
           anisotropic, sheen, sheen_tint, clearcoat, clearcoat_gloss, eta));
     } else {
       glm::vec3 emit
@@ -185,8 +259,6 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
             it->indicesAccessor
                 .has_value());  // We specify GenerateMeshIndices, so we should always have indices
 
-        std::size_t baseColorTexcoordIndex = 0;
-
         // Get the output primitive
         auto index = std::distance(mesh.primitives.begin(), it);
 
@@ -218,7 +290,36 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
           }
         }
 
-        //  TODO add texcoord loading
+        // load texcoords
+        if (it->materialIndex.has_value()) {
+          auto& material = asset->materials[it->materialIndex.value()];
+
+          auto& baseColorTexture = material.pbrData.baseColorTexture;
+
+          if (baseColorTexture.has_value()) {
+            auto& texture = asset->textures[baseColorTexture->textureIndex];
+
+            if (texture.imageIndex.has_value()) {
+              // texture transformation not supported
+              size_t baseColorTexcoordIndex = material.pbrData.baseColorTexture->texCoordIndex;
+
+              auto texcoordAttribute
+                  = std::string("TEXCOORD_") + std::to_string(baseColorTexcoordIndex);
+
+              if (const auto* texcoord_acc = it->findAttribute(texcoordAttribute);
+                  texcoord_acc != it->attributes.end()) {
+                // Tex coord
+                auto& texCoordAccessor = asset->accessors[texcoord_acc->accessorIndex];
+                if (!texCoordAccessor.bufferViewIndex.has_value()) continue;
+
+                fastgltf::iterateAccessor<fastgltf::math::fvec2>(
+                    asset.get(), texCoordAccessor, [&](fastgltf::math::fvec2 uv) {
+                      texcoords.push_back(glm::vec2(uv.x(), uv.y()));
+                    });
+              }
+            }
+          }
+        }
 
         // Create the index buffer and copy the indices into it.
 
@@ -232,7 +333,11 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
             tri_normal.push_back(i);
           }
 
-          tri_uv.push_back(-1);
+          if (texcoords.size() > 0) {
+            tri_uv.push_back(i);
+          } else {
+            tri_uv.push_back(-1);
+          }
         });
 
         // give default normals
@@ -264,13 +369,13 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
           continue;
         }
 
-        list_meshes.push_back(
-            std::make_unique<Mesh>(vertices, tri_vertex, normals, tri_normal, texcoords, tri_uv));
+        auto m = Mesh(vertices, tri_vertex, normals, tri_normal, texcoords, tri_uv);
+        list_meshes.push_back(std::make_unique<Mesh>(m));
 
         // add to list of surfaces
         for (size_t i = 0; i < tri_vertex.size() / 3; i++) {
-          list_surfaces.push_back(
-              std::make_unique<Triangle>(list_meshes[list_meshes.size() - 1].get(), i, mat_ptr));
+          Triangle t = Triangle(list_meshes[list_meshes.size() - 1].get(), i, mat_ptr);
+          list_surfaces.push_back(std::make_unique<Triangle>(t));
         }
 
         // add to list of lights if needed
