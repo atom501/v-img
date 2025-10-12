@@ -72,6 +72,10 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
   }
 
   // only load the first camera
+  if (asset->cameras.size() == 0) {
+    fmt::println("No camera in the scene");
+    return false;
+  }
   auto& scene_camera = asset->cameras[0];
   glm::mat4 camToWorld = glm::mat4(1.0f);
   float vfov_rad = 0.f;
