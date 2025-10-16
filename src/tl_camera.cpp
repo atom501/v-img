@@ -1,4 +1,5 @@
 #include <tl_camera.h>
+
 #include <numbers>
 
 TLCam::TLCam(const glm::mat4& xform, const glm::ivec2& res, const float ver_fov) {
@@ -30,6 +31,9 @@ Ray TLCam::generate_ray(const float& x, const float& y) const {
   // Transforms from camera to world coords
   new_ray.xform_ray(camToWorld_xform);
   new_ray.dir = glm::normalize(new_ray.dir);
+
+  new_ray.ray_cone
+      = raycone_for_primary_ray((TLCam::vfov * std::numbers::pi) / 180.f, TLCam::resolution.y);
   return new_ray;
 }
 
