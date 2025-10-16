@@ -9,7 +9,7 @@
 // Thin lens camera
 class TLCam {
 private:
-  float vfov;                                    // Vertical FOV. Given in degrees
+  float vfov;                                    // Vertical FOV. In degrees
   glm::mat4x4 camToWorld_xform;                  // Camera to world transform
   glm::vec4 p_size = glm::vec4(1.0f);            // Physical size of the image plane
   glm::ivec2 resolution = glm::ivec2(512, 512);  // Resolution
