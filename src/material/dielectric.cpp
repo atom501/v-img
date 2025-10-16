@@ -74,7 +74,8 @@ std::optional<ScatterInfo> Dielectric::sample_mat(const glm::vec3& wi, const Hit
 }
 
 // has no color of its own
-glm::vec3 Dielectric::eval(const glm::vec3& wi, const glm::vec3& wo, const HitInfo& hit) const {
+glm::vec3 Dielectric::eval(const glm::vec3& wi, const glm::vec3& wo, const HitInfo& hit,
+                           const RayCone& cone) const {
   return glm::vec3(1.f);
 }
 
@@ -83,7 +84,7 @@ float Dielectric::pdf(const glm::vec3& wi, const glm::vec3& wo, const HitInfo& h
   return 0.f;
 }
 
-glm::vec3 Dielectric::eval_div_pdf(const glm::vec3& wi, const glm::vec3& wo,
-                                   const HitInfo& hit) const {
+glm::vec3 Dielectric::eval_div_pdf(const glm::vec3& wi, const glm::vec3& wo, const HitInfo& hit,
+                                   const RayCone& cone) const {
   return glm::vec3(1.f);
 }

@@ -26,9 +26,10 @@ public:
 
   std::optional<ScatterInfo> sample_mat(const glm::vec3& wi, const HitInfo& hit,
                                         pcg32_random_t& pcg_rng) const override;
-  glm::vec3 eval(const glm::vec3& wi, const glm::vec3& wo, const HitInfo& hit) const override;
+  glm::vec3 eval(const glm::vec3& wi, const glm::vec3& wo, const HitInfo& hit,
+                 const RayCone& cone) const override;
   float pdf(const glm::vec3& wi, const glm::vec3& wo, const HitInfo& hit) const override;
-  glm::vec3 eval_div_pdf(const glm::vec3& wi, const glm::vec3& wo,
-                         const HitInfo& hit) const override;
+  glm::vec3 eval_div_pdf(const glm::vec3& wi, const glm::vec3& wo, const HitInfo& hit,
+                         const RayCone& cone) const override;
   bool is_delta() const override { return true; }
 };

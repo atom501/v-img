@@ -31,13 +31,13 @@ ImageTexture::ImageTexture(const std::vector<glm::vec3>& image, uint32_t width, 
   ImageTexture::width = width;
   ImageTexture::height = height;
 
-  fmt::println("mipmap level 0. Width {}, Height {}", width, height);
+  // fmt::println("mipmap level 0. Width {}, Height {}", width, height);
 
-  static constexpr int max_mipmap_level = 8;
-  uint32_t size = std::max(width, height);
+  static constexpr int max_mipmap_level = 15;
+  uint32_t size = std::min(width, height);
 
-  // make mipmap by box filtering each level
-  int num_levels = std::min((int)std::ceil(std::log2(float(size)) + 1.f), max_mipmap_level);
+  // make mipmap by applying filter to each level
+  int num_levels = std::min((int)std::ceil(std::log2(float(size))), max_mipmap_level);
 
   uint32_t prev_width = width;
   uint32_t prev_height = height;
@@ -47,7 +47,7 @@ ImageTexture::ImageTexture(const std::vector<glm::vec3>& image, uint32_t width, 
     int next_w = std::max(prev_width / 2u, 1u);
     int next_h = std::max(prev_height / 2u, 1u);
 
-    fmt::println("mipmap level {}. Width {}, Height {}", l, next_w, next_h);
+    // fmt::println("mipmap level {}. Width {}, Height {}", l, next_w, next_h);
 
     std::vector<glm::vec3> new_level(next_w * next_h);
 
@@ -57,20 +57,28 @@ ImageTexture::ImageTexture(const std::vector<glm::vec3>& image, uint32_t width, 
       for (size_t x = 0; x < next_w; x++) {
         glm::vec3 sum = glm::vec3(0.f);
 
-        // if box filter is out of bound then pad with zeros
-        size_t sum_index = (2 * x) + (2 * y * prev_width);
-        sum += sum_index < old_size ? prev_img[sum_index] : glm::vec3(0.f);
+        // downsampling filter. source:
+        // https://bartwronski.com/2022/03/07/fast-gpu-friendly-antialiasing-downsampling-filter/
 
-        sum_index = (2 * x + 1) + (2 * y * prev_width);
-        sum += sum_index < old_size ? prev_img[sum_index] : glm::vec3(0.f);
+        glm::vec2 inv_res = glm::vec2(1.f / prev_width, 1.f / prev_height);
+        glm::vec2 curr_uv = glm::vec2(2 * x, 2 * y) * inv_res;
+        sum += 0.37487566f
+               * col_at_uv_mipmap(l - 1, curr_uv + glm::vec2(-0.75777, -0.75777) * inv_res);
+        sum += 0.37487566f
+               * col_at_uv_mipmap(l - 1, curr_uv + glm::vec2(0.75777, -0.75777) * inv_res);
+        sum += 0.37487566f
+               * col_at_uv_mipmap(l - 1, curr_uv + glm::vec2(0.75777, 0.75777) * inv_res);
+        sum += 0.37487566f
+               * col_at_uv_mipmap(l - 1, curr_uv + glm::vec2(-0.75777, 0.75777) * inv_res);
 
-        sum_index = (2 * x) + (2 * y * prev_width + 1);
-        sum += sum_index < old_size ? prev_img[sum_index] : glm::vec3(0.f);
+        sum += -0.12487566f * col_at_uv_mipmap(l - 1, curr_uv + glm::vec2(-2.907, 0.0) * inv_res);
+        sum += -0.12487566f * col_at_uv_mipmap(l - 1, curr_uv + glm::vec2(2.907, 0.0) * inv_res);
+        sum += -0.12487566f * col_at_uv_mipmap(l - 1, curr_uv + glm::vec2(0.0, -2.907) * inv_res);
+        sum += -0.12487566f * col_at_uv_mipmap(l - 1, curr_uv + glm::vec2(0.0, 2.907) * inv_res);
 
-        sum_index = (2 * x + 1) + (2 * y * prev_width + 1);
-        sum += sum_index < old_size ? prev_img[sum_index] : glm::vec3(0.f);
-
-        sum /= 4.f;
+        if (sum.x < 0) sum.x = 0.f;
+        if (sum.y < 0) sum.y = 0.f;
+        if (sum.z < 0) sum.z = 0.f;
 
         new_level[x + y * next_w] = sum;
       }
@@ -83,31 +91,53 @@ ImageTexture::ImageTexture(const std::vector<glm::vec3>& image, uint32_t width, 
   }
 }
 
-glm::vec3 ImageTexture::col_at_uv(const glm::vec2& uv) const {
-  float pixel_u = uv[0] * width;
-  float pixel_v = uv[1] * height;
+glm::vec3 ImageTexture::col_at_uv_mipmap(int mipmap_level, const glm::vec2& uv) const {
+  uint32_t mip_w = std::max(ImageTexture::width >> mipmap_level, 1u);
+  uint32_t mip_h = std::max(ImageTexture::height >> mipmap_level, 1u);
+
+  // get value on the mipmap level
+  float pixel_u = uv[0] * mip_w;
+  float pixel_v = uv[1] * mip_h;
 
   // get pixel value using sampling
-  int curr_x = std::clamp(static_cast<int>(pixel_u), 0, static_cast<int>(width) - 1);
-  int curr_y = std::clamp(static_cast<int>(pixel_v), 0, static_cast<int>(height) - 1);
+  int curr_x = std::clamp(static_cast<int>(pixel_u), 0, static_cast<int>(mip_w) - 1);
+  int curr_y = std::clamp(static_cast<int>(pixel_v), 0, static_cast<int>(mip_h) - 1);
 
-  int next_x = std::clamp(curr_x + 1, 0, static_cast<int>(width) - 1);
-  int next_y = std::clamp(curr_y + 1, 0, static_cast<int>(height) - 1);
+  int next_x = std::clamp(curr_x + 1, 0, static_cast<int>(mip_w) - 1);
+  int next_y = std::clamp(curr_y + 1, 0, static_cast<int>(mip_h) - 1);
 
   float x_fraction = pixel_u - curr_x;
   float y_fraction = pixel_v - curr_y;
 
-  glm::vec3 x0 = ImageTexture::mipmap[0][curr_x + curr_y * width];
-  glm::vec3 x1 = ImageTexture::mipmap[0][next_x + curr_y * width];
+  glm::vec3 x0 = ImageTexture::mipmap[mipmap_level][curr_x + curr_y * mip_w];
+  glm::vec3 x1 = ImageTexture::mipmap[mipmap_level][next_x + curr_y * mip_w];
 
   glm::vec3 a = glm::mix(x0, x1, glm::vec3(x_fraction));
 
-  glm::vec3 y0 = ImageTexture::mipmap[0][curr_x + next_y * width];
-  glm::vec3 y1 = ImageTexture::mipmap[0][next_x + next_y * width];
+  glm::vec3 y0 = ImageTexture::mipmap[mipmap_level][curr_x + next_y * mip_w];
+  glm::vec3 y1 = ImageTexture::mipmap[mipmap_level][next_x + next_y * mip_w];
 
   glm::vec3 b = glm::mix(y0, y1, glm::vec3(x_fraction));
 
   return glm::mix(a, b, glm::vec3(y_fraction));
+}
+
+glm::vec3 ImageTexture::col_at_uv(const glm::vec3& ray_in_dir, const RayCone& cone,
+                                  const HitInfo& surf_hit) const {
+  // calculate mipmap level. subtract so it isn't too aggressive
+  float lambda = compute_texture_LOD(ray_in_dir, cone, surf_hit) - 2.f;
+  lambda = std::clamp(lambda, 0.f, static_cast<float>(mipmap.size() - 1));
+
+  int mipmap_level0 = std::floor(lambda);
+  int mipmap_level1
+      = std::clamp(mipmap_level0 + 1, static_cast<int>(0), static_cast<int>(mipmap.size() - 1));
+
+  float fraction = lambda - std::floor(lambda);
+
+  glm::vec3 col0 = col_at_uv_mipmap(mipmap_level0, surf_hit.uv);
+  glm::vec3 col1 = col_at_uv_mipmap(mipmap_level1, surf_hit.uv);
+
+  return glm::mix(col0, col1, glm::vec3(fraction));
 }
 
 // for debugging. writes all mipmaps as png

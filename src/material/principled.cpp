@@ -51,7 +51,8 @@ std::optional<ScatterInfo> Principled::sample_mat(const glm::vec3& wi, const Hit
     return std::nullopt;
   }
 }
-glm::vec3 Principled::eval(const glm::vec3& wi, const glm::vec3& wo, const HitInfo& hit) const {
+glm::vec3 Principled::eval(const glm::vec3& wi, const glm::vec3& wo, const HitInfo& hit,
+                           const RayCone& cone) const {
   glm::vec3 dir_in = -wi;
   ONB normal_frame = hit.n_frame;
 
@@ -61,7 +62,7 @@ glm::vec3 Principled::eval(const glm::vec3& wi, const glm::vec3& wo, const HitIn
     normal_frame.w = -normal_frame.w;
   }
 
-  glm::vec3 base_color = Principled::tex->col_at_uv(hit.uv);
+  glm::vec3 base_color = Principled::tex->col_at_uv(wi, cone, hit);
 
   glm::vec3 half_vector = glm::normalize(dir_in + wo);
   glm::vec3 eval_glass = eval_disney_rough_glass(dir_in, wo, hit, base_color, eta, anisotropic,
@@ -128,14 +129,15 @@ float Principled::pdf(const glm::vec3& wi, const glm::vec3& wo, const HitInfo& h
          + choose_glass * glass_pdf;
 }
 
-glm::vec3 Principled::eval_div_pdf(const glm::vec3& wi, const glm::vec3& wo,
-                                   const HitInfo& hit) const {
+glm::vec3 Principled::eval_div_pdf(const glm::vec3& wi, const glm::vec3& wo, const HitInfo& hit,
+                                   const RayCone& cone) const {
   // TODO optimize
-  return eval(wi, wo, hit) / pdf(wi, wo, hit);
+  return eval(wi, wo, hit, cone) / pdf(wi, wo, hit);
 }
 
 std::pair<glm::vec3, float> Principled::eval_pdf_pair(const glm::vec3& wi, const glm::vec3& wo,
-                                                      const HitInfo& hit) const {
+                                                      const HitInfo& hit,
+                                                      const RayCone& cone) const {
   // TODO optimize
-  return std::make_pair<glm::vec3, float>(eval(wi, wo, hit), pdf(wi, wo, hit));
+  return std::make_pair<glm::vec3, float>(eval(wi, wo, hit, cone), pdf(wi, wo, hit));
 }

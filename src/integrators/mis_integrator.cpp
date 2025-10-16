@@ -25,7 +25,7 @@ glm::vec3 mis_integrator(Ray& input_ray, std::vector<size_t>& thread_stack, cons
   glm::vec3 throughput = glm::vec3(1.0f);
   size_t d = 0;
 
-  // tracking eta_scale and removing it from the path contribution when doing MIS
+  // tracking eta_scale and removing it from the path contribution when doing russian roulette
   float eta_scale = 1;
   constexpr uint32_t roulette_threshold = 5;
 
@@ -59,8 +59,10 @@ glm::vec3 mis_integrator(Ray& input_ray, std::vector<size_t>& thread_stack, cons
 
         // if light visible from point
         if (!light_is_occluded) {
-          const auto [mat_eval, mat_pdf]
-              = hit.value().mat->eval_pdf_pair(test_ray.dir, l_sample_info.wi, hit.value());
+          const auto [mat_eval, mat_pdf] = hit.value().mat->eval_pdf_pair(
+              test_ray.dir, l_sample_info.wi, hit.value(),
+              propagate_reflect_cone(test_ray.ray_cone, hit.value().angle_spread,
+                                     l_sample_info.dist));
 
           if (mat_pdf != 0 && !std::isnan(mat_pdf)) {
             float G = l_sample_info.G;
@@ -81,17 +83,24 @@ glm::vec3 mis_integrator(Ray& input_ray, std::vector<size_t>& thread_stack, cons
 
     if (scattered_mat.value().eta != 0.f) {
       eta_scale /= (scattered_mat.value().eta * scattered_mat.value().eta);
+      test_ray.ray_cone = propagate_refract_cone(
+          test_ray.ray_cone, test_ray.dir, hit.value().hit_p, hit.value().angle_spread,
+          scattered_mat.value().eta, scattered_mat.value().wo);
+    } else {
+      float hit_dist = glm::length(test_ray.o - hit.value().hit_p);
+      test_ray.ray_cone
+          = propagate_reflect_cone(test_ray.ray_cone, hit.value().angle_spread, hit_dist);
     }
 
     float mat_sample_pdf
         = hit.value().mat->pdf(test_ray.dir, scattered_mat.value().wo, hit.value());
 
     // material sampling
-    throughput
-        *= hit.value().mat->eval_div_pdf(test_ray.dir, scattered_mat.value().wo, hit.value());
+    throughput *= hit.value().mat->eval_div_pdf(test_ray.dir, scattered_mat.value().wo, hit.value(),
+                                                test_ray.ray_cone);
 
     // where light goes after hitting object
-    Ray direct_light_ray = Ray(hit.value().hit_p, scattered_mat.value().wo);
+    Ray direct_light_ray = Ray(hit.value().hit_p, scattered_mat.value().wo, test_ray.ray_cone);
     std::optional<HitInfo> hit_next_bounce
         = bvh.hit<std::optional<HitInfo>>(direct_light_ray, thread_stack, prims);
 
