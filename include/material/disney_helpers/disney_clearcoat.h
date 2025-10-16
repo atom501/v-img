@@ -37,9 +37,8 @@ inline glm::vec3 eval_disney_clearcoat(const glm::vec3& dir_in, const glm::vec3&
 }
 
 inline float pdf_disney_clearcoat(const glm::vec3& dir_in, const glm::vec3& dir_out,
-                                  const HitInfo& hit, const glm::vec3& base_col,
-                                  float clearcoat_gloss, const glm::vec3& half_vec,
-                                  ONB normal_frame) {
+                                  const HitInfo& hit, float clearcoat_gloss,
+                                  const glm::vec3& half_vec, ONB normal_frame) {
   if (glm::dot(hit.hit_n_g, dir_in) < 0 || glm::dot(hit.hit_n_g, dir_out) < 0) {
     // No light below the surface
     return 0.f;

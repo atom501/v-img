@@ -63,6 +63,12 @@ CPMAddPackage(
   GITHUB_REPOSITORY Taywee/args
 )
 
+CPMAddPackage(
+  NAME fastgltf
+  GIT_TAG v0.9.0
+  GITHUB_REPOSITORY spnda/fastgltf
+)
+
 # Source file grouping of visual studio and xcode
 CPMAddPackage(
   NAME GroupSourcesByFolder.cmake
@@ -88,4 +94,4 @@ endif()
 
 set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 20 OUTPUT_NAME "v-img")
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_link_libraries(${PROJECT_NAME} fmt::fmt glm nlohmann_json args)
+target_link_libraries(${PROJECT_NAME} fmt::fmt glm nlohmann_json args fastgltf)

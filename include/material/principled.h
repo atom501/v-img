@@ -1,13 +1,14 @@
 #pragma once
 
 #include <material/material.h>
+#include <texture.h>
 
 #include <algorithm>
 #include <numbers>
 
 class Principled : public Material {
 private:
-  glm::vec3 base_color;
+  Texture* tex;
   float specular_transmission;
   float metallic;
   float subsurface;
@@ -22,11 +23,10 @@ private:
   float eta;
 
 public:
-  Principled(const glm::vec3& base_color, float specular_transmission, float metallic,
-             float subsurface, float specular, float roughness, float specular_tint,
-             float anisotropic, float sheen, float sheen_tint, float clearcoat,
-             float clearcoat_gloss, float eta)
-      : base_color(base_color),
+  Principled(Texture* tex, float specular_transmission, float metallic, float subsurface,
+             float specular, float roughness, float specular_tint, float anisotropic, float sheen,
+             float sheen_tint, float clearcoat, float clearcoat_gloss, float eta)
+      : tex(tex),
         specular_transmission(specular_transmission),
         metallic(metallic),
         subsurface(subsurface),
@@ -43,14 +43,15 @@ public:
 
   std::optional<ScatterInfo> sample_mat(const glm::vec3& wi, const HitInfo& hit,
                                         pcg32_random_t& pcg_rng) const override;
-  glm::vec3 eval(const glm::vec3& wi, const glm::vec3& wo, const HitInfo& hit) const override;
+  glm::vec3 eval(const glm::vec3& wi, const glm::vec3& wo, const HitInfo& hit,
+                 const RayCone& cone) const override;
   float pdf(const glm::vec3& wi, const glm::vec3& wo, const HitInfo& hit) const override;
 
-  glm::vec3 eval_div_pdf(const glm::vec3& wi, const glm::vec3& wo,
-                         const HitInfo& hit) const override;
+  glm::vec3 eval_div_pdf(const glm::vec3& wi, const glm::vec3& wo, const HitInfo& hit,
+                         const RayCone& cone) const override;
 
   std::pair<glm::vec3, float> eval_pdf_pair(const glm::vec3& wi, const glm::vec3& wo,
-                                            const HitInfo& hit) const override;
+                                            const HitInfo& hit, const RayCone& cone) const override;
 
   bool is_delta() const override { return false; }
 };

@@ -11,7 +11,7 @@ struct HitInfo;
 
 struct ScatterInfo {
   glm::vec3 wo;  // outgoing direction from hit point on material. Always normalized
-  float eta;     // get eta for the case with MIS and refraction
+  float eta;     // get eta for the case with refraction
 };
 
 class Material {
@@ -27,7 +27,8 @@ public:
     return std::nullopt;
   }
 
-  virtual glm::vec3 eval(const glm::vec3& wi, const glm::vec3& wo, const HitInfo& hit) const {
+  virtual glm::vec3 eval(const glm::vec3& wi, const glm::vec3& wo, const HitInfo& hit,
+                         const RayCone& cone) const {
     return glm::vec3(0.0f);
   }
 
@@ -35,18 +36,19 @@ public:
     return 1.0f;
   }
 
-  virtual glm::vec3 eval_div_pdf(const glm::vec3& wi, const glm::vec3& wo,
-                                 const HitInfo& hit) const {
+  virtual glm::vec3 eval_div_pdf(const glm::vec3& wi, const glm::vec3& wo, const HitInfo& hit,
+                                 const RayCone& cone) const {
     return glm::vec3(0.0f);
   }
 
   virtual std::pair<glm::vec3, float> eval_pdf_pair(const glm::vec3& wi, const glm::vec3& wo,
-                                                    const HitInfo& hit) const {
+                                                    const HitInfo& hit, const RayCone& cone) const {
     return std::make_pair(glm::vec3(0.0f), 1.0f);
   }
 
   // light emitted
-  virtual glm::vec3 emitted(const Ray& ray, const glm::vec3& shading_normal, const glm::vec3& hit_p) const {
+  virtual glm::vec3 emitted(const Ray& ray, const glm::vec3& shading_normal,
+                            const glm::vec3& hit_p) const {
     return glm::vec3(0.0f, 0.0f, 0.0f);
   }
 

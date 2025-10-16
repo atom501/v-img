@@ -322,9 +322,11 @@ bool set_list_of_materials(const nlohmann::json& json_settings,
         float clearcoat = mat_data.value("clearcoat", 0.f);
         float clearcoat_gloss = mat_data.value("clearcoat_gloss", 1.f);
 
+        texture_list.push_back(std::make_unique<ConstColor>(base_col));
+
         list_materials.push_back(std::make_unique<Principled>(
-            base_col, spec_trans, metallic, subsurface, specular, roughness, spec_tint, anisotropic,
-            sheen, sheen_tint, clearcoat, clearcoat_gloss, eta));
+            texture_list.back().get(), spec_trans, metallic, subsurface, specular, roughness,
+            spec_tint, anisotropic, sheen, sheen_tint, clearcoat, clearcoat_gloss, eta));
         name_to_index[mat_data["name"]] = list_materials.size() - 1;
       } else {
         std::string surf_name = mat_data["type"];

@@ -150,9 +150,11 @@ Material* mat_index_from_obj(std::shared_ptr<tinyparser_mitsuba::Object> mat_obj
           float clearcoat = properties["clearcoat"].getNumber();
           float clearcoat_gloss = properties["clearcoat_gloss"].getNumber(1.f);
 
+          texture_list.push_back(std::make_unique<ConstColor>(base_col));
+
           list_materials.push_back(std::make_unique<Principled>(
-              base_col, spec_trans, metallic, subsurface, specular, roughness, spec_tint,
-              anisotropic, sheen, sheen_tint, clearcoat, clearcoat_gloss, eta));
+              texture_list.back().get(), spec_trans, metallic, subsurface, specular, roughness,
+              spec_tint, anisotropic, sheen, sheen_tint, clearcoat, clearcoat_gloss, eta));
         } else {
           fmt::println("plugin type {} is not supported.", plugin_type);
           return nullptr;

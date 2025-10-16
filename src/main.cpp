@@ -10,6 +10,7 @@
 #include <geometry/surface.h>
 #include <integrators.h>
 #include <material/material.h>
+#include <scene_loading/gltf_loading.h>
 #include <scene_loading/json_scene.h>
 #include <scene_loading/mitsuba_scene.h>
 #include <stb_image_write.h>
@@ -63,6 +64,13 @@ int main(int argc, char* argv[]) {
   args::ValueFlag<int16_t> set_tonemapper(
       parser, "tonemapper",
       "Set tonemapper to be used. 0 for clamp, 1 for agx, 2 for reinhard, 3 for aces", {'c'});
+  args::ValueFlag<int16_t> set_yres(parser, "yres", "Set y resolution of image for gltf file",
+                                    {'y'});
+  args::ValueFlag<uint32_t> set_spp(parser, "spp", "Set samples per pixel for gltf file", {'s'});
+  args::ValueFlag<int16_t> set_integrator(
+      parser, "integrator",
+      "Set integrator for gltf file. 0: s_normal, 1: g_normal, 2: material, 3: mis", {'i'});
+  args::ValueFlag<int> set_depth(parser, "depth", "Set depth for gltf file", {'d'});
 
   try {
     parser.ParseCLI(argc, argv);
@@ -94,7 +102,6 @@ int main(int argc, char* argv[]) {
 
   if (set_tonemapper) {
     int16_t val = args::get(set_tonemapper);
-    fmt::println("val us {}", val);
 
     if (val >= 0 && val < static_cast<int16_t>(tonemapper::COUNT)) {
       tonemapping_func = static_cast<tonemapper>(val);
@@ -117,6 +124,21 @@ int main(int argc, char* argv[]) {
   } else if (extension.string() == ".xml") {
     scene_load_check = set_scene_from_xml(scene_file_path, rendering_settings, list_objects,
                                           mat_list, list_lights, list_meshes, texture_list);
+  } else if (extension.string() == ".gltf" || extension.string() == ".glb") {
+    // set parameters that are not given in gltf
+    rendering_settings.resolution.y = set_yres ? args::get(set_yres) : 768;
+    rendering_settings.samples = set_spp ? args::get(set_spp) : 32;
+
+    uint16_t integrator_val = set_integrator ? args::get(set_integrator) : 0;
+    if (integrator_val >= static_cast<uint16_t>(integrator_func::COUNT)) {
+      integrator_val = 0;
+    }
+
+    rendering_settings.func = static_cast<integrator_func>(integrator_val);
+    rendering_settings.depth = set_depth ? args::get(set_depth) : 64;
+
+    scene_load_check = set_scene_from_gltf(scene_file_path, rendering_settings, list_objects,
+                                           mat_list, list_lights, list_meshes, texture_list);
   }
 
   if (!scene_load_check) {

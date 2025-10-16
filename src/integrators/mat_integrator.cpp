@@ -9,7 +9,7 @@ glm::vec3 material_integrator(Ray& input_ray, std::vector<size_t>& thread_stack,
   glm::vec3 throughput = glm::vec3(1.0f);
   constexpr uint32_t roulette_threshold = 5;
 
-  // tracking eta_scale and removing it from the path contribution when doing MIS
+  // tracking eta_scale and removing it from the path contribution when doing russian roulette
   float eta_scale = 1;
 
   for (size_t d = 0; d < depth; d++) {
@@ -27,13 +27,22 @@ glm::vec3 material_integrator(Ray& input_ray, std::vector<size_t>& thread_stack,
 
       // get color from material (sample the material)
       if (scattered_ray.has_value()) {
+        // update the ray cone at hit point
+        float hit_dist = glm::length(test_ray.o - hit.value().hit_p);
+
         if (scattered_ray.value().eta != 0.f) {
           eta_scale /= (scattered_ray.value().eta * scattered_ray.value().eta);
+          test_ray.ray_cone = propagate_refract_cone(
+              test_ray.ray_cone, test_ray.dir, hit.value().hit_p, hit.value().angle_spread,
+              scattered_ray.value().eta, scattered_ray.value().wo);
+        } else {
+          test_ray.ray_cone
+              = propagate_reflect_cone(test_ray.ray_cone, hit.value().angle_spread, hit_dist);
         }
 
-        throughput
-            *= emitted_col
-               + hit.value().mat->eval_div_pdf(test_ray.dir, scattered_ray.value().wo, hit.value());
+        throughput *= emitted_col
+                      + hit.value().mat->eval_div_pdf(test_ray.dir, scattered_ray.value().wo,
+                                                      hit.value(), test_ray.ray_cone);
 
         // perform russian roulette
         if (d > roulette_threshold) {
@@ -52,7 +61,7 @@ glm::vec3 material_integrator(Ray& input_ray, std::vector<size_t>& thread_stack,
         }
 
         // update the ray
-        test_ray = Ray(hit.value().hit_p, scattered_ray.value().wo);
+        test_ray = Ray(hit.value().hit_p, scattered_ray.value().wo, test_ray.ray_cone);
       } else {
         return throughput * emitted_col;
       }
