@@ -248,13 +248,28 @@ private:
       glm::vec3 bitangent = glm::normalize(glm::cross(shading_normal, tangent));
       float mean_curvature = (glm::dot(dndu, tangent) + glm::dot(dndv, bitangent)) / 2.f;
 
+      float twice_tri_area = glm::length(glm::cross(p1 - p0, p2 - p0));
+
+      glm::vec2 uv0 = glm::vec2(0, 0), uv1 = glm::vec2(1, 0), uv2 = glm::vec2(0, 1);
+      if (tri_texcoords_list[3 * tri_index] != -1 && tri_texcoords_list[3 * tri_index + 1] != -1
+          && tri_texcoords_list[3 * tri_index + 2] != -1) {
+        uv0 = texcoords_list[tri_texcoords_list[3 * tri_index]],
+        uv1 = texcoords_list[tri_texcoords_list[3 * tri_index + 1]],
+        uv2 = texcoords_list[tri_texcoords_list[3 * tri_index + 2]];
+      }
+      float uv_area
+          = std::abs((uv1.x - uv0.x) * (uv2.y - uv0.y) - (uv2.x - uv0.x) * (uv1.y - uv0.y));
+
       HitInfo hit = {mat,
                      this,
                      hit_p,
                      shading_normal,
                      tri_normal,
                      uv,
-                     ONB{tangent, bitangent, shading_normal}};
+                     ONB{tangent, bitangent, shading_normal},
+                     twice_tri_area,
+                     uv_area,
+                     mean_curvature};
 
       return std::make_optional(std::move(hit));
     }

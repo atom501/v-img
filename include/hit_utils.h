@@ -64,6 +64,9 @@ struct HitInfo {
                       // Both normals faces are normalized
   glm::vec2 uv;       // texture uv coordinates
   ONB n_frame;
+  float primitive_area;
+  float tex_coord_area;
+  float angle_spread;
 };
 
 // Axis-aligned bounding box
