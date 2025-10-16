@@ -212,14 +212,12 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
         if (!texture.imageIndex.has_value()) return false;
 
         img_tex = texture_list[img_list_idx[texture.imageIndex.value()]].get();
-        fmt::println("given img text");
       } else {
         // add constant texture
         texture_list.push_back(std::make_unique<ConstColor>(
             glm::vec3(mat.pbrData.baseColorFactor.x(), mat.pbrData.baseColorFactor.y(),
                       mat.pbrData.baseColorFactor.z())));
 
-        fmt::println("given const text");
         img_tex = texture_list.back().get();
       }
 
