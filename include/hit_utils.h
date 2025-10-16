@@ -66,7 +66,7 @@ struct HitInfo {
   ONB n_frame;
   float primitive_area;
   float tex_coord_area;
-  float angle_spread;
+  float mean_curvature;
 };
 
 // Axis-aligned bounding box

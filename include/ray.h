@@ -47,6 +47,19 @@ inline RayCone raycone_for_primary_ray(float vfov, uint32_t pixel_height) {
   return RayCone{cone_width, spread_angle};
 }
 
+static inline float float_sign(float in) { return in > 0.f ? 1.f : -1.f; }
+
+inline float spread_angle_from_curvature(float mean_curvature, float rayConeWidth,
+                                         const glm::vec3& rayDir, const glm::vec3& normal) {
+  float dn = -glm::dot(rayDir, normal);
+  dn = std::abs(dn) < 1.0e-5 ? float_sign(dn) * 1.0e-5 : dn;
+
+  float deltaPhi = (mean_curvature * rayConeWidth / dn);
+  float surfaceSpreadAngle = deltaPhi;
+
+  return surfaceSpreadAngle;
+}
+
 inline RayCone propagate_reflect_cone(const RayCone& cone, float surface_spread_angle,
                                       float hit_dist) {
   float new_cone_width = cone.spread_angle * hit_dist + cone.cone_width;
@@ -107,7 +120,7 @@ inline RayCone propagate_refract_cone(const RayCone& rayCone, glm::vec3 ray_in_d
   glm::vec2 tu = +incidentDirOrtho2D * rayCone.cone_width
                  * 0.5f;  // Top, upper point on the incoming ray cone (in 2D).
   glm::vec2 tl = -tu;     // Top, lower point on the incoming ray cone (in 2D).
-  
+
   float hitPoint_u_x = tu.x + incidentDir2D_u.x * (-tu.y / incidentDir2D_u.y);
   float hitPoint_l_x = tl.x + incidentDir2D_l.x * (-tl.y / incidentDir2D_l.y);
 
@@ -141,6 +154,10 @@ inline RayCone propagate_refract_cone(const RayCone& rayCone, glm::vec3 ray_in_d
                     ? +1.0f
                     : -1.0f;
   float spreadAngle = std::acos(glm::dot(refractedDir2D_u_val, refractedDir2D_l_val)) * signA;
+
+  if (std::isnan(spreadAngle)) {
+    spreadAngle = 0.f;
+  }
 
   // Now compute the width of the refracted cone.
   glm::vec2 refractDirOrtho2D = orthogonal(refractedDir2D);

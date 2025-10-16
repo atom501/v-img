@@ -217,13 +217,15 @@ private:
       glm::vec2 duvdt = diff_uvs[2] - diff_uvs[1];
 
       float det = duvds[0] * duvdt[1] - duvdt[0] * duvds[1];
-      float dsdu = duvdt[1] / det;
-      float dtdu = -duvds[1] / det;
-      float dsdv = duvdt[0] / det;
-      float dtdv = -duvds[0] / det;
 
+      float dsdu = 0.f, dtdu = 0.f, dsdv = 0.f, dtdv = 0.f;
       glm::vec3 dpdu, dpdv;
-      if (std::abs(det) > 1e-8f) {
+      if (std::abs(det) > 1e-8f && !std::isnan(det)) {
+        dsdu = duvdt[1] / det;
+        dtdu = -duvds[1] / det;
+        dsdv = duvdt[0] / det;
+        dtdv = -duvds[0] / det;
+
         // Now we just need to do the matrix multiplication
         glm::vec3 dpds = p2 - p0;
         glm::vec3 dpdt = p2 - p1;

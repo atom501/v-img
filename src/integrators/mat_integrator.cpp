@@ -29,15 +29,19 @@ glm::vec3 material_integrator(Ray& input_ray, std::vector<size_t>& thread_stack,
       if (scattered_ray.has_value()) {
         // update the ray cone at hit point
         float hit_dist = glm::length(test_ray.o - hit.value().hit_p);
+        float surface_spread_angle
+            = spread_angle_from_curvature(hit.value().mean_curvature, test_ray.ray_cone.cone_width,
+                                          test_ray.dir, hit.value().hit_n_s);
 
         if (scattered_ray.value().eta != 0.f) {
           eta_scale /= (scattered_ray.value().eta * scattered_ray.value().eta);
+
           test_ray.ray_cone = propagate_refract_cone(
-              test_ray.ray_cone, test_ray.dir, hit.value().hit_p, hit.value().angle_spread,
+              test_ray.ray_cone, test_ray.dir, hit.value().hit_p, surface_spread_angle,
               scattered_ray.value().eta, scattered_ray.value().wo);
         } else {
           test_ray.ray_cone
-              = propagate_reflect_cone(test_ray.ray_cone, hit.value().angle_spread, hit_dist);
+              = propagate_reflect_cone(test_ray.ray_cone, surface_spread_angle * 2.f, hit_dist);
         }
 
         throughput *= emitted_col
