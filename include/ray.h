@@ -34,10 +34,27 @@ public:
 
   // transform the current ray
   void xform_ray(const glm::mat4& xform) {
+    // points using old minT and maxT
+    glm::vec3 min = Ray::at(minT);
+    glm::vec3 max = Ray::at(maxT);
+
+    // transform dir and o
     dir = glm::vec3(xform * glm::vec4(dir, 0.0f));
     glm::vec4 temp_o = xform * glm::vec4(o, 1.0f);
     temp_o /= temp_o[3];
     o = glm::vec3(temp_o);
+
+    // transform maxT and minT
+    glm::vec4 temp_min = xform * glm::vec4(min, 1.0f);
+    temp_min /= temp_min[3];
+    min = glm::vec3(temp_min);
+
+    glm::vec4 temp_max = xform * glm::vec4(max, 1.0f);
+    temp_max /= temp_max[3];
+    max = glm::vec3(temp_max);
+
+    minT = glm::length(o - min);
+    maxT = glm::length(o - max);
   }
 };
 

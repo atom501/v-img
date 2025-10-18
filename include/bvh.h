@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <glm/vec3.hpp>
 #include <memory>
+#include <utility>
 #include <vector>
 
 struct BVHNode {
@@ -38,6 +39,14 @@ struct Split {
   uint8_t axis;
 };
 
+template <typename T>
+concept HitReturnType = std::is_same_v<T, std::optional<HitInfo>> || std::is_same_v<T, uint32_t>
+                        || std::is_same_v<T, bool>;
+
+template <typename T>
+concept PrimitiveType = std::is_same_v<T, const std::vector<std::unique_ptr<Surface>>&>
+                        || std::is_same_v<T, MeshData*>;
+
 class BVH {
 public:
   std::vector<BVHNode> nodes;
@@ -53,7 +62,7 @@ public:
 
   bool occlude(Ray& ray, std::vector<size_t>& thread_stack,
                const std::vector<std::unique_ptr<Surface>>& prims) const {
-    return hit<bool>(ray, thread_stack, prims);
+    return hit<bool, const std::vector<std::unique_ptr<Surface>>&>(ray, thread_stack, prims);
   }
 
   /*
@@ -61,13 +70,8 @@ public:
    * bvh checking for hit and getting surface information. If output is set to uint32_t it will
    * be used to make the heatmap. Only the total number of primitives hit by the ray are needed.
    */
-  template <typename T,
-            std::enable_if_t<std::is_same_v<T, std::optional<HitInfo>>
-                                 || std::is_same_v<T, uint32_t> || std::is_same_v<T, bool>,
-                             bool>
-            = true>
-  T hit(Ray& ray, std::vector<size_t>& thread_stack,
-        const std::vector<std::unique_ptr<Surface>>& prims) const {
+  template <HitReturnType T, PrimitiveType L>
+  T hit(Ray& ray, std::vector<size_t>& thread_stack, L prims) const {
     T return_variable;
 
     if constexpr (std::is_same_v<T, std::optional<HitInfo>>) {
@@ -121,18 +125,38 @@ public:
           auto prim_index = obj_indices[node.first_index + i];
 
           // ray's tmax value will be changed if hit
-          if constexpr (std::is_same_v<T, std::optional<HitInfo>>) {
-            const auto hit_temp = prims[prim_index]->hit_surface(ray);
-            // if ray hit the object replace the last hit_final
-            if (hit_temp.has_value()) return_variable = hit_temp;
-          } else if constexpr (std::is_same_v<T, uint32_t>) {
-            prims[prim_index]->hit_check(ray);
-            // increment whenever a hit test is done on a primitive
-            ++return_variable;
-          } else if constexpr (std::is_same_v<T, bool>) {
-            const auto hit_surf_ptr = prims[prim_index]->hit_check(ray);
-            // exit on first hit
-            if (hit_surf_ptr) return true;
+          if constexpr (std::is_same_v<L, const std::vector<std::unique_ptr<Surface>>&>) {
+            // handling general surface object
+            if constexpr (std::is_same_v<T, std::optional<HitInfo>>) {
+              const auto hit_temp = prims[prim_index]->hit_surface(ray);
+              // if ray hit the object replace the last hit_final
+              if (hit_temp.has_value()) return_variable = hit_temp;
+            } else if constexpr (std::is_same_v<T, uint32_t>) {
+              prims[prim_index]->hit_check(ray);
+              // increment whenever a hit test is done on a primitive
+              ++return_variable;
+            } else if constexpr (std::is_same_v<T, bool>) {
+              const auto hit_surf_ptr = prims[prim_index]->hit_check(ray);
+              // exit on first hit
+              if (hit_surf_ptr) return true;
+            }
+          } else if constexpr (std::is_same_v<L, MeshData*>) {
+            // handling meshes directly
+            uint32_t tri_to_hit = prims->indices[prim_index];
+
+            if constexpr (std::is_same_v<T, std::optional<HitInfo>>) {
+              const auto hit_temp = prims->hit_surface(ray, tri_to_hit);
+              // if ray hit the object replace the last hit_final
+              if (hit_temp.has_value()) return_variable = hit_temp;
+            } else if constexpr (std::is_same_v<T, uint32_t>) {
+              prims->hit_check(ray, tri_to_hit);
+              // increment whenever a hit test is done on a primitive
+              ++return_variable;
+            } else if constexpr (std::is_same_v<T, bool>) {
+              const auto hit_surf_ptr = prims->hit_check(ray, tri_to_hit);
+              // exit on first hit
+              if (hit_surf_ptr) return true;
+            }
           }
         }
       } else {
