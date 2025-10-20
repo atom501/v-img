@@ -1,13 +1,12 @@
 #pragma once
 
 #include <geometry/emitters.h>
+#include <geometry/mesh.h>
 #include <geometry/surface.h>
 #include <hit_utils.h>
 
 #include <cstdint>
 #include <glm/gtx/norm.hpp>
-
-class Mesh;
 
 static inline float difference_of_products(float a, float b, float c, float d) {
   float cd = c * d;
@@ -50,8 +49,7 @@ public:
   uint32_t tri_index;  // triangle number in Mesh
 
 public:
-  Triangle(Mesh* mesh_ptr, uint32_t index, Material* mat_ptr)
-      : obj_mesh(mesh_ptr), tri_index(index), Surface(mat_ptr) {}
+  Triangle(Mesh* obj_mesh, uint32_t index) : obj_mesh(obj_mesh), tri_index(index) {}
 
   ~Triangle() = default;
 
@@ -77,12 +75,11 @@ private:
       std::enable_if_t<std::is_same_v<T, std::optional<HitInfo>> || std::is_same_v<T, bool>, bool>
       = true>
   inline T tri_hit_template(Ray& ray) {
-    const auto& tri_vertex_list = obj_mesh->tri_vertex;
+    const auto& tri_indices = obj_mesh->indices[tri_index];
     const auto& vertices_list = obj_mesh->vertices;
 
-    glm::vec3 p0 = vertices_list[tri_vertex_list[3 * tri_index]],
-              p1 = vertices_list[tri_vertex_list[3 * tri_index + 1]],
-              p2 = vertices_list[tri_vertex_list[3 * tri_index + 2]];
+    glm::vec3 p0 = vertices_list[tri_indices[0]], p1 = vertices_list[tri_indices[1]],
+              p2 = vertices_list[tri_indices[2]];
 
     auto edge1 = p1 - p0;
     auto edge2 = p2 - p0;
@@ -179,38 +176,38 @@ private:
     } else if constexpr (std::is_same_v<T, std::optional<HitInfo>>) {
       float u = e0 * invDet, v = e1 * invDet, w = e2 * invDet;
 
-      const auto& tri_normal_list = obj_mesh->tri_normal;
-      const auto& normal_list = obj_mesh->normals;
-
-      glm::vec3 n0 = normal_list[tri_normal_list[3 * tri_index]],
-                n1 = normal_list[tri_normal_list[3 * tri_index + 1]],
-                n2 = normal_list[tri_normal_list[3 * tri_index + 2]];
-
-      const glm::vec3 shading_normal = glm::normalize(u * n0 + v * n1 + w * n2);
-      const glm::vec3 hit_p = u * p0 + v * p1 + w * p2;
       const glm::vec3 tri_normal = glm::normalize(glm::cross(edge1, edge2));
 
-      const auto& tri_texcoords_list = obj_mesh->tri_uv;
+      glm::vec3 n0, n1, n2;
+      glm::vec3 shading_normal;
+
+      const auto& normal_list = obj_mesh->normals;
+      if (obj_mesh->normals.size() > 0) {
+        n0 = normal_list[tri_indices[0]], n1 = normal_list[tri_indices[1]],
+        n2 = normal_list[tri_indices[2]];
+
+        shading_normal = glm::normalize(u * n0 + v * n1 + w * n2);
+      } else {
+        n0 = tri_normal, n1 = tri_normal, n2 = tri_normal;
+        shading_normal = tri_normal;
+      }
+      const glm::vec3 hit_p = u * p0 + v * p1 + w * p2;
+
       const auto& texcoords_list = obj_mesh->texcoords;
 
       glm::vec2 uv = glm::vec2(u, v);
       glm::vec2 diff_uvs[3];
-      if (tri_texcoords_list[3 * tri_index] != -1 && tri_texcoords_list[3 * tri_index + 1] != -1
-          && tri_texcoords_list[3 * tri_index + 2] != -1) {
-        glm::vec2 uv0 = texcoords_list[tri_texcoords_list[3 * tri_index]],
-                  uv1 = texcoords_list[tri_texcoords_list[3 * tri_index + 1]],
-                  uv2 = texcoords_list[tri_texcoords_list[3 * tri_index + 2]];
+      glm::vec2 uv0 = glm::vec2(0, 0), uv1 = glm::vec2(1, 0), uv2 = glm::vec2(1, 1);
+      if (obj_mesh->texcoords.size() > 0) {
+        uv0 = texcoords_list[tri_indices[0]], uv1 = texcoords_list[tri_indices[1]],
+        uv2 = texcoords_list[tri_indices[2]];
 
         uv = u * uv0 + v * uv1 + w * uv2;
-
-        diff_uvs[0] = uv0;
-        diff_uvs[1] = uv1;
-        diff_uvs[2] = uv2;
-      } else {
-        diff_uvs[0] = glm::vec2{0, 0};
-        diff_uvs[1] = glm::vec2{1, 0};
-        diff_uvs[2] = glm::vec2{1, 1};
       }
+
+      diff_uvs[0] = uv0;
+      diff_uvs[1] = uv1;
+      diff_uvs[2] = uv2;
 
       // calculating surface differential
       glm::vec2 duvds = diff_uvs[2] - diff_uvs[0];
@@ -252,17 +249,10 @@ private:
 
       float twice_tri_area = glm::length(glm::cross(p1 - p0, p2 - p0));
 
-      glm::vec2 uv0 = glm::vec2(0, 0), uv1 = glm::vec2(1, 0), uv2 = glm::vec2(0, 1);
-      if (tri_texcoords_list[3 * tri_index] != -1 && tri_texcoords_list[3 * tri_index + 1] != -1
-          && tri_texcoords_list[3 * tri_index + 2] != -1) {
-        uv0 = texcoords_list[tri_texcoords_list[3 * tri_index]],
-        uv1 = texcoords_list[tri_texcoords_list[3 * tri_index + 1]],
-        uv2 = texcoords_list[tri_texcoords_list[3 * tri_index + 2]];
-      }
       float uv_area
           = std::abs((uv1.x - uv0.x) * (uv2.y - uv0.y) - (uv2.x - uv0.x) * (uv1.y - uv0.y));
 
-      HitInfo hit = {mat,
+      HitInfo hit = {obj_mesh->mat,
                      this,
                      hit_p,
                      shading_normal,

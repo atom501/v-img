@@ -8,10 +8,7 @@
 
 class Surface {
 public:
-  Material* mat;
-
-public:
-  Surface(Material* const mat) : mat(mat) {}
+  Surface() = default;
   ~Surface() = default;
 
   virtual std::optional<HitInfo> hit_surface(Ray& r) = 0;

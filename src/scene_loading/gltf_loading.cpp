@@ -243,9 +243,7 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
       std::vector<glm::vec3> normals;
       std::vector<glm::vec2> texcoords;
 
-      std::vector<uint32_t> tri_vertex;
-      std::vector<uint32_t> tri_normal;
-      std::vector<int> tri_uv;
+      std::vector<std::array<uint32_t, 3>> indices;
 
       fastgltf::Mesh& mesh = asset->meshes[node.meshIndex.value()];
 
@@ -325,40 +323,19 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
 
         // Create the index buffer and copy the indices into it.
 
+        std::vector<uint32_t> tri_vertex;
+
         auto& indexAccessor = asset->accessors[it->indicesAccessor.value()];
         if (!indexAccessor.bufferViewIndex.has_value()) return false;
 
-        fastgltf::iterateAccessor<std::uint32_t>(asset.get(), indexAccessor, [&](std::uint32_t i) {
-          tri_vertex.push_back(i);
+        fastgltf::iterateAccessor<std::uint32_t>(asset.get(), indexAccessor,
+                                                 [&](std::uint32_t i) { tri_vertex.push_back(i); });
 
-          if (normals.size() > 0) {
-            tri_normal.push_back(i);
-          }
+        for (size_t i = 0; i < tri_vertex.size(); i += 3) {
+          std::array<uint32_t, 3> tri_indexes
+              = {tri_vertex[i], tri_vertex[i + 1], tri_vertex[i + 2]};
 
-          if (texcoords.size() > 0) {
-            tri_uv.push_back(i);
-          } else {
-            tri_uv.push_back(-1);
-          }
-        });
-
-        // give default normals
-        if (normals.size() == 0) {
-          for (size_t i = 0; i < tri_vertex.size() / 3; i++) {
-            glm::vec3 p0 = vertices[tri_vertex[3 * i]], p1 = vertices[tri_vertex[3 * i + 1]],
-                      p2 = vertices[tri_vertex[3 * i + 2]];
-
-            auto edge1 = p1 - p0;
-            auto edge2 = p2 - p0;
-
-            glm::vec3 n = glm::normalize(glm::cross(edge1, edge2));
-
-            normals.push_back(n);
-
-            tri_normal.push_back(normals.size() - 1);
-            tri_normal.push_back(normals.size() - 1);
-            tri_normal.push_back(normals.size() - 1);
-          }
+          indices.push_back(tri_indexes);
         }
 
         // load material
@@ -371,12 +348,12 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
           continue;
         }
 
-        auto m = Mesh(vertices, tri_vertex, normals, tri_normal, texcoords, tri_uv);
+        auto m = Mesh(indices, vertices, normals, texcoords, mat_ptr);
         list_meshes.push_back(std::make_unique<Mesh>(m));
 
         // add to list of surfaces
         for (size_t i = 0; i < tri_vertex.size() / 3; i++) {
-          Triangle t = Triangle(list_meshes[list_meshes.size() - 1].get(), i, mat_ptr);
+          Triangle t = Triangle(list_meshes[list_meshes.size() - 1].get(), i);
           list_surfaces.push_back(std::make_unique<Triangle>(t));
         }
 

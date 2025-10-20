@@ -8,7 +8,6 @@
 #include <material/principled.h>
 #include <scene_loading/mitsuba_scene.h>
 #include <scene_loading/serialized_file.h>
-#include <tiny_obj_loader.h>
 #include <tinyexr.h>
 
 #include <numbers>
@@ -22,31 +21,32 @@ float hfov_deg_to_vfov_deg(float h_fov_deg, int64_t width, int64_t height) {
   return vfov_deg;
 }
 
-void cube_mesh(std::vector<glm::vec3>& vertices, std::vector<glm::vec3>& normals,
-               std::vector<glm::vec2>& texcoords, std::vector<uint32_t>& tri_vertex,
-               std::vector<uint32_t>& tri_normal, std::vector<int>& tri_uv) {
+void cube_mesh(std::vector<std::array<uint32_t, 3>>& indices, std::vector<glm::vec3>& vertices,
+               std::vector<glm::vec3>& normals, std::vector<glm::vec2>& texcoords) {
   // data for mesh object
-  vertices = {glm::vec3(1.f, -1.f, -1.f),  glm::vec3(1.f, -1.f, 1.f), glm::vec3(-1.f, -1.f, 1.f),
-              glm::vec3(-1.f, -1.f, -1.f), glm::vec3(1.f, 1.f, -1.f), glm::vec3(1.f, 1.f, 1.f),
-              glm::vec3(-1.f, 1.f, 1.f),   glm::vec3(-1.f, 1.f, -1.f)};
+  vertices
+      = {glm::vec3{1, -1, -1}, glm::vec3{1, -1, 1},  glm::vec3{-1, -1, 1},  glm::vec3{-1, -1, -1},
+         glm::vec3{1, 1, -1},  glm::vec3{-1, 1, -1}, glm::vec3{-1, 1, 1},   glm::vec3{1, 1, 1},
+         glm::vec3{1, -1, -1}, glm::vec3{1, 1, -1},  glm::vec3{1, 1, 1},    glm::vec3{1, -1, 1},
+         glm::vec3{1, -1, 1},  glm::vec3{1, 1, 1},   glm::vec3{-1, 1, 1},   glm::vec3{-1, -1, 1},
+         glm::vec3{-1, -1, 1}, glm::vec3{-1, 1, 1},  glm::vec3{-1, 1, -1},  glm::vec3{-1, -1, -1},
+         glm::vec3{1, 1, -1},  glm::vec3{1, -1, -1}, glm::vec3{-1, -1, -1}, glm::vec3{-1, 1, -1}};
 
-  normals = {glm::vec3(0.f, -1.f, 0.f), glm::vec3(0.f, 1.f, 0.f),  glm::vec3(1.f, 0.f, 0.f),
-             glm::vec3(0.f, 0.f, 1.f),  glm::vec3(-1.f, 0.f, 0.f), glm::vec3(0.f, 0.f, -1.f)};
+  normals = {glm::vec3{0, -1, 0}, glm::vec3{0, -1, 0}, glm::vec3{0, -1, 0}, glm::vec3{0, -1, 0},
+             glm::vec3{0, 1, 0},  glm::vec3{0, 1, 0},  glm::vec3{0, 1, 0},  glm::vec3{0, 1, 0},
+             glm::vec3{1, 0, 0},  glm::vec3{1, 0, 0},  glm::vec3{1, 0, 0},  glm::vec3{1, 0, 0},
+             glm::vec3{0, 0, 1},  glm::vec3{0, 0, 1},  glm::vec3{0, 0, 1},  glm::vec3{0, 0, 1},
+             glm::vec3{-1, 0, 0}, glm::vec3{-1, 0, 0}, glm::vec3{-1, 0, 0}, glm::vec3{-1, 0, 0},
+             glm::vec3{0, 0, -1}, glm::vec3{0, 0, -1}, glm::vec3{0, 0, -1}, glm::vec3{0, 0, -1}};
 
-  texcoords = {
-      glm::vec2(1.000000, 0.333333), glm::vec2(1.000000, 0.666667), glm::vec2(0.666667, 0.666667),
-      glm::vec2(0.666667, 0.333333), glm::vec2(0.666667, 0.000000), glm::vec2(0.000000, 0.333333),
-      glm::vec2(0.000000, 0.000000), glm::vec2(0.333333, 0.000000), glm::vec2(0.333333, 1.000000),
-      glm::vec2(0.000000, 1.000000), glm::vec2(0.000000, 0.666667), glm::vec2(0.333333, 0.333333),
-      glm::vec2(0.333333, 0.666667), glm::vec2(1.000000, 0.000000),
-  };
+  texcoords = {glm::vec2{0, 1}, glm::vec2{1, 1}, glm::vec2{1, 0}, glm::vec2{0, 0}, glm::vec2{0, 1},
+               glm::vec2{1, 1}, glm::vec2{1, 0}, glm::vec2{0, 0}, glm::vec2{0, 1}, glm::vec2{1, 1},
+               glm::vec2{1, 0}, glm::vec2{0, 0}, glm::vec2{0, 1}, glm::vec2{1, 1}, glm::vec2{1, 0},
+               glm::vec2{0, 0}, glm::vec2{0, 1}, glm::vec2{1, 1}, glm::vec2{1, 0}, glm::vec2{0, 0},
+               glm::vec2{0, 1}, glm::vec2{1, 1}, glm::vec2{1, 0}, glm::vec2{0, 0}};
 
-  tri_vertex = {1, 2, 3, 7, 6, 5, 4, 5, 1, 5, 6, 2, 2, 6, 7, 0, 3, 7,
-                0, 1, 3, 4, 7, 5, 0, 4, 1, 1, 5, 2, 3, 2, 7, 4, 0, 7};
-  tri_normal = {0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4, 5, 5, 5,
-                0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4, 5, 5, 5};
-  tri_uv = {0, 1, 2, 0,  3, 4, 5,  6, 7, 7,  4, 3, 8,  9, 10, 11, 12, 10,
-            3, 0, 2, 13, 0, 4, 11, 5, 7, 11, 7, 3, 12, 8, 10, 5,  11, 10};
+  indices = {{0, 1, 2},    {3, 0, 2},    {4, 5, 6},    {7, 4, 6},    {8, 9, 10},   {11, 8, 10},
+             {12, 13, 14}, {15, 12, 14}, {16, 17, 18}, {19, 16, 18}, {20, 21, 22}, {23, 20, 22}};
 }
 
 Material* mat_index_from_obj(std::shared_ptr<tinyparser_mitsuba::Object> mat_obj,
@@ -462,11 +462,9 @@ bool set_scene_from_xml(const std::filesystem::path& path_file, integrator_data&
           std::vector<glm::vec3> normals;
           std::vector<glm::vec2> texcoords;
 
-          std::vector<uint32_t> tri_vertex;
-          std::vector<uint32_t> tri_normal;
-          std::vector<int> tri_uv;
+          std::vector<std::array<uint32_t, 3>> indices;
 
-          cube_mesh(vertices, normals, texcoords, tri_vertex, tri_normal, tri_uv);
+          cube_mesh(indices, vertices, normals, texcoords);
 
           // transform vertices
           for (glm::vec3& vec : vertices) {
@@ -486,19 +484,15 @@ bool set_scene_from_xml(const std::filesystem::path& path_file, integrator_data&
           normals.shrink_to_fit();
           texcoords.shrink_to_fit();
 
-          tri_vertex.shrink_to_fit();
-          tri_normal.shrink_to_fit();
-          tri_uv.shrink_to_fit();
-
           // make mesh
-          auto tri_mesh = Mesh(vertices, tri_vertex, normals, tri_normal, texcoords, tri_uv);
+          auto tri_mesh = Mesh(indices, vertices, normals, texcoords, mat_ptr);
           list_meshes.push_back(std::make_unique<Mesh>(tri_mesh));
 
-          int num_tri = tri_vertex.size() / 3;
+          int num_tri = indices.size();
 
           // add to list of surfaces
           for (size_t i = 0; i < num_tri; i++) {
-            auto tri = Triangle(list_meshes[list_meshes.size() - 1].get(), i, mat_ptr);
+            auto tri = Triangle(list_meshes[list_meshes.size() - 1].get(), i);
             list_surfaces.push_back(std::make_unique<Triangle>(tri));
           }
 
@@ -520,14 +514,15 @@ bool set_scene_from_xml(const std::filesystem::path& path_file, integrator_data&
           int shape_index = properties["shape_index"].getInteger();
 
           Mesh serialized_mesh = read_serialized_file(model_path_rel_file, shape_index, transform);
+          serialized_mesh.mat = mat_ptr;
 
           list_meshes.push_back(std::make_unique<Mesh>(serialized_mesh));
 
-          int num_tri = serialized_mesh.tri_vertex.size() / 3;
+          int num_tri = serialized_mesh.indices.size();
 
           // add to list of surfaces
           for (size_t i = 0; i < num_tri; i++) {
-            auto tri = Triangle(list_meshes[list_meshes.size() - 1].get(), i, mat_ptr);
+            auto tri = Triangle(list_meshes[list_meshes.size() - 1].get(), i);
             list_surfaces.push_back(std::make_unique<Triangle>(tri));
           }
 
@@ -557,11 +552,12 @@ bool set_scene_from_xml(const std::filesystem::path& path_file, integrator_data&
             list_lights.push_back(s_ptr);
           }
         } else if (obj->pluginType() == "obj") {
-          tinyobj::attrib_t attrib;
-          std::vector<tinyobj::shape_t> shapes;
-          std::vector<tinyobj::material_t> materials;
-          std::string warnings;
-          std::string errors;
+          // data for mesh object
+          std::vector<glm::vec3> vertices;
+          std::vector<glm::vec3> normals;
+          std::vector<glm::vec2> texcoords;
+
+          std::vector<std::array<uint32_t, 3>> indices;
 
           std::string s_file = properties["filename"].getString();
           std::filesystem::path model_filename = properties["filename"].getString();
@@ -569,115 +565,17 @@ bool set_scene_from_xml(const std::filesystem::path& path_file, integrator_data&
 
           const auto model_path_rel_file = scene_filename.remove_filename() / model_filename;
 
-          if (tinyobj::LoadObj(&attrib, &shapes, &materials, &warnings, &errors,
-                               model_path_rel_file.string().c_str())
-              == false) {
-            fmt::println("Tinyobj failed to load the mesh \n {}", errors);
-            return false;
-          }
+          load_from_obj(model_path_rel_file.string(), indices, vertices, normals, texcoords,
+                        transform);
 
-          // data for mesh object
-          std::vector<glm::vec3> vertices;
-          std::vector<glm::vec3> normals;
-          std::vector<glm::vec2> texcoords;
-
-          std::vector<uint32_t> tri_vertex;
-          std::vector<uint32_t> tri_normal;
-          std::vector<int> tri_uv;
-
-          // read vertices and normals, also transform them
-          for (size_t i = 0; i < attrib.vertices.size(); i += 3) {
-            auto vec
-                = glm::vec3(attrib.vertices[i], attrib.vertices[i + 1], attrib.vertices[i + 2]);
-            glm::vec4 result = transform * glm::vec4(vec, 1);
-            result /= result.w;
-            vertices.push_back(glm::vec3(result));
-          }
-
-          const glm::mat4 normal_xform = glm::transpose(glm::inverse(transform));
-          for (size_t i = 0; i < attrib.normals.size(); i += 3) {
-            auto norm = glm::vec3(attrib.normals[i], attrib.normals[i + 1], attrib.normals[i + 2]);
-            glm::vec4 result = normal_xform * glm::vec4(norm, 0);
-            normals.push_back(glm::normalize(glm::vec3(result)));
-          }
-
-          for (size_t i = 0; i < attrib.texcoords.size(); i += 2) {
-            auto uv = glm::vec2(attrib.texcoords[i], attrib.texcoords[i + 1]);
-            texcoords.push_back(uv);
-          }
-
-          vertices.shrink_to_fit();
-          normals.shrink_to_fit();
-          texcoords.shrink_to_fit();
-
-          for (const auto& shape : shapes) {
-            const std::vector<tinyobj::index_t>& indices = shape.mesh.indices;
-            const std::vector<int>& material_ids = shape.mesh.material_ids;
-
-            // for each triangle get the index in vector of vertices for a vertex
-            for (size_t i = 0; i < material_ids.size(); i++) {
-              // for ith triangle
-
-              // get index for each vertex
-              tri_vertex.push_back(indices[3 * i].vertex_index);
-              tri_vertex.push_back(indices[3 * i + 1].vertex_index);
-              tri_vertex.push_back(indices[3 * i + 2].vertex_index);
-
-              auto tri_min_point = glm::min(
-                  vertices[tri_vertex[3 * i]],
-                  glm::min(vertices[tri_vertex[3 * i + 1]], vertices[tri_vertex[(3 * i) + 2]]));
-
-              auto tri_max_point = glm::max(
-                  vertices[tri_vertex[3 * i]],
-                  glm::max(vertices[tri_vertex[3 * i + 1]], vertices[tri_vertex[(3 * i) + 2]]));
-
-              // get index for each vertex normal
-
-              // if one of the vertex normals don't exist use face normal
-              if (indices[3 * i].normal_index == -1 || indices[3 * i + 1].normal_index == -1
-                  || indices[3 * i + 2].normal_index == -1) {
-                glm::vec3 p0 = vertices[tri_vertex[3 * i]], p1 = vertices[tri_vertex[3 * i + 1]],
-                          p2 = vertices[tri_vertex[3 * i + 2]];
-                auto edge1 = p1 - p0;
-                auto edge2 = p2 - p0;
-
-                glm::vec3 face_normal = glm::normalize(glm::cross(edge1, edge2));
-
-                normals.push_back(face_normal);
-
-                // calculate face normal and assign it to all normal index for triangle
-                tri_normal.push_back(normals.size() - 1);
-                tri_normal.push_back(normals.size() - 1);
-                tri_normal.push_back(normals.size() - 1);
-              } else {
-                tri_normal.push_back(indices[3 * i].normal_index);
-                tri_normal.push_back(indices[3 * i + 1].normal_index);
-                tri_normal.push_back(indices[3 * i + 2].normal_index);
-              }
-
-              // if one of the vertex uv don't exist, don't pass anything
-              if (indices[3 * i].texcoord_index == -1 || indices[3 * i + 1].texcoord_index == -1
-                  || indices[3 * i + 2].texcoord_index == -1) {
-                // set the uvs for vertices tp -1
-                tri_uv.push_back(-1);
-                tri_uv.push_back(-1);
-                tri_uv.push_back(-1);
-              } else {
-                tri_uv.push_back(indices[3 * i].texcoord_index);
-                tri_uv.push_back(indices[3 * i + 1].texcoord_index);
-                tri_uv.push_back(indices[3 * i + 2].texcoord_index);
-              }
-            }
-          }
-
-          auto tri_mesh = Mesh(vertices, tri_vertex, normals, tri_normal, texcoords, tri_uv);
+          auto tri_mesh = Mesh(indices, vertices, normals, texcoords, mat_ptr);
           list_meshes.push_back(std::make_unique<Mesh>(tri_mesh));
 
-          int num_tri = tri_vertex.size() / 3;
+          int num_tri = indices.size();
 
           // add to list of surfaces
           for (size_t i = 0; i < num_tri; i++) {
-            auto tri = Triangle(list_meshes[list_meshes.size() - 1].get(), i, mat_ptr);
+            auto tri = Triangle(list_meshes[list_meshes.size() - 1].get(), i);
             list_surfaces.push_back(std::make_unique<Triangle>(tri));
           }
 

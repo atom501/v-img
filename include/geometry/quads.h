@@ -24,10 +24,11 @@ private:
   glm::vec3 normal;
   glm::vec3 w;  // constant for the plane's basis frame
   float D;      // D in eq Ax+By+Cz=D
+  Material* mat;
 
 public:
   Quad(const glm::vec3& l_corner, const glm::vec3& u, const glm::vec3& v, Material* mat_ptr)
-      : l_corner(l_corner), u(u), v(v), Surface(mat_ptr) {
+      : l_corner(l_corner), u(u), v(v), mat(mat_ptr) {
     auto n = cross(u, v);
     normal = glm::normalize(n);
     D = glm::dot(normal, l_corner);
@@ -36,7 +37,7 @@ public:
 
   Quad(const glm::vec3& l_corner, const glm::vec3& u, const glm::vec3& v, Material* mat_ptr,
        const glm::mat4& to_world)
-      : Surface(mat_ptr) {
+      : mat(mat_ptr) {
     // transform quad
     glm::vec4 temp_o = to_world * glm::vec4(l_corner, 1.0f);
     temp_o /= temp_o[3];

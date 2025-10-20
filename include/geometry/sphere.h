@@ -28,10 +28,11 @@ class Sphere : public Surface, public Emitter {
 private:
   glm::vec3 center = glm::vec3(0.0f);
   float radius = 1.0f;
+  Material* mat;
 
 public:
   Sphere(const glm::vec3& center, float r, Material* mat_ptr)
-      : center(center), radius(r), Surface(mat_ptr) {}
+      : center(center), radius(r), mat(mat_ptr) {}
 
   ~Sphere() = default;
 
