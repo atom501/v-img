@@ -60,7 +60,14 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
     return false;
   }
 
-  static constexpr auto supportedExtensions = fastgltf::Extensions::KHR_materials_emissive_strength;
+  static constexpr auto supportedExtensions = fastgltf::Extensions::KHR_materials_emissive_strength
+                                              | fastgltf::Extensions::KHR_materials_specular
+                                              | fastgltf::Extensions::KHR_materials_ior
+                                              | fastgltf::Extensions::KHR_materials_transmission
+                                              | fastgltf::Extensions::KHR_materials_clearcoat
+                                              | fastgltf::Extensions::KHR_materials_transmission
+                                              | fastgltf::Extensions::KHR_materials_sheen
+                                              | fastgltf::Extensions::KHR_materials_anisotropy;
 
   fastgltf::Parser parser(supportedExtensions);
   fastgltf::Expected<fastgltf::Asset> asset
@@ -188,20 +195,24 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
       float clearcoat_gloss = 0.f;
       if (mat.clearcoat) {
         clearcoat = mat.clearcoat->clearcoatFactor;
-        clearcoat_gloss = mat.clearcoat->clearcoatRoughnessFactor;
+        clearcoat_gloss = 1.f - mat.clearcoat->clearcoatRoughnessFactor;
       }
 
       float eta = mat.ior;
 
-      float specular_transmission = 0.f;
-      float specular = 0.f;
+      float specular = 0.5f;
+      float spec_tint = 0.f;
       if (mat.specular) {
-        specular_transmission = mat.specular->specularFactor;
-        specular = mat.specular->specularColorFactor[0];
+        specular = mat.specular->specularFactor;
+        spec_tint = mat.specular->specularColorFactor[0];
+      }
+
+      float specular_transmission = 0.f;
+      if (mat.transmission) {
+        specular_transmission = mat.transmission->transmissionFactor;
       }
 
       static constexpr float subsurface = 0.f;
-      static constexpr float spec_tint = 0.f;
 
       // get texture for material
       auto& baseColorTexture = mat.pbrData.baseColorTexture;
