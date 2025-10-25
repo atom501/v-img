@@ -30,3 +30,5 @@ public:
 bool load_from_obj(std::string model_path_rel_file, std::vector<std::array<uint32_t, 3>>& indices,
                    std::vector<glm::vec3>& vertices, std::vector<glm::vec3>& normals,
                    std::vector<glm::vec2>& texcoords, const glm::mat4& transform);
+
+Mesh create_quad_mesh(Material* mat_ptr, const glm::mat4& xform);

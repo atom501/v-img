@@ -64,3 +64,23 @@ bool load_from_obj(std::string model_path_rel_file, std::vector<std::array<uint3
 
   return true;
 }
+
+Mesh create_quad_mesh(Material* mat_ptr, const glm::mat4& xform) {
+  std::vector<glm::vec3> vertices
+      = {glm::vec3{-1, -1, 0}, glm::vec3{-1, 1, 0}, glm::vec3{1, 1, 0}, glm::vec3{1, -1, 0}};
+
+  for (auto& vec : vertices) {
+    glm::vec4 result = xform * glm::vec4(vec, 1);
+    result /= result.w;
+    vec = result;
+  }
+
+  std::vector<glm::vec3> normals;
+
+  std::vector<glm::vec2> texcoords
+      = {glm::vec2{0, 0}, glm::vec2{0, 1}, glm::vec2{1, 1}, glm::vec2{1, 0}};
+
+  std::vector<std::array<uint32_t, 3>> indices = {{0, 2, 1}, {2, 0, 3}};
+
+  return Mesh(indices, vertices, normals, texcoords, mat_ptr);
+}

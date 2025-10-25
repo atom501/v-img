@@ -111,13 +111,20 @@ private:
       // subtract the projection of shading_normal onto dpdu to make them orthogonal
       glm::vec3 tangent = glm::normalize(dpdu - normal * dot(normal, dpdu));
 
+      // fixed value set for Sphere's data needed for texture filtering
+      // TODO either remove spheres or change the values
+      float mean_curvature = 1.f / Sphere::radius;
+
       HitInfo hit = {mat,
                      this,
                      hit_p,
                      normal,
                      normal,
                      glm::vec2(u, v),
-                     ONB{tangent, glm::normalize(glm::cross(normal, tangent)), normal}};
+                     ONB{tangent, glm::normalize(glm::cross(normal, tangent)), normal},
+                     1.f,
+                     0.000001f,
+                     mean_curvature};
 
       return std::make_optional(std::move(hit));
     }

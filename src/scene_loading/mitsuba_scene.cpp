@@ -1,6 +1,5 @@
 #include <background.h>
 #include <geometry/mesh.h>
-#include <geometry/quads.h>
 #include <geometry/sphere.h>
 #include <geometry/triangle.h>
 #include <material/diffuse_light.h>
@@ -447,14 +446,24 @@ bool set_scene_from_xml(const std::filesystem::path& path_file, integrator_data&
         // load surface
         if (obj->pluginType() == "rectangle") {
           // create quad
-          Quad q(glm::vec3(-1.f, -1.f, 0.f), glm::vec3(2.f, 0.f, 0.f), glm::vec3(0.f, 2.f, 0.f),
-                 mat_ptr, transform);
+          Mesh quad_mesh = create_quad_mesh(mat_ptr, transform);
 
-          list_surfaces.push_back(std::make_unique<Quad>(q));
+          int num_tri = quad_mesh.indices.size();
+
+          // add to list of surfaces
+          for (size_t i = 0; i < num_tri; i++) {
+            auto tri = Triangle(list_meshes[list_meshes.size() - 1].get(), i);
+            list_surfaces.push_back(std::make_unique<Triangle>(tri));
+          }
+
+          // add to list of lights if needed
+          size_t rev_count_index = list_surfaces.size() - 1;
 
           if (mat_ptr->is_emissive()) {
-            Quad* s_ptr = static_cast<Quad*>(list_surfaces[list_surfaces.size() - 1].get());
-            list_lights.push_back(s_ptr);
+            for (size_t i = rev_count_index; i > (rev_count_index - num_tri); i--) {
+              Triangle* s_ptr = static_cast<Triangle*>(list_surfaces[i].get());
+              list_lights.push_back(s_ptr);
+            }
           }
         } else if (obj->pluginType() == "cube") {
           // manually set cube mesh

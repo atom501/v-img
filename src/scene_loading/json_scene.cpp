@@ -1,7 +1,6 @@
 #include <background.h>
 #include <fmt/core.h>
 #include <geometry/mesh.h>
-#include <geometry/quads.h>
 #include <geometry/sphere.h>
 #include <geometry/triangle.h>
 #include <material/dielectric.h>
@@ -349,33 +348,28 @@ bool set_list_of_objects(const nlohmann::json& json_settings,
     for (auto& surf_data : json_surface_list) {
       if (surf_data["type"] == "quad") {
         glm::mat4 surf_xform = get_transform(surf_data);
-
-        glm::vec3 l_corner;
-        l_corner = surf_data["l_corner"].template get<glm::vec3>();
-
-        glm::vec3 u;
-        u = surf_data["u"].template get<glm::vec3>();
-
-        glm::vec3 v;
-        v = surf_data["v"].template get<glm::vec3>();
-
-        // transform the quad
-        glm::vec4 temp_o = surf_xform * glm::vec4(l_corner, 1.0f);
-        temp_o /= temp_o[3];
-        l_corner = temp_o;
-
-        u = glm::vec3(surf_xform * glm::vec4(u, 0.0f));
-        v = glm::vec3(surf_xform * glm::vec4(v, 0.0f));
-
         std::string mat_name = surf_data["mat_name"];
         Material* mat_ptr = list_materials[name_to_index.at(mat_name)].get();
 
-        auto quad = Quad(l_corner, u, v, mat_ptr);
-        list_surfaces.push_back(std::make_unique<Quad>(quad));
+        // create quad
+        Mesh quad_mesh = create_quad_mesh(mat_ptr, surf_xform);
+
+        int num_tri = quad_mesh.indices.size();
+
+        // add to list of surfaces
+        for (size_t i = 0; i < num_tri; i++) {
+          auto tri = Triangle(list_meshes[list_meshes.size() - 1].get(), i);
+          list_surfaces.push_back(std::make_unique<Triangle>(tri));
+        }
+
+        // add to list of lights if needed
+        size_t rev_count_index = list_surfaces.size() - 1;
 
         if (mat_ptr->is_emissive()) {
-          Quad* s_ptr = static_cast<Quad*>(list_surfaces[list_surfaces.size() - 1].get());
-          list_lights.push_back(s_ptr);
+          for (size_t i = rev_count_index; i > (rev_count_index - num_tri); i--) {
+            Triangle* s_ptr = static_cast<Triangle*>(list_surfaces[i].get());
+            list_lights.push_back(s_ptr);
+          }
         }
       } else if (surf_data["type"] == "sphere") {
         glm::mat4 surf_transform = glm::mat4(1.0f);
