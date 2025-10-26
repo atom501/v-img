@@ -183,7 +183,7 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
       }
 
       float sheen = 0.f;
-      float sheen_tint = 0.f;
+      float sheen_tint = 0.5f;
       if (mat.sheen) {
         sheen = mat.sheen->sheenRoughnessFactor;
 
@@ -192,7 +192,7 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
       }
 
       float clearcoat = 0.f;
-      float clearcoat_gloss = 0.f;
+      float clearcoat_gloss = 1.f;
       if (mat.clearcoat) {
         clearcoat = mat.clearcoat->clearcoatFactor;
         clearcoat_gloss = 1.f - mat.clearcoat->clearcoatRoughnessFactor;
