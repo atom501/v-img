@@ -353,6 +353,7 @@ bool set_list_of_objects(const nlohmann::json& json_settings,
 
         // create quad
         Mesh quad_mesh = create_quad_mesh(mat_ptr, surf_xform);
+        list_meshes.push_back(std::make_unique<Mesh>(quad_mesh));
 
         int num_tri = quad_mesh.indices.size();
 

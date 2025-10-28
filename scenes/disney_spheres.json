@@ -142,99 +142,56 @@
     ],
     "surfaces": [
         {
-            "type": "mesh",
-            "filename": "../assets/plane.obj",
+            "type": "quad",
             "mat_name": "white",
             "transform": [
-                {
-                    "scale": [650, 277.5, 1]
-                },
-                {
-                    "rotate": [ 0, 1, 0, 0 ]
-                },
-                {
-                    "translate": [0, 0, -277.5]
-                }
+                { "scale": [650, 277.5, 1] },
+                { "translate": [0, 0, -277.5] }
             ]
         },
         {
-            "type": "mesh",
-            "filename": "../assets/plane.obj",
+            "type": "quad",
             "mat_name": "white",
             "transform": [
-                {
-                    "scale": [650, 277.5, 1]
-                },
-                {
-                    "rotate": [ -0.7071068, 0, 0, 0.7071068 ]
-                }, 
-                {
-                    "translate": [0, 277.5, 0]
-                }
+                { "scale": [650, 277.5, 1] },
+                { "rotate": [ 0.7071068, 0, 0, 0.7071068 ] }, 
+                { "translate": [0, 277.5, 0] }
             ]
         },
         {
-            "type": "mesh",
-            "filename": "../assets/plane.obj",
+            "type": "quad",
             "mat_name": "white",
             "transform": [
-                {
-                    "scale": [650, 277.5, 1]
-                },
-                {
-                    "rotate": [ 0.7071068, 0, 0, 0.7071068 ]
-                },
-                {
-                    "translate": [0, -277.5, 0]
-                }
+                { "scale": [650, 277.5, 1] },
+                { "rotate": [ -0.7071068, 0, 0, 0.7071068 ] },
+                { "translate": [0, -277.5, 0] }
             ]
         },
         {
-            "type": "mesh",
-            "filename": "../assets/plane.obj",
+            "type": "quad",
             "mat_name": "green",
             "transform": [
-                {
-                    "scale": [277.5, 277.5, 1]
-                },
-                {
-                    "rotate": [ 0, -0.7071068, 0, 0.7071068 ]
-                },
-                {
-                    "translate": [-650, 0, 0]
-                }
+                { "scale": [277.5, 277.5, 1] },
+                { "rotate": [ 0, 0.7071068, 0, 0.7071068 ] },
+                { "translate": [-650, 0, 0] }
             ]
         },
         {
-            "type": "mesh",
-            "filename": "../assets/plane.obj",
+            "type": "quad",
             "mat_name": "red",
             "transform": [
-                {
-                    "scale": [277.5, 277.5, 1]
-                },
-                {
-                    "rotate": [ 0, 0.7071068, 0, 0.7071068 ]
-                },
-                {
-                    "translate": [650, 0, 0]
-                }
+                { "scale": [277.5, 277.5, 1] },
+                { "rotate": [ 0, -0.7071068, 0, 0.7071068 ] },
+                { "translate": [650, 0, 0] }
             ]
         },
         {
-            "type": "mesh",
-            "filename": "../assets/plane.obj",
+            "type": "quad",
             "mat_name": "light",
             "transform": [
-                {
-                    "scale": [500, 250, 1]
-                },
-                {
-                    "rotate": [ -0.7071068, 0, 0, 0.7071068 ]
-                },
-                {
-                    "translate": [0, 277, 0]
-                }
+                { "scale": [500, 250, 1] },
+                { "rotate": [ 0.7071068, 0, 0, 0.7071068 ] },
+                { "translate": [0, 277, 0] }
             ]
         }, {
             "type": "sphere",

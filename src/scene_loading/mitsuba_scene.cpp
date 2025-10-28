@@ -447,6 +447,7 @@ bool set_scene_from_xml(const std::filesystem::path& path_file, integrator_data&
         if (obj->pluginType() == "rectangle") {
           // create quad
           Mesh quad_mesh = create_quad_mesh(mat_ptr, transform);
+          list_meshes.push_back(std::make_unique<Mesh>(quad_mesh));
 
           int num_tri = quad_mesh.indices.size();
 

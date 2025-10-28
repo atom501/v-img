@@ -53,45 +53,57 @@
     "surfaces": [
         {
             "type": "quad",
-            "l_corner": [555, 0, 0],
-            "u": [0, 0, 555],
-            "v": [0, 555, 0],
-            "mat_name": "green"
+            "mat_name": "red",
+            "transform": [
+                { "scale": 277.5 },
+                { "rotate": [ 0, 0.7071068, 0, 0.7071068 ] }, 
+                { "translate": [0 , 277.5, 277.5] }
+            ]
         },
         {
             "type": "quad",
-            "l_corner": [0, 0, 555],
-            "u": [0, 0, -555],
-            "v": [0, 555, 0],
-            "mat_name": "red"
+            "mat_name": "green",
+            "transform": [
+                { "scale": 277.5 },
+                { "rotate": [ 0, -0.7071068, 0, 0.7071068 ] }, 
+                { "translate": [555 , 277.5, 277.5] }
+            ]
         },
         {
             "type": "quad",
-            "l_corner": [0, 555, 0],
-            "u": [555, 0, 0],
-            "v": [0, 0, 555],
-            "mat_name": "white"
+            "mat_name": "white",
+            "transform": [
+                { "scale": 277.5 },
+                { "rotate": [ 1, 0, 0, 0 ] },
+                { "translate": [277.5 , 277.5, 555] }
+            ]
         },
         {
             "type": "quad",
-            "l_corner": [0, 0, 555],
-            "u": [555, 0, 0],
-            "v": [0, 0, -555],
-            "mat_name": "white"
+            "mat_name": "white",
+            "transform": [
+                { "scale": 277.5 },
+                { "rotate": [ -0.7071068, 0, 0, 0.7071068 ] }, 
+                { "translate": [277.5 , 0, 277.5] }
+            ]
         },
         {
             "type": "quad",
-            "l_corner": [555, 0, 555],
-            "u": [-555, 0, 0],
-            "v": [0, 555, 0],
-            "mat_name": "white"
+            "mat_name": "white",
+            "transform": [
+                { "scale": 277.5 },
+                { "rotate": [ 0.7071068, 0, 0, 0.7071068 ] }, 
+                { "translate": [277.5 , 555, 277.5] }
+            ]
         },
         {
             "type": "quad",
-            "l_corner": [213, 554, 227],
-            "u": [130, 0, 0],
-            "v": [0, 0, 105],
-            "mat_name": "light"
+            "mat_name": "light",
+            "transform": [
+                { "scale": [65, 52.5, 0] },
+                { "rotate": [ 0.7071068, 0, 0, 0.7071068 ] }, 
+                { "translate": [277.5 , 554, 277.5] }
+            ]
         },
         {
             "type": "sphere",
