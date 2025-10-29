@@ -37,12 +37,13 @@
             "mat_name": "light",
             "radius": 0.5,
             "center": [0, 0, 1]
-        }, {
+        },
+        {
             "type": "quad",
-            "l_corner": [-50, -50, 0],
-            "u": [100, 0, 0],
-            "v": [0, 100, 0],
-            "mat_name": "white"
+            "mat_name": "white",
+            "transform": [
+                { "scale": 50 }
+            ]
         }
     ]
 }
