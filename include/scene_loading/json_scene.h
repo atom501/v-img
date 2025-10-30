@@ -43,3 +43,5 @@ namespace glm {
   void from_json(const nlohmann::json& j, quat& q);
 
 }  // namespace glm
+
+std::optional<std::string> read_file(std::filesystem::path path);

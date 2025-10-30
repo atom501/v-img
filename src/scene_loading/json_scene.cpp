@@ -36,7 +36,7 @@ namespace glm {
 
 }  // namespace glm
 
-static std::optional<std::string> read_file(std::filesystem::path path) {
+std::optional<std::string> read_file(std::filesystem::path path) {
   if (!std::filesystem::exists(path)) {
     fmt::println("Json scene file does not exists");
     return std::nullopt;

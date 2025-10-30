@@ -3,6 +3,8 @@
 #include <material/diffuse_light.h>
 #include <material/principled.h>
 #include <scene_loading/gltf_loading.h>
+#include <scene_loading/json_scene.h>
+#include <tinyexr.h>
 
 #include <cstddef>
 #include <fastgltf/core.hpp>
@@ -51,7 +53,8 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
                          std::vector<std::unique_ptr<Material>>& list_materials,
                          std::vector<Emitter*>& list_lights,
                          std::vector<std::unique_ptr<Mesh>>& list_meshes,
-                         std::vector<std::unique_ptr<Texture>>& texture_list) {
+                         std::vector<std::unique_ptr<Texture>>& texture_list,
+                         const nlohmann::json& extra_settings) {
   fastgltf::Expected<fastgltf::GltfDataBuffer> gltfFile
       = fastgltf::GltfDataBuffer::FromPath(path_file);
 
@@ -108,7 +111,85 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
     fmt::println("Failed to open glTF: Orthographic camera is not supported");
   }
 
+  // load the extra settings from the companion json file
+  integrator_data.samples = extra_settings.value("spp", 32);
+  integrator_data.depth = extra_settings.value("depth", 64);
+
+  if (extra_settings.contains("integrator")) {
+    std::string integrator_string = extra_settings["integrator"];
+
+    if (integrator_string == "s_normal") {
+      integrator_data.func = integrator_func::s_normal;
+      fmt::println("Shading normal integrator set");
+    } else if (integrator_string == "g_normal") {
+      integrator_data.func = integrator_func::g_normal;
+      fmt::println("Shading normal integrator set");
+    } else if (integrator_string == "material") {
+      integrator_data.func = integrator_func::material;
+      fmt::println("Material integrator set");
+    } else if (integrator_string == "mis") {
+      integrator_data.func = integrator_func::mis;
+      fmt::println("MIS integrator set");
+    }
+  } else {
+    integrator_data.func = integrator_func::s_normal;
+  }
+
+  integrator_data.background = std::make_unique<ConstBackground>(ConstBackground(glm::vec3(0)));
+  if (extra_settings.contains("background")) {
+    if (extra_settings["background"].is_array()) {
+      const auto& val = extra_settings["background"];
+      integrator_data.background = std::make_unique<ConstBackground>(
+          ConstBackground(extra_settings["background"].template get<glm::vec3>()));
+    } else {
+      std::filesystem::path env_filepath = extra_settings["background"];
+      // read exr file
+      std::string env_type = env_filepath.extension().generic_string();
+      if (env_type == ".exr") {
+        // read exr with tinyexr
+        float* out;  // width * height * RGBA
+        int width;
+        int height;
+        const char* err = nullptr;
+
+        std::filesystem::path scene_filename = path_file;
+        const auto env_path_rel_file = scene_filename.remove_filename() / env_filepath;
+
+        int ret = LoadEXR(&out, &width, &height, env_path_rel_file.generic_string().c_str(), &err);
+        std::vector<glm::vec3> image;
+
+        if (ret != TINYEXR_SUCCESS) {
+          if (err) {
+            fprintf(stderr, "ERR : %s\n", err);
+            FreeEXRErrorMessage(err);  // release memory of error message.
+          }
+        } else {
+          // copy image data to vector. ignore alpha channel for now
+          image = std::vector<glm::vec3>(width * height);
+
+          for (size_t i = 0; i < width * height; i++) {
+            image[i] = glm::vec3(out[i * 4], out[i * 4 + 1], out[i * 4 + 2]);
+          }
+
+          free(out);  // release memory of image data
+
+          float radiance_scale = extra_settings.value("radiance_scale", 1.f);
+
+          // set env map
+          integrator_data.background = std::make_unique<EnvMap>(
+              EnvMap(width, height, image, glm::mat4(1.0f), glm::mat4(1.0f), radiance_scale));
+
+          list_lights.push_back(static_cast<EnvMap*>(integrator_data.background.get()));
+        }
+      } else {
+        fmt::println("env map file type {} is not supported. Settings background to black",
+                     env_type);
+      }
+    }
+  }
+
   // use the passed in vertical resolution and aspect ratio
+  integrator_data.resolution.y = extra_settings.value("yres", 768);
   integrator_data.resolution.x = std::ceil(integrator_data.resolution.y * aspect_ratio);
 
   integrator_data.camera
@@ -380,8 +461,6 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
       }
     }
   }
-
-  integrator_data.background = std::make_unique<ConstBackground>(ConstBackground(glm::vec3(0)));
 
   return true;
 }
