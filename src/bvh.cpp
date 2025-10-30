@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <numeric>
 #include <stack>
+#include <thread>
 
 static size_t bin_index(uint8_t axis, const AABB& bbox, const glm::vec3& center,
                         const size_t num_bins) {
@@ -72,7 +73,7 @@ Split get_best_split(const BVHNode& node, const std::vector<size_t>& obj_indices
 }
 
 // helper bvh constructor
-static void build_recursive(BVH& bvh, size_t node_index, size_t& node_count,
+static void build_recursive(BVH& bvh, size_t node_index, std::atomic<size_t>& node_count,
                             const std::vector<AABB>& bboxes, const std::vector<glm::vec3>& centers,
                             const size_t num_bins) {
   auto& curr_node = bvh.nodes[node_index];
@@ -120,10 +121,9 @@ static void build_recursive(BVH& bvh, size_t node_index, size_t& node_count,
           - bvh.obj_indices.begin();
   }
 
-  size_t first_child = node_count;
+  size_t first_child = node_count.fetch_add(2);
   auto& left = bvh.nodes[first_child];
   auto& right = bvh.nodes[first_child + 1];
-  node_count += 2;
 
   left.obj_count = first_right - curr_node.first_index;
   right.obj_count = curr_node.obj_count - left.obj_count;
@@ -134,7 +134,15 @@ static void build_recursive(BVH& bvh, size_t node_index, size_t& node_count,
   curr_node.first_index = first_child;
   curr_node.obj_count = 0;
 
-  build_recursive(bvh, first_child, node_count, bboxes, centers, num_bins);
+  // run left in another thread if greater than 1024 primitives
+  std::jthread left_thread;
+  if (left.obj_count > 1024) {
+    left_thread = std::jthread(build_recursive, std::ref(bvh), first_child, std::ref(node_count),
+                               std::ref(bboxes), std::ref(centers), num_bins);
+  } else {
+    build_recursive(bvh, first_child, node_count, bboxes, centers, num_bins);
+  }
+
   build_recursive(bvh, first_child + 1, node_count, bboxes, centers, num_bins);
 }
 
@@ -154,7 +162,7 @@ BVH BVH::build(const std::vector<AABB>& bboxes, const std::vector<glm::vec3>& ce
     bvh.nodes[0].obj_count = obj_count;
     bvh.nodes[0].first_index = 0;
 
-    size_t node_count = 1;
+    std::atomic<size_t> node_count = 1;
     // build the bvh top down
     build_recursive(bvh, 0, node_count, bboxes, centers, num_bins);
 

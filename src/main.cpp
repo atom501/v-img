@@ -160,11 +160,22 @@ int main(int argc, char* argv[]) {
   setup_for_bvh(list_objects, list_bboxes, list_centers);
 
   // make bvh
-  BVH bvh = BVH::build(list_bboxes, list_centers, NUM_BINS);
-
-  fmt::println("scene BVH built");
-
   auto begin_time = std::chrono::steady_clock::now();
+  BVH bvh = BVH::build(list_bboxes, list_centers, NUM_BINS);
+  auto end_time = std::chrono::steady_clock::now();
+
+  auto bvh_duration_ms
+      = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - begin_time);
+
+  auto bvh_duration_secs = std::chrono::duration_cast<std::chrono::seconds>(bvh_duration_ms);
+  bvh_duration_ms -= std::chrono::duration_cast<std::chrono::milliseconds>(bvh_duration_secs);
+  auto bvh_duration_mins = std::chrono::duration_cast<std::chrono::minutes>(bvh_duration_secs);
+  bvh_duration_secs -= std::chrono::duration_cast<std::chrono::seconds>(bvh_duration_mins);
+
+  fmt::println("Scene BVH built. Time taken: {} {} {}", bvh_duration_mins, bvh_duration_secs,
+               bvh_duration_ms);
+
+  begin_time = std::chrono::steady_clock::now();
   std::vector<glm::vec3> acc_image;
 
   fmt::println("Started rendering\n");
@@ -197,7 +208,7 @@ int main(int argc, char* argv[]) {
     acc_image = heatmap_img(rendering_settings, bvh, list_objects, heatmap_max);
   }
 
-  auto end_time = std::chrono::steady_clock::now();
+  end_time = std::chrono::steady_clock::now();
   auto duration_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - begin_time);
 
   auto duration_secs = std::chrono::duration_cast<std::chrono::seconds>(duration_ms);
