@@ -124,7 +124,8 @@ std::vector<glm::vec3> scene_integrator(const integrator_data& render_data, BVH&
                 float rand_y = inv_sqrt_sample * (y_sample + rand_float(pcg_state));
 
                 // make ray with random offset
-                Ray cam_ray = render_data.camera.generate_ray(x + rand_x, y + rand_y);
+                Ray cam_ray = render_data.camera.generate_ray(
+                    x + rand_x, y + rand_y, rand_float(pcg_state), rand_float(pcg_state));
 
                 // use set integrator to get color for a pixel
                 glm::vec3 p_col = integrator(cam_ray, thread_stack, bvh, prims, lights, pcg_state,
@@ -143,7 +144,8 @@ std::vector<glm::vec3> scene_integrator(const integrator_data& render_data, BVH&
               float rand_y = rand_float(pcg_state);
 
               // make ray with random offset
-              Ray cam_ray = render_data.camera.generate_ray(x + rand_x, y + rand_y);
+              Ray cam_ray = render_data.camera.generate_ray(
+                  x + rand_x, y + rand_y, rand_float(pcg_state), rand_float(pcg_state));
 
               // use set integrator to get color for a pixel
               glm::vec3 p_col = integrator(cam_ray, thread_stack, bvh, prims, lights, pcg_state,

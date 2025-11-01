@@ -130,6 +130,9 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
     } else if (integrator_string == "mis") {
       integrator_data.func = integrator_func::mis;
       fmt::println("MIS integrator set");
+    } else {
+      integrator_data.func = integrator_func::s_normal;
+      fmt::println("Integrator {} is not defined. Set to shading normal", integrator_string);
     }
   } else {
     integrator_data.func = integrator_func::s_normal;
@@ -192,8 +195,19 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
   integrator_data.resolution.y = extra_settings.value("yres", 768);
   integrator_data.resolution.x = std::ceil(integrator_data.resolution.y * aspect_ratio);
 
+  float focal_dist = 1.f;
+  float aperture_radius = 0.f;
+
+  if (extra_settings.contains("camera")
+      && (integrator_data.func == integrator_func::mis
+          || integrator_data.func == integrator_func::material)) {
+    focal_dist = extra_settings["camera"].value("fdist", 1.f);
+    aperture_radius = extra_settings["camera"].value("aperture_radius", 0.f);
+  }
+
   integrator_data.camera
-      = TLCam(camToWorld, integrator_data.resolution, vfov_rad * (180.f / fastgltf::math::pi));
+      = TLCam(camToWorld, integrator_data.resolution, vfov_rad * (180.f / fastgltf::math::pi),
+              aperture_radius, focal_dist);
 
   // load images
   std::vector<uint32_t> img_list_idx;

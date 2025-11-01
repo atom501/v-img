@@ -14,17 +14,17 @@ private:
   glm::vec4 p_size = glm::vec4(1.0f);            // Physical size of the image plane
   glm::ivec2 resolution = glm::ivec2(512, 512);  // Resolution
 
-  // TODO depth of field
-  // float aperture_radius = 0.f;                   // The size of the aperture for depth of field
-  // float focal_dist = 1.f;                        // Distance to image plane along cam z axis
+  float aperture_radius = 0.f;
+  float focal_dist = 1.f;  // Distance to image plane along cam z axis
 
 public:
-  TLCam(const glm::mat4& xform, const glm::ivec2& res, const float ver_fov);
+  TLCam(const glm::mat4& xform, const glm::ivec2& res, const float ver_fov,
+        const float aperture_radius, const float focal_dist);
   TLCam() = default;
   ~TLCam() = default;
 
   // generate ray with direction normalized
-  Ray generate_ray(const float& x, const float& y) const;
+  Ray generate_ray(const float& x, const float& y, float rand1, float rand2) const;
 };
 /*
   Gives camera to world transform

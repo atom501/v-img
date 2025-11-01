@@ -263,7 +263,7 @@ bool set_scene_from_xml(const std::filesystem::path& path_file, integrator_data&
                 }
               }
 
-              integrator_data.camera = TLCam(to_world, integrator_data.resolution, vfov);
+              integrator_data.camera = TLCam(to_world, integrator_data.resolution, vfov, 0.f, 1.f);
               break;
             }
             case tinyparser_mitsuba::OT_SAMPLER: {

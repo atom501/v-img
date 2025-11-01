@@ -1,8 +1,10 @@
+#include <rng/sampling.h>
 #include <tl_camera.h>
 
 #include <numbers>
 
-TLCam::TLCam(const glm::mat4& xform, const glm::ivec2& res, const float ver_fov) {
+TLCam::TLCam(const glm::mat4& xform, const glm::ivec2& res, const float ver_fov,
+             const float aperture_radius, const float focal_dist) {
   camToWorld_xform = xform;
   resolution = res;
   vfov = ver_fov;
@@ -15,10 +17,12 @@ TLCam::TLCam(const glm::mat4& xform, const glm::ivec2& res, const float ver_fov)
 
   p_size[0] = img_width;
   p_size[1] = img_height;
+
+  TLCam::aperture_radius = aperture_radius;
+  TLCam::focal_dist = focal_dist;
 }
 
-Ray TLCam::generate_ray(const float& x, const float& y) const {
-  Ray new_ray;
+Ray TLCam::generate_ray(const float& x, const float& y, float rand1, float rand2) const {
   /* lerp is slow
   new_ray.dir = glm::vec3(std::lerp(-p_size[0] / 2, p_size[0] / 2, x / resolution[0]),
                           std::lerp(-p_size[1] / 2, +p_size[1] / 2, y / resolution[1]), -1.0f);
@@ -26,15 +30,26 @@ Ray TLCam::generate_ray(const float& x, const float& y) const {
   float x_dir = (p_size[0] * (x / resolution[0])) - (p_size[0] / 2.0f);
   float y_dir = (p_size[1] * (y / resolution[1])) - (p_size[1] / 2.0f);
 
-  new_ray.dir = glm::vec3(x_dir, y_dir, -1.0f);
+  glm::vec3 ray_dir = glm::normalize(glm::vec3(x_dir, y_dir, -1.0f));
+  Ray camera_ray = Ray(glm::vec3(0.f), ray_dir);
+
+  // apply changes to ray for depth of field
+  if (TLCam::aperture_radius > 0.f) {
+    glm::vec3 ray_origin = glm::vec3(TLCam::aperture_radius * sample_disk(rand1, rand2), 0.f);
+    float ft = TLCam::focal_dist / std::abs(ray_dir.z);
+    glm::vec3 focal_plane_p = ray_dir * ft;
+
+    camera_ray.o = ray_origin;
+    camera_ray.dir = glm::normalize(focal_plane_p - ray_origin);
+  }
 
   // Transforms from camera to world coords
-  new_ray.xform_ray(camToWorld_xform);
-  new_ray.dir = glm::normalize(new_ray.dir);
+  camera_ray.xform_ray(camToWorld_xform);
+  camera_ray.dir = glm::normalize(camera_ray.dir);
 
-  new_ray.ray_cone
+  camera_ray.ray_cone
       = raycone_for_primary_ray((TLCam::vfov * std::numbers::pi) / 180.f, TLCam::resolution.y);
-  return new_ray;
+  return camera_ray;
 }
 
 glm::mat4 camToWorld(const glm::vec3& lookFrom, const glm::vec3& lookAT, const glm::vec3& up) {

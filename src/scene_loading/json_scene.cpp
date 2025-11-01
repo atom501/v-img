@@ -179,7 +179,7 @@ bool set_integrator_data(const nlohmann::json& json_settings, integrator_data& i
 
     // set vertical fov
     const float vfov = cam_set.value("vfov", 40.0f);
-    integrator_data.camera = TLCam(cam_xform, res, vfov);
+    integrator_data.camera = TLCam(cam_xform, res, vfov, 0.f, 1.f);
   } else {
     fmt::println("Camera settings not given");
     return false;
@@ -228,6 +228,9 @@ bool set_integrator_data(const nlohmann::json& json_settings, integrator_data& i
     } else if (integrator_string == "mis") {
       func = integrator_func::mis;
       fmt::println("MIS integrator set");
+    } else {
+      func = integrator_func::s_normal;
+      fmt::println("Integrator {} is not defined. Set to shading normal", integrator_string);
     }
   } else {
     fmt::println("Integrator function not given. Default normal integrator set");

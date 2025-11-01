@@ -11,6 +11,16 @@
 #include <span>
 #include <vector>
 
+// give two random numbers [0,1] as input and return a point on disk on with radius 1.
+inline glm::vec2 sample_disk(const float& rand1, const float& rand2) {
+  float r = std::sqrt(rand1);
+  float phi = 2.f * std::numbers::pi * rand2;
+  float x = r * std::cos(phi);
+  float y = r * std::sin(phi);
+
+  return glm::vec2(x, y);
+}
+
 // give two random numbers [0,1] as input and return a point on sphere.
 // where pole of hemisphere is (0,0,1)
 inline glm::vec3 sample_sphere(const float& rand1, const float& rand2) {
