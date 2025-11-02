@@ -220,3 +220,19 @@ public:
     return std::make_tuple(u, v, pdf);
   }
 };
+
+// get number from r2 sequence. returns (x, y) where both are [0, 1)
+// source: https://www.martysmods.com/a-better-r2-sequence/
+
+inline glm::vec2 random_x_y_r2(uint32_t n) {
+  constexpr float g = 1.32471795724474602596;
+  constexpr float a1 = 1.0 - (1.0 / g);
+  constexpr float a2 = 1.0 - (1.0 / (g * g));
+
+  float x = a1 * n;
+  float y = a2 * n;
+
+  // return fractional part
+
+  return glm::vec2(x - std::floor(x), y - std::floor(y));
+}

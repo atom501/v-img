@@ -89,10 +89,6 @@ std::vector<glm::vec3> scene_integrator(const integrator_data& render_data, BVH&
     fmt::print("\n");
   });
 
-  const uint32_t sqrt_sample = std::floorf(std::sqrtf(static_cast<float>(render_data.samples)));
-  const uint32_t sample_remaining = render_data.samples - (sqrt_sample * sqrt_sample);
-  const float inv_sqrt_sample = 1 / static_cast<float>(sqrt_sample);
-
   for (unsigned int c = 0; c < num_cores; c++) {
     workers.push_back(std::thread([&, c]() {
       pcg32_random_t pcg_state;
@@ -115,43 +111,22 @@ std::vector<glm::vec3> scene_integrator(const integrator_data& render_data, BVH&
             pixel_col_accumulator = glm::vec3(0.0f);
             // init hash at the start of each work
             size_t image_index = x + ((image_height - 1 - y) * image_width);
-            pcg32_srandom_r(&pcg_state, image_index, c);
+            size_t image_seq_start = x + y;
 
-            // stratified samples
-            for (size_t x_sample = 0; x_sample < sqrt_sample; x_sample++) {
-              for (size_t y_sample = 0; y_sample < sqrt_sample; y_sample++) {
-                float rand_x = inv_sqrt_sample * (x_sample + rand_float(pcg_state));
-                float rand_y = inv_sqrt_sample * (y_sample + rand_float(pcg_state));
+            pcg32_srandom_r(&pcg_state, image_index, 0);
 
-                // make ray with random offset
-                Ray cam_ray = render_data.camera.generate_ray(
-                    x + rand_x, y + rand_y, rand_float(pcg_state), rand_float(pcg_state));
-
-                // use set integrator to get color for a pixel
-                glm::vec3 p_col = integrator(cam_ray, thread_stack, bvh, prims, lights, pcg_state,
-                                             render_data.depth, render_data.background.get());
-                if (std::isnan(p_col[0]) || std::isnan(p_col[1]) || std::isnan(p_col[2])) {
-                  fmt::println("NaN at x_sample {}, y_sample {}, x {}, y {}", x_sample, y_sample, x,
-                               y);
-                }
-                pixel_col_accumulator += p_col;
-              }
-            }
-
-            // take remaining samples regularly
-            for (size_t sample = 0; sample < sample_remaining; sample++) {
-              float rand_x = rand_float(pcg_state);
-              float rand_y = rand_float(pcg_state);
-
+            for (size_t s = 0; s < render_data.samples; s++) {
+              glm::vec2 pixel_offset = random_x_y_r2(image_seq_start + s);
               // make ray with random offset
-              Ray cam_ray = render_data.camera.generate_ray(
-                  x + rand_x, y + rand_y, rand_float(pcg_state), rand_float(pcg_state));
+              Ray cam_ray
+                  = render_data.camera.generate_ray(x + pixel_offset.x, y + pixel_offset.y,
+                                                    rand_float(pcg_state), rand_float(pcg_state));
 
               // use set integrator to get color for a pixel
               glm::vec3 p_col = integrator(cam_ray, thread_stack, bvh, prims, lights, pcg_state,
                                            render_data.depth, render_data.background.get());
               if (std::isnan(p_col[0]) || std::isnan(p_col[1]) || std::isnan(p_col[2])) {
-                fmt::println("NaN at remaining sample {}, x {}, y {}", sample, x, y);
+                fmt::println("NaN at pixel sample {}, x {}, y {}", s, x, y);
               }
               pixel_col_accumulator += p_col;
             }
