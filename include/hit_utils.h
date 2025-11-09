@@ -101,52 +101,12 @@ public:
     auto d = bboxes[1] - bboxes[0];
     return d[0] * d[1] + d[0] * d[2] + d[1] * d[2];
   }
-
-  /*
-   * source is https://tavianator.com/2022/ray_box_boundary.html
-   * loop is manually unrolled and ray inverse calculated in bvh hit call
-   */
-  inline std::optional<float> intersect(const Ray& ray, const glm::vec3& ray_inv_dir,
-                                        const std::array<bool, 3>& dir_signs) const {
-    const float o_x = ray.o[0];
-    const float o_y = ray.o[1];
-    const float o_z = ray.o[2];
-
-    // x-axis
-    const float bmin0 = this->bboxes[dir_signs[0]][0];
-    const float bmax0 = this->bboxes[!dir_signs[0]][0];
-
-    const float dmin_x = (bmin0 - o_x) * ray_inv_dir[0];
-    const float dmax_x = (bmax0 - o_x) * ray_inv_dir[0];
-
-    // y-axis
-    const float bmin1 = this->bboxes[dir_signs[1]][1];
-    const float bmax1 = this->bboxes[!dir_signs[1]][1];
-
-    const float dmin_y = (bmin1 - o_y) * ray_inv_dir[1];
-    const float dmax_y = (bmax1 - o_y) * ray_inv_dir[1];
-
-    // z-axis
-    const float bmin2 = this->bboxes[dir_signs[2]][2];
-    const float bmax2 = this->bboxes[!dir_signs[2]][2];
-
-    const float dmin_z = (bmin2 - o_z) * ray_inv_dir[2];
-    const float dmax_z = (bmax2 - o_z) * ray_inv_dir[2];
-
-    float tmin = std::max(dmin_x, std::max(dmin_y, std::max(dmin_z, ray.minT)));
-    float tmax = std::min(dmax_x, std::min(dmax_y, std::min(dmax_z, ray.maxT)));
-
-    if (tmin <= tmax)
-      return tmin;
-    else
-      return std::nullopt;
-  }
 };
 
-inline std::optional<float> slab_intersect_aabb_array(const Ray& ray, const glm::vec3& ray_inv_dir,
-                                                      const std::array<bool, 3>& dir_signs,
-                                                      const std::array<float, 3>& bb_min,
-                                                      const std::array<float, 3>& bb_max) {
+// ray-aabb slab test. result is returned in t_val variable
+inline void slab_intersect_aabb_array(const Ray& ray, const glm::vec3& ray_inv_dir,
+                                      const std::array<float, 3>& bb_min,
+                                      const std::array<float, 3>& bb_max, float& t_val) {
   glm::vec3 min_vec3 = glm::vec3(bb_min[0], bb_min[1], bb_min[2]);
   glm::vec3 max_vec3 = glm::vec3(bb_max[0], bb_max[1], bb_max[2]);
 
@@ -158,7 +118,7 @@ inline std::optional<float> slab_intersect_aabb_array(const Ray& ray, const glm:
   float tBoxMax = std::min(tMaxes.x, std::min(tMaxes.y, std::min(tMaxes.z, tMaxes.w)));
 
   if (tBoxMin <= tBoxMax)
-    return tBoxMin;
+    t_val = tBoxMin;
   else
-    return std::nullopt;
+    t_val = std::numeric_limits<float>::infinity();
 }

@@ -178,8 +178,10 @@ BVH BVH::build(const std::vector<AABB>& bboxes, const std::vector<glm::vec3>& ce
     build_recursive(bvh, 0, node_count, bboxes, centers, num_bins);
 
     bvh.nodes.resize(node_count);
-    bvh.BB_mins.resize(node_count);
-    bvh.BB_maxes.resize(node_count);
+
+    // added padding at the end as simd loads 8 values
+    bvh.BB_mins.resize(node_count + 1);
+    bvh.BB_maxes.resize(node_count + 1);
   }
 
   return bvh;
