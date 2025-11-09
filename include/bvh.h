@@ -3,6 +3,10 @@
 #include <geometry/surface.h>
 #include <hit_utils.h>
 
+#ifdef __AVX2__
+#include <simd_hit.h>
+#endif
+
 #include <array>
 #include <cstdint>
 #include <glm/vec3.hpp>
@@ -10,7 +14,6 @@
 #include <vector>
 
 struct BVHNode {
-  AABB aabb;
   uint32_t first_index;  // index of next node or list of objects in leaf
   uint32_t obj_count;    // number of objects in leaf
 
@@ -41,6 +44,8 @@ struct Split {
 class BVH {
 public:
   std::vector<BVHNode> nodes;
+  std::vector<std::array<float, 3>> BB_mins;
+  std::vector<std::array<float, 3>> BB_maxes;
   std::vector<size_t> obj_indices;  // indices pointing to original object list
 
 public:
@@ -78,8 +83,8 @@ public:
       return_variable = false;
     }
 
-    std::optional<float> bb_hit1;
-    std::optional<float> bb_hit2;
+    float bb_hit1;
+    float bb_hit2;
 
     if (BVH::nodes.size() == 0) {
       return return_variable;
@@ -90,16 +95,26 @@ public:
      * stack, no need to perform hit test again when popping the node (except root node)
      */
     auto& root_node = nodes[0];
+    float root_hit;
 
+#ifdef __AVX2__
+    __m256 ray_dir_inv
+        = _mm256_set_ps(1.f, 1.f, ray.dir.z, ray.dir.y, ray.dir.x, ray.dir.z, ray.dir.y, ray.dir.x);
+    ray_dir_inv = _mm256_rcp_ps(ray_dir_inv);
+
+    __m256 ray_o = _mm256_set_ps(0.f, 0.f, ray.o.z, ray.o.y, ray.o.x, ray.o.z, ray.o.y, ray.o.x);
+
+    ray_1aabb_slab(BB_mins[0].data(), BB_maxes[0].data(), ray_o, ray_dir_inv, ray, root_hit);
+#else
     glm::vec3 ray_inv_dir;
     ray_inv_dir[0] = 1.0f / ray.dir[0];
     ray_inv_dir[1] = 1.0f / ray.dir[1];
     ray_inv_dir[2] = 1.0f / ray.dir[2];
 
-    const std::array<bool, 3> dir_signs
-        = {std::signbit(ray.dir[0]), std::signbit(ray.dir[1]), std::signbit(ray.dir[2])};
+    slab_intersect_aabb_array(ray, ray_inv_dir, BB_mins[0], BB_maxes[0], root_hit);
+#endif
 
-    if (!root_node.aabb.intersect(ray, ray_inv_dir, dir_signs)) {
+    if (std::isinf(root_hit)) {
       if constexpr (std::is_same_v<T, std::optional<HitInfo>>) {
         return std::nullopt;
       } else if constexpr (std::is_same_v<T, uint32_t>) {
@@ -140,25 +155,32 @@ public:
         size_t first_child = node.first_index;
         size_t sec_child = node.first_index + 1;
 
-        bb_hit1 = nodes[first_child].aabb.intersect(ray, ray_inv_dir, dir_signs);
-        bb_hit2 = nodes[sec_child].aabb.intersect(ray, ray_inv_dir, dir_signs);
+#ifdef __AVX2__
+        ray_2aabb_slab(BB_mins[first_child].data(), BB_maxes[first_child].data(), ray_o,
+                       ray_dir_inv, ray, bb_hit1, bb_hit2);
+#else
+        slab_intersect_aabb_array(ray, ray_inv_dir, BB_mins[first_child], BB_maxes[first_child],
+                                  bb_hit1);
+        slab_intersect_aabb_array(ray, ray_inv_dir, BB_mins[sec_child], BB_maxes[sec_child],
+                                  bb_hit2);
+#endif
 
         if constexpr (std::is_same_v<T, bool>) {
           // don't care about order in hitcheck. as exit on first hit
-          if (bb_hit1) thread_stack.push_back(first_child);
-          if (bb_hit2) thread_stack.push_back(sec_child);
+          if (!std::isinf(bb_hit1)) thread_stack.push_back(first_child);
+          if (!std::isinf(bb_hit2)) thread_stack.push_back(sec_child);
         } else {
           // order by distance
-          if (bb_hit2) {
-            if (bb_hit1) {
+          if (!std::isinf(bb_hit2)) {
+            if (!std::isinf(bb_hit1)) {
               // both intersect. swap according to dist. push more distant bbox first
-              if (bb_hit2.value() > bb_hit1.value()) {
+              if (bb_hit2 > bb_hit1) {
                 std::swap(first_child, sec_child);
               }
               thread_stack.push_back(first_child);
             }
             thread_stack.push_back(sec_child);
-          } else if (bb_hit1) {
+          } else if (!std::isinf(bb_hit1)) {
             thread_stack.push_back(first_child);
           }  // else don't push any child node
         }

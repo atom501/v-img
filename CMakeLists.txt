@@ -38,6 +38,16 @@ CPMAddPackage(
 
 add_compile_definitions(GLM_ENABLE_EXPERIMENTAL)
 
+check_cxx_compiler_flag("/arch:AVX2" SUPPORTS_AVX2)
+if(SUPPORTS_AVX2)
+    message(STATUS "Compiler supports AVX2. Enabling AVX2.")
+    
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /arch:AVX2")
+else()
+    message(STATUS "Compiler does not support AVX2. AVX2 will not be enabled.")
+endif()
+
+
 CPMAddPackage(
   NAME glm
   GIT_TAG 1.0.1
