@@ -142,3 +142,23 @@ public:
       return std::nullopt;
   }
 };
+
+inline std::optional<float> slab_intersect_aabb_array(const Ray& ray, const glm::vec3& ray_inv_dir,
+                                                      const std::array<bool, 3>& dir_signs,
+                                                      const std::array<float, 3>& bb_min,
+                                                      const std::array<float, 3>& bb_max) {
+  glm::vec3 min_vec3 = glm::vec3(bb_min[0], bb_min[1], bb_min[2]);
+  glm::vec3 max_vec3 = glm::vec3(bb_max[0], bb_max[1], bb_max[2]);
+
+  glm::vec3 tLower = (min_vec3 - ray.o) * ray_inv_dir;
+  glm::vec3 tUpper = (max_vec3 - ray.o) * ray_inv_dir;
+  glm::vec4 tMins = glm::vec4(glm::min(tLower, tUpper), ray.minT);
+  glm::vec4 tMaxes = glm::vec4(glm::max(tLower, tUpper), ray.maxT);
+  float tBoxMin = std::max(tMins.x, std::max(tMins.y, std::max(tMins.z, tMins.w)));
+  float tBoxMax = std::min(tMaxes.x, std::min(tMaxes.y, std::min(tMaxes.z, tMaxes.w)));
+
+  if (tBoxMin <= tBoxMax)
+    return tBoxMin;
+  else
+    return std::nullopt;
+}

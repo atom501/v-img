@@ -16,7 +16,7 @@ static size_t bin_index(uint8_t axis, const AABB& bbox, const glm::vec3& center,
 // get best split on all axis
 Split get_best_split(const BVHNode& node, const std::vector<size_t>& obj_indices,
                      const std::vector<AABB>& bboxes, const std::vector<glm::vec3>& centers,
-                     const size_t num_bins) {
+                     const size_t num_bins, const AABB& aabb) {
   Split best_split = {std::numeric_limits<size_t>::max(), std::numeric_limits<float>::max(), 0};
 
   // temp bin for initialisation
@@ -30,7 +30,7 @@ Split get_best_split(const BVHNode& node, const std::vector<size_t>& obj_indices
     // filling bins
     for (size_t i = 0; i < node.obj_count; i++) {
       auto obj_index = obj_indices[node.first_index + i];
-      auto& bin = bins[bin_index(axis, node.aabb, centers[obj_index], num_bins)];
+      auto& bin = bins[bin_index(axis, aabb, centers[obj_index], num_bins)];
       bin.aabb.extend(bboxes[obj_index]);
       bin.obj_count++;
     }
@@ -77,18 +77,26 @@ static void build_recursive(BVH& bvh, size_t node_index, std::atomic<size_t>& no
                             const std::vector<AABB>& bboxes, const std::vector<glm::vec3>& centers,
                             const size_t num_bins) {
   auto& curr_node = bvh.nodes[node_index];
-
-  curr_node.aabb = bboxes[bvh.obj_indices[curr_node.first_index]];
+  AABB curr_node_aabb = bboxes[bvh.obj_indices[curr_node.first_index]];
   // set the AABB of current node
   for (size_t i = 1; i < curr_node.obj_count; ++i)
-    curr_node.aabb.extend(bboxes[bvh.obj_indices[curr_node.first_index + i]]);
+    curr_node_aabb.extend(bboxes[bvh.obj_indices[curr_node.first_index + i]]);
 
-  Split best_split = get_best_split(curr_node, bvh.obj_indices, bboxes, centers, num_bins);
+  bvh.BB_mins[node_index][0] = curr_node_aabb.bboxes[0].x;
+  bvh.BB_mins[node_index][1] = curr_node_aabb.bboxes[0].y;
+  bvh.BB_mins[node_index][2] = curr_node_aabb.bboxes[0].z;
+
+  bvh.BB_maxes[node_index][0] = curr_node_aabb.bboxes[1].x;
+  bvh.BB_maxes[node_index][1] = curr_node_aabb.bboxes[1].y;
+  bvh.BB_maxes[node_index][2] = curr_node_aabb.bboxes[1].z;
+
+  Split best_split
+      = get_best_split(curr_node, bvh.obj_indices, bboxes, centers, num_bins, curr_node_aabb);
 
   // use the best_split
 
   float curr_leaf_cost
-      = curr_node.aabb.half_SA() * (curr_node.obj_count - 1);  // TODO change 1 to be configurable
+      = curr_node_aabb.half_SA() * (curr_node.obj_count - 1);  // TODO change 1 to be configurable
 
   size_t first_right;  // Index of the first primitive in the right child
 
@@ -97,7 +105,7 @@ static void build_recursive(BVH& bvh, size_t node_index, std::atomic<size_t>& no
       || best_split.cost >= curr_leaf_cost) {
     if (curr_node.obj_count > 8) {  // TODO change max prim to be configurable
       // use the median split if many primitives
-      uint8_t axis = curr_node.aabb.largest_axis();
+      uint8_t axis = curr_node_aabb.largest_axis();
 
       std::sort(bvh.obj_indices.begin() + curr_node.first_index,
                 bvh.obj_indices.begin() + curr_node.first_index + curr_node.obj_count,
@@ -115,7 +123,7 @@ static void build_recursive(BVH& bvh, size_t node_index, std::atomic<size_t>& no
         = std::partition(bvh.obj_indices.begin() + curr_node.first_index,
                          bvh.obj_indices.begin() + curr_node.first_index + curr_node.obj_count,
                          [&](size_t i) {
-                           return bin_index(best_split.axis, curr_node.aabb, centers[i], num_bins)
+                           return bin_index(best_split.axis, curr_node_aabb, centers[i], num_bins)
                                   < best_split.bin_split;
                          })
           - bvh.obj_indices.begin();
@@ -159,6 +167,9 @@ BVH BVH::build(const std::vector<AABB>& bboxes, const std::vector<glm::vec3>& ce
 
     // resize to maximum nodes possible
     bvh.nodes.resize(2 * obj_count - 1);
+    bvh.BB_mins.resize(2 * obj_count - 1);
+    bvh.BB_maxes.resize(2 * obj_count - 1);
+
     bvh.nodes[0].obj_count = obj_count;
     bvh.nodes[0].first_index = 0;
 
@@ -167,6 +178,8 @@ BVH BVH::build(const std::vector<AABB>& bboxes, const std::vector<glm::vec3>& ce
     build_recursive(bvh, 0, node_count, bboxes, centers, num_bins);
 
     bvh.nodes.resize(node_count);
+    bvh.BB_mins.resize(node_count);
+    bvh.BB_maxes.resize(node_count);
   }
 
   return bvh;

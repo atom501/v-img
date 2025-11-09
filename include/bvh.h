@@ -10,7 +10,6 @@
 #include <vector>
 
 struct BVHNode {
-  AABB aabb;
   uint32_t first_index;  // index of next node or list of objects in leaf
   uint32_t obj_count;    // number of objects in leaf
 
@@ -41,6 +40,8 @@ struct Split {
 class BVH {
 public:
   std::vector<BVHNode> nodes;
+  std::vector<std::array<float, 3>> BB_mins;
+  std::vector<std::array<float, 3>> BB_maxes;
   std::vector<size_t> obj_indices;  // indices pointing to original object list
 
 public:
@@ -99,7 +100,7 @@ public:
     const std::array<bool, 3> dir_signs
         = {std::signbit(ray.dir[0]), std::signbit(ray.dir[1]), std::signbit(ray.dir[2])};
 
-    if (!root_node.aabb.intersect(ray, ray_inv_dir, dir_signs)) {
+    if (!slab_intersect_aabb_array(ray, ray_inv_dir, dir_signs, BB_mins[0], BB_maxes[0])) {
       if constexpr (std::is_same_v<T, std::optional<HitInfo>>) {
         return std::nullopt;
       } else if constexpr (std::is_same_v<T, uint32_t>) {
@@ -140,8 +141,10 @@ public:
         size_t first_child = node.first_index;
         size_t sec_child = node.first_index + 1;
 
-        bb_hit1 = nodes[first_child].aabb.intersect(ray, ray_inv_dir, dir_signs);
-        bb_hit2 = nodes[sec_child].aabb.intersect(ray, ray_inv_dir, dir_signs);
+        bb_hit1 = slab_intersect_aabb_array(ray, ray_inv_dir, dir_signs, BB_mins[first_child],
+                                            BB_maxes[first_child]);
+        bb_hit2 = slab_intersect_aabb_array(ray, ray_inv_dir, dir_signs, BB_mins[sec_child],
+                                            BB_maxes[sec_child]);
 
         if constexpr (std::is_same_v<T, bool>) {
           // don't care about order in hitcheck. as exit on first hit
