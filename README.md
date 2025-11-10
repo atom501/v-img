@@ -2,30 +2,51 @@
 
 A toy ray tracer written in C++. For now only uses the CPU. The project was setup using the [ModernCppStarter](https://github.com/TheLartians/ModernCppStarter) template.
 
-## Implemented Features
+## Features
+-  **Performance**
+    - Using AVX2 simd intrinsics to intersect 2 sibling AABB with 1 ray at once
+    - SAH BVH with multi-threaded construction
+    - Multi-importance sampling for better render quality
 
-- Multi threaded
-- BVH with SAH
-- Material sampling and Multi-importance sampling
-- Scene loading. Currently from JSON files in scenes folder
+- **Materials**
+    - Disney BSDF for variety of materials
+    - Lambertian
+    - Glass
 
-## Future Features
-- More sampling options 
-- Support more materials
-- Moving to GPU
-- Volumetric rendering
-- Subsurface scattering
+- **Textures**
+    - HDR Environment Map with importance sampling
+    - Image textures
+    - Trilinear Texture filtering, picking texture level of detail using Ray Cones
 
+- **Camera**
+    - Using R2 sequence for per pixel sampling
+    - Thin lens depth of field
+
+- **Scene format**
+    - gltf
+    - json
+    - limited mitsuba scene support
+    
 ## Usage
 
 ### Build
 
 Use the following command to build the executable.
 
+On Windows
 ```bash
 cmake --build build --config Release --target v-img
 ```
-So far only tested on Windows 10. Code is standard C++ so shouldn't cause issues in other OS, but haven't tested yet.
+
+On Linux
+```bash
+mkdir build
+cd build
+cmake -DCMAKE_BUILD_TYPE=Release ..
+make
+```
+
+Code has been tested on Linux and Windows, x86 machine.
 
 ### Render scenes
 
