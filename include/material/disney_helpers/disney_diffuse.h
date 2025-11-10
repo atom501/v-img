@@ -68,3 +68,37 @@ inline std::optional<ScatterInfo> sample_disney_diffuse(const glm::vec3& dir_in,
     return ScatterInfo{dir_out, 0.f};
   }
 }
+
+inline std::pair<glm::vec3, float> eval_pdf_disney_diffuse(const glm::vec3& dir_in,
+                                                           const glm::vec3& dir_out,
+                                                           const HitInfo& hit,
+                                                           const glm::vec3& base_col,
+                                                           float subsurface, float roughness,
+                                                           glm::vec3 half_vec, ONB normal_frame) {
+  if (glm::dot(hit.hit_n_g, dir_in) < 0 || glm::dot(hit.hit_n_g, dir_out) < 0) {
+    // No light below the surface
+    return std::make_pair(glm::vec3{0.f, 0.f, 0.f}, 0.f);
+  }
+
+  float normal_dirout_dot = glm::dot(normal_frame.w, dir_out);
+
+  const float cos_theta_out = std::max(normal_dirout_dot, 0.f);
+  const float cos_theta_in = std::max(glm::dot(normal_frame.w, dir_in), 0.f);
+  const float dot_h_out = std::max(glm::dot(half_vec, dir_out), 0.f);
+  const float FD_90 = 0.5 + 2.0 * roughness * dot_h_out * dot_h_out;
+
+  const glm::vec3 base_diffuse = base_col * std::numbers::inv_pi_v<float>
+                                 * FD(normal_frame.w, dir_in, FD_90)
+                                 * FD(normal_frame.w, dir_out, FD_90) * cos_theta_out;
+
+  const float FSS_90 = roughness * dot_h_out * dot_h_out;
+
+  glm::vec3 ss_diffuse = base_col * 1.25f * std::numbers::inv_pi_v<float>
+                         * (FD(normal_frame.w, dir_in, FSS_90) * FD(normal_frame.w, dir_out, FSS_90)
+                                * ((1.f / (cos_theta_out + cos_theta_in)) - 0.5f)
+                            + 0.5f)
+                         * cos_theta_out;
+
+  return std::make_pair((1.f - subsurface) * base_diffuse + subsurface * ss_diffuse,
+                        std::max(normal_dirout_dot, 0.f) * std::numbers::inv_pi_v<float>);
+}

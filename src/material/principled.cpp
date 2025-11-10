@@ -1,8 +1,3 @@
-#include <material/disney_helpers/disney_clearcoat.h>
-#include <material/disney_helpers/disney_diffuse.h>
-#include <material/disney_helpers/disney_glass.h>
-#include <material/disney_helpers/disney_metal.h>
-#include <material/disney_helpers/disney_sheen.h>
 #include <material/principled.h>
 
 std::optional<ScatterInfo> Principled::sample_mat(const glm::vec3& wi, const HitInfo& hit,
@@ -131,13 +126,11 @@ float Principled::pdf(const glm::vec3& wi, const glm::vec3& wo, const HitInfo& h
 
 glm::vec3 Principled::eval_div_pdf(const glm::vec3& wi, const glm::vec3& wo, const HitInfo& hit,
                                    const RayCone& cone) const {
-  // TODO optimize
-  return eval(wi, wo, hit, cone) / pdf(wi, wo, hit);
+  return eval_pdf<glm::vec3>(wi, wo, hit, cone);
 }
 
 std::pair<glm::vec3, float> Principled::eval_pdf_pair(const glm::vec3& wi, const glm::vec3& wo,
                                                       const HitInfo& hit,
                                                       const RayCone& cone) const {
-  // TODO optimize
-  return std::make_pair<glm::vec3, float>(eval(wi, wo, hit, cone), pdf(wi, wo, hit));
+  return eval_pdf<std::pair<glm::vec3, float>>(wi, wo, hit, cone);
 }

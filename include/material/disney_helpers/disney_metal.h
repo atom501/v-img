@@ -109,3 +109,38 @@ inline std::optional<ScatterInfo> sample_disney_metal(const glm::vec3& dir_in, c
     return ScatterInfo{reflected, 0.f};
   }
 }
+
+inline std::pair<glm::vec3, float> eval_pdf_disney_metal(
+    const glm::vec3& dir_in, const glm::vec3& dir_out, const HitInfo& hit,
+    const glm::vec3& base_col, float spec_tint, float specular, float eta, float metallic,
+    glm::vec3 half_vec, ONB normal_frame, const float G, const float G_in, const float alphax,
+    const float alphay) {
+  if (dot(hit.hit_n_g, dir_in) < 0 || dot(hit.hit_n_g, dir_out) < 0) {
+    return std::make_pair(glm::vec3{0.f, 0.f, 0.f}, 0.f);
+  }
+
+  glm::vec3 eval = glm::vec3(0.f);
+  float pdf = 0.f;
+
+  float base_lum = luminance(base_col);
+  glm::vec3 C_tint = base_lum > 0 ? base_col / base_lum : glm::vec3(1.f);
+  glm::vec3 K_s = (glm::vec3(1.f) - glm::vec3(spec_tint)) + spec_tint * C_tint;
+  float R0 = ((eta - 1.f) * (eta - 1.f)) / ((eta + 1.f) * (eta + 1.f));
+
+  glm::vec3 C_0 = (specular * R0 * (1.f - metallic)) * K_s + metallic * base_col;
+
+  glm::vec3 Fresnel
+      = C_0 + (glm::vec3(1.f) - C_0) * std::pow((1.f - glm::dot(half_vec, dir_out)), 5.f);
+
+  const glm::vec3 local_H = project_onto_onb(normal_frame, half_vec);
+
+  float h_alpha_denominator = (local_H.x * local_H.x) / (alphax * alphax)
+                              + (local_H.y * local_H.y) / (alphay * alphay)
+                              + (local_H.z * local_H.z);
+
+  float D = 1. / (std::numbers::pi * alphax * alphay * (h_alpha_denominator * h_alpha_denominator));
+
+  float D_mul_denominator = D / (4.f * std::abs(glm::dot(normal_frame.w, dir_in)));
+
+  return std::make_pair(Fresnel * G * D_mul_denominator, G_in * D_mul_denominator);
+}

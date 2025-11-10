@@ -100,3 +100,36 @@ inline std::optional<ScatterInfo> sample_disney_clearcoat(const glm::vec3& dir_i
     return ScatterInfo{reflected, 0};
   }
 }
+
+inline std::pair<glm::vec3, float> eval_pdf_disney_clearcoat(
+    const glm::vec3& dir_in, const glm::vec3& dir_out, const HitInfo& hit,
+    const glm::vec3& base_col, float clearcoat_gloss, const glm::vec3& half_vec, ONB normal_frame) {
+  if (glm::dot(hit.hit_n_g, dir_in) < 0 || glm::dot(hit.hit_n_g, dir_out) < 0) {
+    // No light below the surface
+    return std::make_pair(glm::vec3{0.f, 0.f, 0.f}, 0.f);
+  }
+
+  // index refraction with ior 1.5 fixed
+  constexpr float R0 = ((1.5f - 1.f) * (1.5f - 1.f)) / ((1.5f + 1.f) * (1.5f + 1.f));
+
+  float h_dirout_dot = std::abs(glm::dot(half_vec, dir_out));
+
+  float Fresenl = R0 + (1. - R0) * std::pow(1.f - h_dirout_dot, 5.f);
+
+  float G = G_w(dir_in, 0.25, 0.25, normal_frame) * G_w(dir_out, 0.25, 0.25, normal_frame);
+
+  const float alpha_g = (1.f - clearcoat_gloss) * 0.1f + clearcoat_gloss * 0.001f;
+  const float alpha_g_square = alpha_g * alpha_g;
+
+  const glm::vec3 local_H = project_onto_onb(normal_frame, half_vec);
+
+  float D = (alpha_g_square - 1.f)
+            / (std::numbers::pi * std::log(alpha_g_square)
+               * (1. + (alpha_g_square - 1.) * local_H.z * local_H.z));
+
+  float clearcoat_eval = (Fresenl * D * G) / (4.f * std::abs(glm::dot(normal_frame.w, dir_in)));
+
+  float pdf = (D * std::abs(glm::dot(normal_frame.w, half_vec))) / (4.f * h_dirout_dot);
+
+  return std::make_pair(glm::vec3(clearcoat_eval), pdf);
+}
