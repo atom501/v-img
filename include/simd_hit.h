@@ -37,12 +37,12 @@ inline float horizontal_min_128(const __m128& x) {
 inline void ray_1aabb_slab(const float* mins, const float* maxs, const __m256& ray_o,
                            const __m256& ray_dir_inv, const Ray& r, float& t1) {
   // (bboxes_mins - ray.origin) * invRayDir
-  __m128 bbox_min_vals = _mm_load_ps(mins);
+  __m128 bbox_min_vals = _mm_loadu_ps(mins);
   bbox_min_vals = _mm_mul_ps(_mm_sub_ps(bbox_min_vals, _mm256_castps256_ps128(ray_o)),
                              _mm256_castps256_ps128(ray_dir_inv));
 
   // (bboxes_maxes - ray.origin) * invRayDir
-  __m128 bbox_max_vals = _mm_load_ps(maxs);
+  __m128 bbox_max_vals = _mm_loadu_ps(maxs);
   bbox_max_vals = _mm_mul_ps(_mm_sub_ps(bbox_max_vals, _mm256_castps256_ps128(ray_o)),
                              _mm256_castps256_ps128(ray_dir_inv));
 
@@ -73,11 +73,11 @@ inline void ray_1aabb_slab(const float* mins, const float* maxs, const __m256& r
 inline void ray_2aabb_slab(const float* mins, const float* maxs, const __m256& ray_o,
                            const __m256& ray_dir_inv, const Ray& r, float& t1, float& t2) {
   // (bboxes_mins - ray.origin) * invRayDir
-  __m256 bbox_min_vals = _mm256_load_ps(mins);
+  __m256 bbox_min_vals = _mm256_loadu_ps(mins);
   bbox_min_vals = _mm256_mul_ps(_mm256_sub_ps(bbox_min_vals, ray_o), ray_dir_inv);
 
   // (bboxes_maxes - ray.origin) * invRayDir
-  __m256 bbox_max_vals = _mm256_load_ps(maxs);
+  __m256 bbox_max_vals = _mm256_loadu_ps(maxs);
   bbox_max_vals = _mm256_mul_ps(_mm256_sub_ps(bbox_max_vals, ray_o), ray_dir_inv);
 
   // element wise min and max, equivalent of tMins and tMaxes
