@@ -38,13 +38,24 @@ CPMAddPackage(
 
 add_compile_definitions(GLM_ENABLE_EXPERIMENTAL)
 
-check_cxx_compiler_flag("/arch:AVX2" SUPPORTS_AVX2)
-if(SUPPORTS_AVX2)
-    message(STATUS "Compiler supports AVX2. Enabling AVX2.")
-    
+if (MSVC)
+  check_cxx_compiler_flag("/arch:AVX2" SUPPORTS_AVX2)
+  if(SUPPORTS_AVX2)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /arch:AVX2")
-else()
-    message(STATUS "Compiler does not support AVX2. AVX2 will not be enabled.")
+  endif()
+
+  if(SUPPORTS_AVX2)
+    message(STATUS "MSVC Compiler supports AVX2. Enabling AVX2.")
+  else()
+    message(STATUS "MSVC Compiler does not support AVX2. AVX2 will not be enabled.")
+  endif()
+
+elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
+  message(STATUS "Clang -march=native set")
+elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
+  message(STATUS "GCC -march=native set")
 endif()
 
 
