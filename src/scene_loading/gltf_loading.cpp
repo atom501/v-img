@@ -144,6 +144,7 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
       const auto& val = extra_settings["background"];
       integrator_data.background = std::make_unique<ConstBackground>(
           ConstBackground(extra_settings["background"].template get<glm::vec3>()));
+      list_lights.push_back(static_cast<ConstBackground*>(integrator_data.background.get()));
     } else {
       std::filesystem::path env_filepath = extra_settings["background"];
       // read exr file

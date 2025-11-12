@@ -103,7 +103,7 @@ inline std::optional<ScatterInfo> sample_disney_metal(const glm::vec3& dir_in, c
   // Reflect over the world space normal
   glm::vec3 reflected = normalize(-dir_in + 2 * dot(dir_in, half_vector) * half_vector);
 
-  if (glm::dot(reflected, hit.hit_n_g) < 0) {
+  if (glm::dot(reflected, hit.hit_n_g) <= 0) {
     return std::nullopt;
   } else {
     return ScatterInfo{reflected, 0.f};

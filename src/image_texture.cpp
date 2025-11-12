@@ -128,7 +128,8 @@ glm::vec3 ImageTexture::col_at_uv(const glm::vec3& ray_in_dir, const RayCone& co
   float lambda = compute_texture_LOD(ray_in_dir, cone, surf_hit) - 2.f;
   lambda = std::clamp(lambda, 0.f, static_cast<float>(mipmap.size() - 1));
 
-  int mipmap_level0 = std::floor(lambda);
+  int mipmap_level0 = std::clamp(static_cast<int>(std::floor(lambda)), static_cast<int>(0),
+                                 static_cast<int>(mipmap.size() - 1));
   int mipmap_level1
       = std::clamp(mipmap_level0 + 1, static_cast<int>(0), static_cast<int>(mipmap.size() - 1));
 

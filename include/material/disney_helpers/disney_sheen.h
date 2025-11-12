@@ -39,7 +39,7 @@ inline std::optional<ScatterInfo> sample_disney_sheen(const glm::vec3& dir_in, c
 inline std::pair<glm::vec3, float> eval_pdf_disney_sheen(
     const glm::vec3& dir_in, const glm::vec3& dir_out, const HitInfo& hit,
     const glm::vec3& base_col, float sheen_tint, glm::vec3 half_vec, ONB normal_frame) {
-  if (glm::dot(hit.hit_n_g, dir_in) < 0 || glm::dot(hit.hit_n_g, dir_out) < 0) {
+  if (glm::dot(hit.hit_n_g, dir_in) <= 0 || glm::dot(hit.hit_n_g, dir_out) <= 0) {
     // No light below the surface
     return std::make_pair(glm::vec3{0.f, 0.f, 0.f}, 0.f);
   }

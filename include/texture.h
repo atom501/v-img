@@ -83,7 +83,12 @@ private:
     float lambda = 0.5f * std::log2((surf.tex_coord_area) / surf.primitive_area);
     lambda += std::log2(std::abs(cone.cone_width) / std::abs(glm::dot(ray_dir, surf.hit_n_g)));
     lambda += 0.5f * log2(width * height);
-    return lambda;
+
+    if (std::isnan(lambda)) {
+      return 0.f;
+    } else {
+      return lambda;
+    }
   }
 
   // return color for uv on given mipmap level. applies bilinear filtering

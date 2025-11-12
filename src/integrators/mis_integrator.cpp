@@ -99,12 +99,19 @@ glm::vec3 mis_integrator(Ray& input_ray, std::vector<size_t>& thread_stack, cons
           = propagate_reflect_cone(test_ray.ray_cone, surface_spread_angle * 2.f, hit_dist);
     }
 
-    float mat_sample_pdf
-        = hit.value().mat->pdf(test_ray.dir, scattered_mat.value().wo, hit.value());
+    const auto [mat_sample_eval, mat_sample_pdf] = hit.value().mat->eval_pdf_pair(
+        test_ray.dir, scattered_mat.value().wo, hit.value(), test_ray.ray_cone);
+
+    if (std::isnan(mat_sample_pdf)) {
+      /**
+       * to avoid very rare case of dir_in being perpendicular to shading normal but not geometry
+       * normal. disable this to avoid nan suppression for debugging
+       */
+      return bounce_result;
+    }
 
     // material sampling
-    throughput *= hit.value().mat->eval_div_pdf(test_ray.dir, scattered_mat.value().wo, hit.value(),
-                                                test_ray.ray_cone);
+    throughput *= (mat_sample_eval / mat_sample_pdf);
 
     // where light goes after hitting object
     Ray direct_light_ray = Ray(hit.value().hit_p, scattered_mat.value().wo, test_ray.ray_cone);
