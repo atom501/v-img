@@ -2,53 +2,87 @@
 
 A toy ray tracer written in C++. For now only uses the CPU. The project was setup using the [ModernCppStarter](https://github.com/TheLartians/ModernCppStarter) template.
 
-## Implemented Features
+## Features
+-  **Performance**
+    - Using AVX2 simd intrinsics to intersect 2 sibling AABB with 1 ray at once
+    - SAH BVH with multi-threaded construction
+    - Multi-importance sampling for better render quality
+    - Russian roulette to stop paths with low contribution
 
-- Multi threaded
-- BVH with SAH
-- Material sampling and Multi-importance sampling
-- Scene loading. Currently from JSON files in scenes folder
+- **Materials**
+    - Disney BSDF for variety of materials
+    - Lambertian
+    - Glass
 
-## Future Features
-- More sampling options 
-- Support more materials
-- Moving to GPU
-- Volumetric rendering
-- Subsurface scattering
+- **Textures**
+    - HDR Environment Map with importance sampling
+    - Image textures
+    - Trilinear Texture filtering, picking texture level of detail using Ray Cones
 
+- **Camera**
+    - Using R2 sequence for per pixel sampling
+    - Thin lens depth of field
+
+- **Scene formats**
+    - gltf/glb
+    - json
+    - limited mitsuba scene support
+    
 ## Usage
 
 ### Build
 
 Use the following command to build the executable.
 
+#### On Windows
+Create folder called build and open the project root directory in Developer Command Prompt for VS. Then run commands
 ```bash
+cmake -S . -B Build
 cmake --build build --config Release --target v-img
 ```
-So far only tested on Windows 10. Code is standard C++ so shouldn't cause issues in other OS, but haven't tested yet.
+
+#### On Linux
+```bash
+mkdir build
+cd build
+cmake -DCMAKE_BUILD_TYPE=Release ..
+make
+```
+
+Code has been tested on Linux and Windows, x86 machine with AVX2 supported CPU.
 
 ### Render scenes
+gltf/glb scenes can be downloaded separately from here, [link](https://drive.google.com/drive/folders/1oGOL7pHzUzGY0wZgyGapAFy9W-ujGjQx?usp=sharing). They are not included in the repo to avoid large files.
 
-Use the following commands from the project's root directory to run the test suite.
+Use the following command from the project's root directory to render the scenes.
 
 ```bash
-./v_img <path to a scene json file>
+./v-img -f <file_name>
 ```
 For example
 ```bash
-./v_img \scenes\empty_box.json
+./v-img -f ./scenes/glass_in_box.json
+```
+For gltf/glb files, extra parameters for rendering are included in a json file. Command for rendering them is:
+```
+./v-img -f <gltf/glb file> -j < companion json file>
 ```
 
-Possible integrators that can be set in scene file are "normal", "material" and "mis".
+Integrators that can be set in scene file are "normal", "material" and "mis".
 
 ### Sample renders
-All renders were done on a AMD Ryzen 7 4700U. Image resolution was set 800 by 800 pixels.
+All renders were done on a AMD Ryzen 7 7700, on Linux compiled with gcc.
 
-Sphere rendered with Material sampling. 200 samples per pixel and 64 max depth. Render time 43 sec and 145 ms
-![Alt text](/renders/sphere_mat.png?raw=true "Sphere mat render 200 samples per pixel and 64 max depth")
+Samples per pixel set to 512, max ray depth set to infinite so relying on Russian roulette for stopping a path and AgX tonemapper on the result image. 
 
-Sphere rendered with Multi-importance sampling. 100 samples per pixel and 64 max depth. Render time 50 sec and 690 ms
-![Alt text](/renders/sphere_mis.png?raw=true "Sphere mis render 100 samples per pixel and 64 max depth")
+Spheres rendered with Multi-importance sampling. Resolution 1800 x 800. Render time: 1m 19s
+![Alt text](/renders/disney_spheres_agx_512.png?raw=true "Spheres with Disney BSDF. Rendered at 512 samples per pixel")
 
-Sphere rendered with Material sampling for reference. 5000 samples per pixel and 64 max depth. Render time 20 min, 22 sec and 343 ms
-![Alt text](/renders/sphere_ref.png?raw=true "Sphere mat reference render. 5000 samples per pixel and 64 max depth")
+Mitsuba matpreview rendered with Multi-importance sampling, to show a variety of materials supported by Disney BSDF. Render time: 6m 16s
+![Alt text](/renders/disney_arr_agx_512.png?raw=true "Mitsuba matpreview with Disney BSDF. Rendered at 512 samples per pixel")
+
+Lego glb model rendered. Render time: 2m 30s
+![Alt text](/renders/gandalf_lego_agx_512.png?raw=true "Lego minifigure. Rendered at 512 samples per pixel")
+
+Ajax and Roza statues with HDRI background. Showing off camera depth of field. Render time: 1m 32s
+![Alt text](/renders/statues_dof_agx_512.png?raw=true "Ajax and Roza statues with HDRI background, focus on Roza. Rendered at 512 samples per pixel")
