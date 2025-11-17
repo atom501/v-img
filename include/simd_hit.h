@@ -67,70 +67,86 @@ inline void ray_1aabb_slab(const float* mins, const float* maxs, const __m256& r
     t1 = std::numeric_limits<float>::infinity();
 }
 
+// insert value x at position 3 and 7
+inline __m256 insert_float_min_max(__m256 v, float x) {
+  __m256 min_max_broadcast = _mm256_set1_ps(x);
+  return _mm256_blend_ps(v, min_max_broadcast, 0b10001000);
+}
+
+/*
+ * input (x1, y1, z1, minT, x2, y2, z2, minT). returns max(x1, y1, z1, minT),
+ * max(x2, y2, z2, minT)
+ */
+inline std::pair<float, float> horizontal_max_128_lane(__m256 x) {
+  // shuffle each lane to (z, minT, x, x)
+  __m256 shuffle1 = _mm256_shuffle_ps(x, x, _MM_SHUFFLE(0, 0, 3, 2));
+
+  // each lane result (max(x,z), max(y, t), max(x, z), max(x,t))
+  __m256 max1 = _mm256_max_ps(x, shuffle1);
+
+  // each lane let max1 ( m0, m1, m2, m3 ). then shuffle2 is (m1, m0, m0, m0)
+  __m256 shuffle2 = _mm256_shuffle_ps(max1, max1, _MM_SHUFFLE(0, 0, 0, 1));
+
+  // each lane's least significant element will be max(m0, m1). i.e max(max(x,z), max(y, t))
+  __m256 max2 = _mm256_max_ps(max1, shuffle2);
+
+  // get max for ray 1
+  float tBoxMin1 = _mm256_cvtss_f32(max2);
+  // get max for ray 2
+  float tBoxMin2 = _mm_cvtss_f32(_mm256_extractf128_ps(max2, 1));
+
+  return std::make_pair(tBoxMin1, tBoxMin2);
+}
+
+/*
+ * input (x1, y1, z1, maxT, x2, y2, z2, maxT). returns min(x1, y1, z1, maxT),
+ * min(x2, y2, z2, maxT)
+ * same logic as horizontal_max_128_lane just using min operations
+ */
+inline std::pair<float, float> horizontal_min_128_lane(__m256 x) {
+  __m256 shuffle1 = _mm256_shuffle_ps(x, x, _MM_SHUFFLE(0, 0, 3, 2));
+  __m256 min1 = _mm256_min_ps(x, shuffle1);
+  __m256 shuffle2 = _mm256_shuffle_ps(min1, min1, _MM_SHUFFLE(0, 0, 0, 1));
+  __m256 min2 = _mm256_min_ps(min1, shuffle2);
+
+  float tBoxMax1 = _mm256_cvtss_f32(min2);
+  float tBoxMax2 = _mm_cvtss_f32(_mm256_extractf128_ps(min2, 1));
+
+  return std::make_pair(tBoxMax1, tBoxMax2);
+}
+
 // aabb mins and maxes are given array of floats. Result is given in t1 and t2
 // used slab_intersect_aabb_array function as basis for simd
 // same function as ray_1aabb_slab but loads both sibling AABBs
 inline void ray_2aabb_slab(const float* mins, const float* maxs, const __m256& ray_o,
                            const __m256& ray_dir_inv, const Ray& r, float& t1, float& t2) {
   // (bboxes_mins - ray.origin) * invRayDir
-  __m256 bbox_min_vals = _mm256_loadu_ps(mins);
+  __m256 bbox_min_vals = _mm256_load_ps(mins);
+  bbox_min_vals = _mm256_permutevar8x32_ps(bbox_min_vals, _mm256_set_epi32(6, 5, 4, 3, 7, 2, 1, 0));
+
   bbox_min_vals = _mm256_mul_ps(_mm256_sub_ps(bbox_min_vals, ray_o), ray_dir_inv);
 
   // (bboxes_maxes - ray.origin) * invRayDir
-  __m256 bbox_max_vals = _mm256_loadu_ps(maxs);
+  __m256 bbox_max_vals = _mm256_load_ps(maxs);
+  bbox_max_vals = _mm256_permutevar8x32_ps(bbox_max_vals, _mm256_set_epi32(6, 5, 4, 3, 7, 2, 1, 0));
+
   bbox_max_vals = _mm256_mul_ps(_mm256_sub_ps(bbox_max_vals, ray_o), ray_dir_inv);
 
   // element wise min and max, equivalent of tMins and tMaxes
   __m256 min_elements = _mm256_min_ps(bbox_min_vals, bbox_max_vals);
   __m256 max_elements = _mm256_max_ps(bbox_min_vals, bbox_max_vals);
 
-  // get tBoxMin for AABB 1
-  // ******************************
-  // lower 128 bits for AABB 1
-  __m128 part = _mm256_castps256_ps128(min_elements);
+  // insert minT to min_elements
+  min_elements = insert_float_min_max(min_elements, r.minT);
 
-  // overwrite upper most value with r.minT. as that contains x value for ray 2
-  __m128 ray_limit_val = _mm_set_ss(r.minT);
-  __m128 min_max_op = _mm_insert_ps(part, ray_limit_val, 0b00'11'00'00);
+  // get tBoxMin for ray 1 and 2
+  auto [tBoxMin1, tBoxMin2] = horizontal_max_128_lane(min_elements);
 
-  float tBoxMin1 = horizontal_max_128(min_max_op);
-  // ******************************
+  // insert minT to min_elements
+  max_elements = insert_float_min_max(max_elements, r.maxT);
 
-  // get tBoxMin for AABB 2
-  // ******************************
-  // move floats at 3, 4, 5 to position 0, 1, 2
-  min_elements = _mm256_permutevar8x32_ps(min_elements, _mm256_set_epi32(5, 5, 5, 5, 5, 5, 4, 3));
-
-  // overwrite upper most value with r.minT
-  part = _mm256_castps256_ps128(min_elements);
-  min_max_op = _mm_insert_ps(part, ray_limit_val, 0b00'11'00'00);
-
-  float tBoxMin2 = horizontal_max_128(min_max_op);
-  // ******************************
-
-  // get tBoxMax for AABB 1
-  // ******************************
-  // lower 128 bits for AABB 1
-  part = _mm256_castps256_ps128(max_elements);
-
-  // overwrite upper most value with r.maxT
-  ray_limit_val = _mm_set_ss(r.maxT);
-  min_max_op = _mm_insert_ps(part, ray_limit_val, 0b00'11'00'00);
-
-  float tBoxMax1 = horizontal_min_128(min_max_op);
-  // ******************************
-
-  // get tBoxMax for AABB 2
-  // ******************************
-  // move floats at 3, 4, 5 to position 0, 1, 2
-  max_elements = _mm256_permutevar8x32_ps(max_elements, _mm256_set_epi32(5, 5, 5, 5, 5, 5, 4, 3));
-
-  // overwrite upper most value with r.maxT
-  part = _mm256_castps256_ps128(max_elements);
-  min_max_op = _mm_insert_ps(part, ray_limit_val, 0b00'11'00'00);
-  // ******************************
-
-  float tBoxMax2 = horizontal_min_128(min_max_op);
+  // get tBoxMin for ray 1 and 2
+  auto [tBoxMax1, tBoxMax2] = horizontal_min_128_lane(max_elements);
 
   if (tBoxMin1 <= tBoxMax1)
     t1 = tBoxMin1;

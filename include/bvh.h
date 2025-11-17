@@ -99,10 +99,10 @@ public:
 
 #ifdef __AVX2__
     __m256 ray_dir_inv
-        = _mm256_set_ps(1.f, 1.f, ray.dir.z, ray.dir.y, ray.dir.x, ray.dir.z, ray.dir.y, ray.dir.x);
+        = _mm256_set_ps(1.f, ray.dir.z, ray.dir.y, ray.dir.x, 1.f, ray.dir.z, ray.dir.y, ray.dir.x);
     ray_dir_inv = _mm256_rcp_ps(ray_dir_inv);
 
-    __m256 ray_o = _mm256_set_ps(0.f, 0.f, ray.o.z, ray.o.y, ray.o.x, ray.o.z, ray.o.y, ray.o.x);
+    __m256 ray_o = _mm256_set_ps(0.f, ray.o.z, ray.o.y, ray.o.x, 0.f, ray.o.z, ray.o.y, ray.o.x);
 
     ray_1aabb_slab(BB_mins[0].data(), BB_maxes[0].data(), ray_o, ray_dir_inv, ray, root_hit);
 #else
