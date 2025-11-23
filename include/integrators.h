@@ -95,7 +95,7 @@ std::vector<glm::vec3> scene_integrator(const integrator_data& render_data, BVH&
       glm::vec3 pixel_col_accumulator;
 
       // make a stack for each core. instead of one for each bvh hit call
-      std::vector<size_t> thread_stack;
+      std::vector<size_t> thread_stack(bvh.max_depth + 2);
       thread_stack.reserve(64);
 
       for (size_t i = c; i < work_list_len; i += num_cores) {

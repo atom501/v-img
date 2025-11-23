@@ -152,7 +152,7 @@ int main(int argc, char* argv[]) {
   fmt::println("Number of Meshes loaded {}", list_meshes.size());
   fmt::println("Number of Surfaces loaded {}", list_objects.size());
 
-  fmt::println("\nImage resolution {}x{}, samples per pixel {}, max depth {}\n",
+  fmt::println("\nImage resolution {}x{}, samples per pixel {}, max ray depth {}\n",
                rendering_settings.resolution.x, rendering_settings.resolution.y,
                rendering_settings.samples, rendering_settings.depth);
 
@@ -172,8 +172,8 @@ int main(int argc, char* argv[]) {
   auto bvh_duration_mins = std::chrono::duration_cast<std::chrono::minutes>(bvh_duration_secs);
   bvh_duration_secs -= std::chrono::duration_cast<std::chrono::seconds>(bvh_duration_mins);
 
-  fmt::println("Scene BVH built. Time taken: {} {} {}", bvh_duration_mins, bvh_duration_secs,
-               bvh_duration_ms);
+  fmt::println("Scene BVH built. Time taken: {} {} {}. BVH max depth: {}", bvh_duration_mins,
+               bvh_duration_secs, bvh_duration_ms, bvh.max_depth);
 
   begin_time = std::chrono::steady_clock::now();
   std::vector<glm::vec3> acc_image;

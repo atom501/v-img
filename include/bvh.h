@@ -48,6 +48,8 @@ public:
   std::vector<std::array<float, 3>> BB_maxes;
   std::vector<size_t> obj_indices;  // indices pointing to original object list
 
+  uint32_t max_depth;
+
 public:
   BVH() = default;
   ~BVH() = default;
