@@ -265,8 +265,21 @@ int main(int argc, char* argv[]) {
     }
   }
 
-  stbi_write_png("v_img.png", rendering_settings.resolution.x, rendering_settings.resolution.y,
-                 CHANNEL_NUM, pixels, rendering_settings.resolution.x * CHANNEL_NUM);
+  auto now_utc = std::chrono::utc_clock::now();
+  std::string out_file_timestamp = std::format(
+      "{:%Y-%m-%d_%H-%M-%S}", std::chrono::time_point_cast<std::chrono::seconds>(now_utc));
+
+  std::string img_filename = std::format("v_img_{}.png", out_file_timestamp);
+
+  int write_img = stbi_write_png(img_filename.c_str(), rendering_settings.resolution.x,
+                                 rendering_settings.resolution.y, CHANNEL_NUM, pixels,
+                                 rendering_settings.resolution.x * CHANNEL_NUM);
+
+  if (write_img) {
+    fmt::println("output image written to {}", img_filename);
+  } else {
+    fmt::println("failed to write output image");
+  }
 
   delete[] pixels;
 
