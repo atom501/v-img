@@ -95,8 +95,8 @@ std::vector<glm::vec3> scene_integrator(const integrator_data& render_data, BVH&
       glm::vec3 pixel_col_accumulator;
 
       // make a stack for each core. instead of one for each bvh hit call
-      std::vector<size_t> thread_stack(bvh.max_depth + 2);
-      thread_stack.reserve(64);
+      std::vector<size_t> thread_stack;
+      thread_stack.reserve(bvh.max_depth + 2);
 
       for (size_t i = c; i < work_list_len; i += num_cores) {
         std::pair<glm::u16vec2, glm::u16vec2>& curr_work = work_list[i];
@@ -177,3 +177,46 @@ glm::vec3 mis_integrator(Ray& input_ray, std::vector<size_t>& thread_stack, cons
 std::vector<glm::vec3> heatmap_img(const integrator_data& render_data, const BVH& bvh,
                                    const std::vector<std::unique_ptr<Surface>>& prims,
                                    const int max_count);
+
+template <typename F> glm::vec3 trace_pixel(const integrator_data& render_data, BVH& bvh,
+                                            const std::vector<std::unique_ptr<Surface>>& prims,
+                                            const GroupOfEmitters& lights, F integrator, int x,
+                                            int y) {
+  const uint32_t image_width = render_data.resolution[0];
+  const uint32_t image_height = render_data.resolution[1];
+
+  const unsigned int total_pixels = image_width * image_height;
+
+  pcg32_random_t pcg_state;
+
+  // make a stack for each core. instead of one for each bvh hit call
+  std::vector<size_t> thread_stack;
+  thread_stack.reserve(bvh.max_depth + 2);
+
+  glm::vec3 pixel_col_accumulator = glm::vec3(0.0f);
+  // init hash at the start of each work
+  size_t image_index = x + ((image_height - 1 - y) * image_width);
+  size_t image_seq_start = x + y;
+
+  pcg32_srandom_r(&pcg_state, image_index, 0);
+
+  for (size_t s = 0; s < render_data.samples; s++) {
+    glm::vec2 pixel_offset = random_x_y_r2(image_seq_start + s);
+    // make ray with random offset
+    Ray cam_ray = render_data.camera.generate_ray(x + pixel_offset.x, y + pixel_offset.y,
+                                                  rand_float(pcg_state), rand_float(pcg_state));
+
+    // use set integrator to get color for a pixel
+    glm::vec3 p_col = integrator(cam_ray, thread_stack, bvh, prims, lights, pcg_state,
+                                 render_data.depth, render_data.background.get());
+    if (std::isnan(p_col[0]) || std::isnan(p_col[1]) || std::isnan(p_col[2])) {
+      fmt::println("NaN at pixel sample {}, x {}, y {}", s, x, y);
+    }
+    pixel_col_accumulator += p_col;
+  }
+
+  // average final sum
+  pixel_col_accumulator /= render_data.samples;
+
+  return pixel_col_accumulator;
+}

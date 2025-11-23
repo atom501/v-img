@@ -66,6 +66,9 @@ int main(int argc, char* argv[]) {
       "Set tonemapper to be used. 0 for clamp, 1 for agx, 2 for reinhard, 3 for aces", {'c'});
   args::ValueFlag<std::string> set_jsonfilename(
       parser, "j_file", "Json file with extra settings for gltf scenes", {'j'});
+  args::ValueFlag<std::string> set_debug_params(
+      parser, "debug", "Only trace one pixel. Input value is 'x y'. out image x, height - y",
+      {'d'});
 
   try {
     parser.ParseCLI(argc, argv);
@@ -180,32 +183,76 @@ int main(int argc, char* argv[]) {
 
   fmt::println("Started rendering\n");
 
-  if (heatmap_max < 0) {
-    // run integrator
+  if (!set_debug_params) {
+    if (heatmap_max < 0) {
+      // run integrator
+      switch (rendering_settings.func) {
+        case integrator_func::s_normal:
+          fmt::println("Running shading normal integrator");
+          acc_image = scene_integrator(rendering_settings, bvh, list_objects, lights,
+                                       shading_normal_integrator);
+          break;
+        case integrator_func::g_normal:
+          fmt::println("Running geometric normal integrator");
+          acc_image = scene_integrator(rendering_settings, bvh, list_objects, lights,
+                                       geometric_normal_integrator);
+          break;
+        case integrator_func::material:
+          fmt::println("Running material integrator");
+          acc_image = scene_integrator(rendering_settings, bvh, list_objects, lights,
+                                       material_integrator);
+          break;
+        case integrator_func::mis:
+          fmt::println("Running MIS integrator");
+          acc_image
+              = scene_integrator(rendering_settings, bvh, list_objects, lights, mis_integrator);
+          break;
+      }
+    } else {
+      fmt::println("Creating Heatmap for ray intersection");
+      acc_image = heatmap_img(rendering_settings, bvh, list_objects, heatmap_max);
+    }
+  } else {
+    glm::vec3 pixel_out;
+    std::string input_str = args::get(set_debug_params);
+
+    size_t first_space_idx = input_str.find_first_of(' ');
+
+    if (first_space_idx == std::string::npos) {
+      fmt::println("value of y not found");
+      return 0;
+    }
+
+    int x = std::stoi(input_str.substr(0, first_space_idx));
+    int y = std::stoi(input_str.substr(first_space_idx + 1));
+
     switch (rendering_settings.func) {
       case integrator_func::s_normal:
         fmt::println("Running shading normal integrator");
-        acc_image = scene_integrator(rendering_settings, bvh, list_objects, lights,
-                                     shading_normal_integrator);
+        pixel_out = trace_pixel(rendering_settings, bvh, list_objects, lights,
+                                shading_normal_integrator, x, y);
         break;
       case integrator_func::g_normal:
         fmt::println("Running geometric normal integrator");
-        acc_image = scene_integrator(rendering_settings, bvh, list_objects, lights,
-                                     geometric_normal_integrator);
+        pixel_out = trace_pixel(rendering_settings, bvh, list_objects, lights,
+                                geometric_normal_integrator, x, y);
         break;
       case integrator_func::material:
         fmt::println("Running material integrator");
-        acc_image
-            = scene_integrator(rendering_settings, bvh, list_objects, lights, material_integrator);
+        pixel_out
+            = trace_pixel(rendering_settings, bvh, list_objects, lights, material_integrator, x, y);
         break;
       case integrator_func::mis:
         fmt::println("Running MIS integrator");
-        acc_image = scene_integrator(rendering_settings, bvh, list_objects, lights, mis_integrator);
+        pixel_out
+            = trace_pixel(rendering_settings, bvh, list_objects, lights, mis_integrator, x, y);
         break;
     }
-  } else {
-    fmt::println("Creating Heatmap for ray intersection");
-    acc_image = heatmap_img(rendering_settings, bvh, list_objects, heatmap_max);
+
+    acc_image.push_back(pixel_out);
+
+    fmt::println("Value of pixel x {} y {} with {} samples in linear space is ({}, {}, {})", x, y,
+                 rendering_settings.samples, pixel_out.x, pixel_out.y, pixel_out.z);
   }
 
   end_time = std::chrono::steady_clock::now();
@@ -244,6 +291,13 @@ int main(int argc, char* argv[]) {
 
   // apply gamma correction
   sRGB_gamma_correction(acc_image);
+
+  if (set_debug_params) {
+    fmt::println("Value of pixel in rgb space is ({}, {}, {})", acc_image[0].x, acc_image[0].y,
+                 acc_image[0].z);
+
+    return 0;
+  }
 
   // buffer for image writing
   uint8_t* pixels = new uint8_t[rendering_settings.resolution.x * rendering_settings.resolution.y
