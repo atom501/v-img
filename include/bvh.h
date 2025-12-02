@@ -85,9 +85,6 @@ public:
       return_variable = false;
     }
 
-    float bb_hit1;
-    float bb_hit2;
-
     if (BVH::nodes.size() == 0) {
       return return_variable;
     }
@@ -97,7 +94,6 @@ public:
      * stack, no need to perform hit test again when popping the node (except root node)
      */
     auto& root_node = nodes[0];
-    float root_hit;
 
 #ifdef __AVX2__
     __m256 ray_dir_inv
@@ -106,14 +102,14 @@ public:
 
     __m256 ray_o = _mm256_set_ps(0.f, ray.o.z, ray.o.y, ray.o.x, 0.f, ray.o.z, ray.o.y, ray.o.x);
 
-    ray_1aabb_slab(BB_mins[0].data(), BB_maxes[0].data(), ray_o, ray_dir_inv, ray, root_hit);
+    float root_hit = ray_1aabb_slab(BB_mins[0].data(), BB_maxes[0].data(), ray_o, ray_dir_inv, ray);
 #else
     glm::vec3 ray_inv_dir;
     ray_inv_dir[0] = 1.0f / ray.dir[0];
     ray_inv_dir[1] = 1.0f / ray.dir[1];
     ray_inv_dir[2] = 1.0f / ray.dir[2];
 
-    slab_intersect_aabb_array(ray, ray_inv_dir, BB_mins[0], BB_maxes[0], root_hit);
+    float root_hit = slab_intersect_aabb_array(ray, ray_inv_dir, BB_mins[0], BB_maxes[0]);
 #endif
 
     if (std::isinf(root_hit)) {
@@ -158,13 +154,13 @@ public:
         size_t sec_child = node.first_index + 1;
 
 #ifdef __AVX2__
-        ray_2aabb_slab(BB_mins[first_child].data(), BB_maxes[first_child].data(), ray_o,
-                       ray_dir_inv, ray, bb_hit1, bb_hit2);
+        auto [bb_hit1, bb_hit2] = ray_2aabb_slab(
+            BB_mins[first_child].data(), BB_maxes[first_child].data(), ray_o, ray_dir_inv, ray);
 #else
-        slab_intersect_aabb_array(ray, ray_inv_dir, BB_mins[first_child], BB_maxes[first_child],
-                                  bb_hit1);
-        slab_intersect_aabb_array(ray, ray_inv_dir, BB_mins[sec_child], BB_maxes[sec_child],
-                                  bb_hit2);
+        float bb_hit1 = slab_intersect_aabb_array(ray, ray_inv_dir, BB_mins[first_child],
+                                                  BB_maxes[first_child]);
+        float bb_hit2
+            = slab_intersect_aabb_array(ray, ray_inv_dir, BB_mins[sec_child], BB_maxes[sec_child]);
 #endif
 
         if constexpr (std::is_same_v<T, bool>) {

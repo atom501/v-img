@@ -104,9 +104,9 @@ public:
 };
 
 // ray-aabb slab test. result is returned in t_val variable
-inline void slab_intersect_aabb_array(const Ray& ray, const glm::vec3& ray_inv_dir,
-                                      const std::array<float, 3>& bb_min,
-                                      const std::array<float, 3>& bb_max, float& t_val) {
+inline float slab_intersect_aabb_array(const Ray& ray, const glm::vec3& ray_inv_dir,
+                                       const std::array<float, 3>& bb_min,
+                                       const std::array<float, 3>& bb_max) {
   glm::vec3 min_vec3 = glm::vec3(bb_min[0], bb_min[1], bb_min[2]);
   glm::vec3 max_vec3 = glm::vec3(bb_max[0], bb_max[1], bb_max[2]);
 
@@ -118,7 +118,7 @@ inline void slab_intersect_aabb_array(const Ray& ray, const glm::vec3& ray_inv_d
   float tBoxMax = std::min(tMaxes.x, std::min(tMaxes.y, std::min(tMaxes.z, tMaxes.w)));
 
   if (tBoxMin <= tBoxMax)
-    t_val = tBoxMin;
+    return tBoxMin;
   else
-    t_val = std::numeric_limits<float>::infinity();
+    return std::numeric_limits<float>::infinity();
 }

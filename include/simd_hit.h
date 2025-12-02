@@ -34,8 +34,8 @@ inline float horizontal_min_128(const __m128& x) {
 
 // aabb mins and maxes are given array of floats. Result is given in t1
 // used slab_intersect_aabb_array function as basis for simd
-inline void ray_1aabb_slab(const float* mins, const float* maxs, const __m256& ray_o,
-                           const __m256& ray_dir_inv, const Ray& r, float& t1) {
+inline float ray_1aabb_slab(const float* mins, const float* maxs, const __m256& ray_o,
+                            const __m256& ray_dir_inv, const Ray& r) {
   // (bboxes_mins - ray.origin) * invRayDir
   __m128 bbox_min_vals = _mm_loadu_ps(mins);
   bbox_min_vals = _mm_mul_ps(_mm_sub_ps(bbox_min_vals, _mm256_castps256_ps128(ray_o)),
@@ -62,9 +62,9 @@ inline void ray_1aabb_slab(const float* mins, const float* maxs, const __m256& r
   float tBoxMax = horizontal_min_128(elements_with_ray_limit);
 
   if (tBoxMin <= tBoxMax)
-    t1 = tBoxMin;
+    return tBoxMin;
   else
-    t1 = std::numeric_limits<float>::infinity();
+    return std::numeric_limits<float>::infinity();
 }
 
 // insert value x at position 3 and 7
@@ -118,8 +118,9 @@ inline std::pair<float, float> horizontal_min_128_lane(__m256 x) {
 // aabb mins and maxes are given array of floats. Result is given in t1 and t2
 // used slab_intersect_aabb_array function as basis for simd
 // same function as ray_1aabb_slab but loads both sibling AABBs
-inline void ray_2aabb_slab(const float* mins, const float* maxs, const __m256& ray_o,
-                           const __m256& ray_dir_inv, const Ray& r, float& t1, float& t2) {
+inline std::pair<float, float> ray_2aabb_slab(const float* mins, const float* maxs,
+                                              const __m256& ray_o, const __m256& ray_dir_inv,
+                                              const Ray& r) {
   // (bboxes_mins - ray.origin) * invRayDir
   __m256 bbox_min_vals = _mm256_load_ps(mins);
   bbox_min_vals = _mm256_permutevar8x32_ps(bbox_min_vals, _mm256_set_epi32(6, 5, 4, 3, 7, 2, 1, 0));
@@ -148,14 +149,9 @@ inline void ray_2aabb_slab(const float* mins, const float* maxs, const __m256& r
   // get tBoxMin for ray 1 and 2
   auto [tBoxMax1, tBoxMax2] = horizontal_min_128_lane(max_elements);
 
-  if (tBoxMin1 <= tBoxMax1)
-    t1 = tBoxMin1;
-  else
-    t1 = std::numeric_limits<float>::infinity();
+  float t1 = (tBoxMin1 <= tBoxMax1) ? tBoxMin1 : std::numeric_limits<float>::infinity();
+  float t2 = (tBoxMin2 <= tBoxMax2) ? tBoxMin2 : std::numeric_limits<float>::infinity();
 
-  if (tBoxMin2 <= tBoxMax2)
-    t2 = tBoxMin2;
-  else
-    t2 = std::numeric_limits<float>::infinity();
+  return std::make_pair(t1, t2);
 }
 #endif
