@@ -152,19 +152,23 @@ public:
       } else {
         // intersect with both children and push further bbox first
         size_t first_child = node.first_index;
-        size_t sec_child = node.first_index + 1;
+        size_t sec_child = first_child + 1;
+
+        size_t bb_left_min = first_child * 2 + 2;
+        size_t bb_left_max = bb_left_min + 2;
 
 #ifdef __AVX2__
         auto [bb_hit1, bb_hit2]
-            = ray_2aabb_slab(BB_mins_maxes[first_child * 2 + 2].data(),
-                             BB_mins_maxes[first_child * 2 + 4].data(), ray_o, ray_dir_inv, ray);
+            = ray_2aabb_slab(BB_mins_maxes[bb_left_min].data(), BB_mins_maxes[bb_left_max].data(),
+                             ray_o, ray_dir_inv, ray);
 #else
-        float bb_hit1
-            = slab_intersect_aabb_array(ray, ray_inv_dir, BB_mins_maxes[first_child * 2 + 2],
-                                        BB_mins_maxes[first_child * 2 + 4]);
-        float bb_hit2
-            = slab_intersect_aabb_array(ray, ray_inv_dir, BB_mins_maxes[first_child * 2 + 3],
-                                        BB_mins_maxes[first_child * 2 + 5]);
+        size_t bb_right_min = bb_left_min + 1;
+        size_t bb_right_max = bb_left_max + 1;
+
+        float bb_hit1 = slab_intersect_aabb_array(ray, ray_inv_dir, BB_mins_maxes[bb_left_min],
+                                                  BB_mins_maxes[bb_left_max]);
+        float bb_hit2 = slab_intersect_aabb_array(ray, ray_inv_dir, BB_mins_maxes[bb_right_min],
+                                                  BB_mins_maxes[bb_right_max]);
 #endif
 
         if constexpr (std::is_same_v<T, bool>) {
