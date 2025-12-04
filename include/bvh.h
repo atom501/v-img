@@ -44,8 +44,7 @@ struct Split {
 class BVH {
 public:
   std::vector<BVHNode> nodes;
-  std::vector<std::array<float, 3>> BB_mins;
-  std::vector<std::array<float, 3>> BB_maxes;
+  std::vector<std::array<float, 3>> BB_mins_maxes;
   std::vector<size_t> obj_indices;  // indices pointing to original object list
 
   uint32_t max_depth;
@@ -102,14 +101,16 @@ public:
 
     __m256 ray_o = _mm256_set_ps(0.f, ray.o.z, ray.o.y, ray.o.x, 0.f, ray.o.z, ray.o.y, ray.o.x);
 
-    float root_hit = ray_1aabb_slab(BB_mins[0].data(), BB_maxes[0].data(), ray_o, ray_dir_inv, ray);
+    float root_hit
+        = ray_1aabb_slab(BB_mins_maxes[0].data(), BB_mins_maxes[2].data(), ray_o, ray_dir_inv, ray);
 #else
     glm::vec3 ray_inv_dir;
     ray_inv_dir[0] = 1.0f / ray.dir[0];
     ray_inv_dir[1] = 1.0f / ray.dir[1];
     ray_inv_dir[2] = 1.0f / ray.dir[2];
 
-    float root_hit = slab_intersect_aabb_array(ray, ray_inv_dir, BB_mins[0], BB_maxes[0]);
+    float root_hit
+        = slab_intersect_aabb_array(ray, ray_inv_dir, BB_mins_maxes[0], BB_mins_maxes[2]);
 #endif
 
     if (std::isinf(root_hit)) {
@@ -154,13 +155,16 @@ public:
         size_t sec_child = node.first_index + 1;
 
 #ifdef __AVX2__
-        auto [bb_hit1, bb_hit2] = ray_2aabb_slab(
-            BB_mins[first_child].data(), BB_maxes[first_child].data(), ray_o, ray_dir_inv, ray);
+        auto [bb_hit1, bb_hit2]
+            = ray_2aabb_slab(BB_mins_maxes[first_child * 2 + 2].data(),
+                             BB_mins_maxes[first_child * 2 + 4].data(), ray_o, ray_dir_inv, ray);
 #else
-        float bb_hit1 = slab_intersect_aabb_array(ray, ray_inv_dir, BB_mins[first_child],
-                                                  BB_maxes[first_child]);
+        float bb_hit1
+            = slab_intersect_aabb_array(ray, ray_inv_dir, BB_mins_maxes[first_child * 2 + 2],
+                                        BB_mins_maxes[first_child * 2 + 4]);
         float bb_hit2
-            = slab_intersect_aabb_array(ray, ray_inv_dir, BB_mins[sec_child], BB_maxes[sec_child]);
+            = slab_intersect_aabb_array(ray, ray_inv_dir, BB_mins_maxes[first_child * 2 + 3],
+                                        BB_mins_maxes[first_child * 2 + 5]);
 #endif
 
         if constexpr (std::is_same_v<T, bool>) {
