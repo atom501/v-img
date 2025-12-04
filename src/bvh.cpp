@@ -73,22 +73,23 @@ Split get_best_split(const BVHNode& node, const std::vector<size_t>& obj_indices
 }
 
 // helper bvh constructor
-static void build_recursive(BVH& bvh, size_t node_index, std::atomic<size_t>& node_count,
-                            const std::vector<AABB>& bboxes, const std::vector<glm::vec3>& centers,
-                            const size_t num_bins, uint32_t& max_depth) {
+static void build_recursive(BVH& bvh, size_t node_index, size_t bb_index,
+                            std::atomic<size_t>& node_count, const std::vector<AABB>& bboxes,
+                            const std::vector<glm::vec3>& centers, const size_t num_bins,
+                            uint32_t& max_depth) {
   auto& curr_node = bvh.nodes[node_index];
   AABB curr_node_aabb = bboxes[bvh.obj_indices[curr_node.first_index]];
   // set the AABB of current node
   for (size_t i = 1; i < curr_node.obj_count; ++i)
     curr_node_aabb.extend(bboxes[bvh.obj_indices[curr_node.first_index + i]]);
 
-  bvh.BB_mins[node_index][0] = curr_node_aabb.bboxes[0].x;
-  bvh.BB_mins[node_index][1] = curr_node_aabb.bboxes[0].y;
-  bvh.BB_mins[node_index][2] = curr_node_aabb.bboxes[0].z;
+  bvh.BB_mins_maxes[bb_index][0] = curr_node_aabb.bboxes[0].x;
+  bvh.BB_mins_maxes[bb_index][1] = curr_node_aabb.bboxes[0].y;
+  bvh.BB_mins_maxes[bb_index][2] = curr_node_aabb.bboxes[0].z;
 
-  bvh.BB_maxes[node_index][0] = curr_node_aabb.bboxes[1].x;
-  bvh.BB_maxes[node_index][1] = curr_node_aabb.bboxes[1].y;
-  bvh.BB_maxes[node_index][2] = curr_node_aabb.bboxes[1].z;
+  bvh.BB_mins_maxes[bb_index + 2][0] = curr_node_aabb.bboxes[1].x;
+  bvh.BB_mins_maxes[bb_index + 2][1] = curr_node_aabb.bboxes[1].y;
+  bvh.BB_mins_maxes[bb_index + 2][2] = curr_node_aabb.bboxes[1].z;
 
   Split best_split
       = get_best_split(curr_node, bvh.obj_indices, bboxes, centers, num_bins, curr_node_aabb);
@@ -149,13 +150,16 @@ static void build_recursive(BVH& bvh, size_t node_index, std::atomic<size_t>& no
   uint32_t right_depth = 0;
 
   if (left.obj_count > 1024) {
-    left_thread = std::thread(build_recursive, std::ref(bvh), first_child, std::ref(node_count),
-                              std::ref(bboxes), std::ref(centers), num_bins, std::ref(left_depth));
+    left_thread = std::thread(build_recursive, std::ref(bvh), first_child, first_child * 2 + 2,
+                              std::ref(node_count), std::ref(bboxes), std::ref(centers), num_bins,
+                              std::ref(left_depth));
   } else {
-    build_recursive(bvh, first_child, node_count, bboxes, centers, num_bins, left_depth);
+    build_recursive(bvh, first_child, first_child * 2 + 2, node_count, bboxes, centers, num_bins,
+                    left_depth);
   }
 
-  build_recursive(bvh, first_child + 1, node_count, bboxes, centers, num_bins, right_depth);
+  build_recursive(bvh, first_child + 1, first_child * 2 + 3, node_count, bboxes, centers, num_bins,
+                  right_depth);
 
   if (left_thread.joinable()) {
     left_thread.join();
@@ -181,8 +185,7 @@ BVH BVH::build(const std::vector<AABB>& bboxes, const std::vector<glm::vec3>& ce
 
     // resize to maximum nodes possible
     bvh.nodes.resize(2 * obj_count - 1);
-    bvh.BB_mins.resize(2 * obj_count - 1);
-    bvh.BB_maxes.resize(2 * obj_count - 1);
+    bvh.BB_mins_maxes.resize((2 * obj_count - 1) * 2 + 3);
 
     bvh.nodes[0].obj_count = obj_count;
     bvh.nodes[0].first_index = 0;
@@ -191,13 +194,12 @@ BVH BVH::build(const std::vector<AABB>& bboxes, const std::vector<glm::vec3>& ce
     uint32_t max_depth = 0;
 
     // build the bvh top down
-    build_recursive(bvh, 0, node_count, bboxes, centers, num_bins, max_depth);
+    build_recursive(bvh, 0, 0, node_count, bboxes, centers, num_bins, max_depth);
 
     bvh.nodes.resize(node_count);
 
     // added padding at the end as simd loads 8 values
-    bvh.BB_mins.resize(node_count + 1);
-    bvh.BB_maxes.resize(node_count + 1);
+    bvh.BB_mins_maxes.resize(node_count * 2 + 3);
 
     bvh.max_depth = max_depth;
   }
