@@ -146,6 +146,12 @@ int main(int argc, char* argv[]) {
     return 0;
   }
 
+#ifdef __AVX2__
+  fmt::println("Raytracer will use AVX2");
+#else
+  fmt::println("AVX2 not supported or is disabled");
+#endif
+
   GroupOfEmitters lights = GroupOfEmitters(list_lights);
 
   rendering_settings.num_threads = num_threads;

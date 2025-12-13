@@ -122,13 +122,13 @@ inline std::pair<float, float> ray_2aabb_slab(const float* mins, const float* ma
                                               const __m256& ray_o, const __m256& ray_dir_inv,
                                               const Ray& r) {
   // (bboxes_mins - ray.origin) * invRayDir
-  __m256 bbox_min_vals = _mm256_load_ps(mins);
+  __m256 bbox_min_vals = _mm256_loadu_ps(mins);
   bbox_min_vals = _mm256_permutevar8x32_ps(bbox_min_vals, _mm256_set_epi32(6, 5, 4, 3, 7, 2, 1, 0));
 
   bbox_min_vals = _mm256_mul_ps(_mm256_sub_ps(bbox_min_vals, ray_o), ray_dir_inv);
 
   // (bboxes_maxes - ray.origin) * invRayDir
-  __m256 bbox_max_vals = _mm256_load_ps(maxs);
+  __m256 bbox_max_vals = _mm256_loadu_ps(maxs);
   bbox_max_vals = _mm256_permutevar8x32_ps(bbox_max_vals, _mm256_set_epi32(6, 5, 4, 3, 7, 2, 1, 0));
 
   bbox_max_vals = _mm256_mul_ps(_mm256_sub_ps(bbox_max_vals, ray_o), ray_dir_inv);
