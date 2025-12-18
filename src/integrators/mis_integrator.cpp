@@ -44,6 +44,11 @@ glm::vec3 mis_integrator(Ray& input_ray, std::vector<size_t>& thread_stack, cons
   for (d = 0; d < depth; d++) {
     bool mat_is_delta = hit.value().mat->is_delta();
 
+    float hit_dist = glm::length(test_ray.o - hit.value().hit_p);
+    float surface_spread_angle
+        = spread_angle_from_curvature(hit.value().mean_curvature, test_ray.ray_cone.cone_width,
+                                      test_ray.dir, hit.value().hit_n_s);
+
     // skip if light sampling material with a delta functions where material pdf = 0
     if (!mat_is_delta) {
       // light sampling
@@ -59,13 +64,9 @@ glm::vec3 mis_integrator(Ray& input_ray, std::vector<size_t>& thread_stack, cons
 
         // if light visible from point
         if (!light_is_occluded) {
-          float surface_spread_angle = spread_angle_from_curvature(
-              hit.value().mean_curvature, test_ray.ray_cone.cone_width, test_ray.dir,
-              hit.value().hit_n_s);
-
           const auto [mat_eval, mat_pdf] = hit.value().mat->eval_pdf_pair(
               test_ray.dir, l_sample_info.wi, hit.value(),
-              propagate_reflect_cone(test_ray.ray_cone, surface_spread_angle, l_sample_info.dist));
+              propagate_reflect_cone(test_ray.ray_cone, surface_spread_angle * 2.f, hit_dist));
 
           if (mat_pdf != 0 && !std::isnan(mat_pdf)) {
             float G = l_sample_info.G;
@@ -84,17 +85,12 @@ glm::vec3 mis_integrator(Ray& input_ray, std::vector<size_t>& thread_stack, cons
       return bounce_result;
     }
 
-    float surface_spread_angle
-        = spread_angle_from_curvature(hit.value().mean_curvature, test_ray.ray_cone.cone_width,
-                                      test_ray.dir, hit.value().hit_n_s);
-
     if (scattered_mat.value().eta != 0.f) {
       eta_scale /= (scattered_mat.value().eta * scattered_mat.value().eta);
       test_ray.ray_cone = propagate_refract_cone(test_ray.ray_cone, test_ray.dir, hit.value().hit_p,
                                                  surface_spread_angle, scattered_mat.value().eta,
                                                  scattered_mat.value().wo);
     } else {
-      float hit_dist = glm::length(test_ray.o - hit.value().hit_p);
       test_ray.ray_cone
           = propagate_reflect_cone(test_ray.ray_cone, surface_spread_angle * 2.f, hit_dist);
     }
