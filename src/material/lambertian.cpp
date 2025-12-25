@@ -31,7 +31,7 @@ std::optional<ScatterInfo> Lambertian::sample_mat(const glm::vec3& wi, const Hit
  */
 glm::vec3 Lambertian::eval(const glm::vec3& wi, const glm::vec3& wo, const HitInfo& hit,
                            const RayCone& cone) const {
-  return Lambertian::tex->col_at_uv(wi, cone, hit)
+  return Lambertian::tex->col_at_ray_hit(wi, cone, hit)
          * static_cast<float>(std::max(0.0f, glm::dot(wo, hit.hit_n_s)) / std::numbers::pi);
 }
 
@@ -41,7 +41,7 @@ float Lambertian::pdf(const glm::vec3& wi, const glm::vec3& wo, const HitInfo& h
 
 glm::vec3 Lambertian::eval_div_pdf(const glm::vec3& wi, const glm::vec3& wo, const HitInfo& hit,
                                    const RayCone& cone) const {
-  return Lambertian::tex->col_at_uv(wi, cone, hit);
+  return Lambertian::tex->col_at_ray_hit(wi, cone, hit);
 }
 
 std::pair<glm::vec3, float> Lambertian::eval_pdf_pair(const glm::vec3& wi, const glm::vec3& wo,
@@ -50,5 +50,5 @@ std::pair<glm::vec3, float> Lambertian::eval_pdf_pair(const glm::vec3& wi, const
   float dot_product
       = static_cast<float>(std::max(0.0f, glm::dot(wo, hit.hit_n_s)) / std::numbers::pi);
 
-  return std::make_pair(Lambertian::tex->col_at_uv(wi, cone, hit) * dot_product, dot_product);
+  return std::make_pair(Lambertian::tex->col_at_ray_hit(wi, cone, hit) * dot_product, dot_product);
 }

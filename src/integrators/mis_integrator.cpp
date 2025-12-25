@@ -34,7 +34,7 @@ glm::vec3 mis_integrator(Ray& input_ray, std::vector<size_t>& thread_stack, cons
 
   if (!hit.has_value()) {
     // scene missed. if background not assigned it will be init to black
-    return background->background_emit(test_ray);
+    return background->background_emit(test_ray.dir, test_ray.ray_cone);
   } else if (hit.value().mat->is_emissive()) {
     // if first hit is emissive
     return hit.value().mat->emitted(test_ray, hit.value().hit_n_s, hit.value().hit_p);
@@ -171,7 +171,9 @@ glm::vec3 mis_integrator(Ray& input_ray, std::vector<size_t>& thread_stack, cons
         // G = 1
         float mis_weight = balance_heuristic(mat_sample_pdf, light_pdf);
 
-        bounce_result += throughput * mis_weight * background->background_emit(direct_light_ray);
+        bounce_result
+            += throughput * mis_weight
+               * background->background_emit(direct_light_ray.dir, direct_light_ray.ray_cone);
       }
       return bounce_result;
     }

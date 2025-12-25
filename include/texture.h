@@ -17,8 +17,8 @@ public:
   Texture() = default;
   ~Texture() = default;
 
-  virtual glm::vec3 col_at_uv(const glm::vec3& ray_in_dir, const RayCone& cone,
-                              const HitInfo& surf_hit) const
+  virtual glm::vec3 col_at_ray_hit(const glm::vec3& ray_in_dir, const RayCone& cone,
+                                   const HitInfo& surf_hit) const
       = 0;
 };
 
@@ -30,8 +30,8 @@ public:
   ConstColor(const glm::vec3& albedo) : albedo(albedo) {}
   ~ConstColor() = default;
 
-  glm::vec3 col_at_uv(const glm::vec3& ray_in_dir, const RayCone& cone,
-                      const HitInfo& surf_hit) const override {
+  glm::vec3 col_at_ray_hit(const glm::vec3& ray_in_dir, const RayCone& cone,
+                           const HitInfo& surf_hit) const override {
     return albedo;
   }
 };
@@ -48,8 +48,8 @@ public:
       : width(width), height(height), col_a(col_a), col_b(col_b) {}
   ~Checkerboard() = default;
 
-  glm::vec3 col_at_uv(const glm::vec3& ray_in_dir, const RayCone& cone,
-                      const HitInfo& surf_hit) const override {
+  glm::vec3 col_at_ray_hit(const glm::vec3& ray_in_dir, const RayCone& cone,
+                           const HitInfo& surf_hit) const override {
     uint32_t u_board = std::floor(surf_hit.uv[0] * width);
     uint32_t v_board = std::floor(surf_hit.uv[1] * height);
 
@@ -61,7 +61,7 @@ public:
 };
 
 class ImageTexture : public Texture {
-private:
+public:
   uint32_t width;
   uint32_t height;
   std::vector<std::vector<glm::vec3>> mipmap;  // flattened size width * height. Top left corner is
@@ -72,8 +72,14 @@ public:
 
   ImageTexture(const std::vector<glm::vec3>& image, uint32_t width, uint32_t height);
 
-  glm::vec3 col_at_uv(const glm::vec3& ray_in_dir, const RayCone& cone,
-                      const HitInfo& surf_hit) const override;
+  // color when hitting a surface
+  glm::vec3 col_at_ray_hit(const glm::vec3& ray_in_dir, const RayCone& cone,
+                           const HitInfo& surf_hit) const override;
+  // color of background
+  glm::vec3 col_mipmap_interpolate(float lambda, const glm::vec2& uv) const;
+
+  // return color for uv on given mipmap level. applies bilinear filtering
+  glm::vec3 col_at_uv_mipmap(int mipmap_level, const glm::vec2& uv) const;
 
   void debug_mipmaps_to_file();
 
@@ -90,9 +96,6 @@ private:
       return lambda;
     }
   }
-
-  // return color for uv on given mipmap level. applies bilinear filtering
-  glm::vec3 col_at_uv_mipmap(int mipmap_level, const glm::vec2& uv) const;
 };
 
 ImageTexture load_imagetexture(const std::filesystem::path& ImageTexture_file);

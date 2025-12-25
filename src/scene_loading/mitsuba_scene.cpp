@@ -321,40 +321,16 @@ bool set_scene_from_xml(const std::filesystem::path& path_file, integrator_data&
           // read exr file
           std::string env_type = env_file.extension().generic_string();
           if (env_type == ".exr") {
-            // read exr with tinyexr
-            float* out;  // width * height * RGBA
-            int width;
-            int height;
-            const char* err = nullptr;
-
             std::filesystem::path scene_filename = path_file;
             const auto env_path_rel_file = scene_filename.remove_filename() / env_file;
 
-            int ret
-                = LoadEXR(&out, &width, &height, env_path_rel_file.generic_string().c_str(), &err);
-            std::vector<glm::vec3> image;
+            ImageTexture image = load_imagetexture(env_path_rel_file);
 
-            if (ret != TINYEXR_SUCCESS) {
-              if (err) {
-                fprintf(stderr, "ERR : %s\n", err);
-                FreeEXRErrorMessage(err);  // release memory of error message.
-              }
-            } else {
-              // copy image data to vector. ignore alpha channel for now
-              image = std::vector<glm::vec3>(width * height);
+            // set env map
+            integrator_data.background = std::make_unique<EnvMap>(
+                EnvMap(image, glm::inverse(transform), transform, radiance_scale));
 
-              for (size_t i = 0; i < width * height; i++) {
-                image[i] = glm::vec3(out[i * 4], out[i * 4 + 1], out[i * 4 + 2]);
-              }
-
-              free(out);  // release memory of image data
-
-              // set env map
-              integrator_data.background = std::make_unique<EnvMap>(
-                  EnvMap(width, height, image, glm::inverse(transform), transform, radiance_scale));
-
-              list_lights.push_back(static_cast<EnvMap*>(integrator_data.background.get()));
-            }
+            list_lights.push_back(static_cast<EnvMap*>(integrator_data.background.get()));
           } else {
             fmt::println("env map file type {} is not supported", env_type);
           }

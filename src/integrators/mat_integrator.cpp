@@ -70,7 +70,7 @@ glm::vec3 material_integrator(Ray& input_ray, std::vector<size_t>& thread_stack,
         return throughput * emitted_col;
       }
     } else {
-      return throughput * background->background_emit(test_ray);
+      return throughput * background->background_emit(test_ray.dir, test_ray.ray_cone);
     }
   }
 

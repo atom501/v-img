@@ -57,7 +57,7 @@ glm::vec3 Principled::eval(const glm::vec3& wi, const glm::vec3& wo, const HitIn
     normal_frame.w = -normal_frame.w;
   }
 
-  glm::vec3 base_color = Principled::tex->col_at_uv(wi, cone, hit);
+  glm::vec3 base_color = Principled::tex->col_at_ray_hit(wi, cone, hit);
 
   glm::vec3 half_vector = glm::normalize(dir_in + wo);
   glm::vec3 eval_glass = eval_disney_rough_glass(dir_in, wo, hit, base_color, eta, anisotropic,

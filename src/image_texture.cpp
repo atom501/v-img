@@ -1,6 +1,7 @@
 #include <texture.h>
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image_write.h>
+#include <tinyexr.h>
 
 #include "fmt/core.h"
 #include "stb_image.h"
@@ -8,18 +9,45 @@
 // loading image from disk and constructing ImageTexture from it
 ImageTexture load_imagetexture(const std::filesystem::path& ImageTexture_file) {
   int width, height, channels;
+  std::vector<glm::vec3> image;
 
-  // already gamma corrected
-  float* image_array
-      = stbi_loadf(ImageTexture_file.string().c_str(), &width, &height, &channels, STBI_rgb);
+  std::string env_type = ImageTexture_file.extension().generic_string();
 
-  std::vector<glm::vec3> image(width * height);
+  // LoadEXR and stbi_loadf will give top left corner as pixel 0, 0
+  if (env_type == ".exr") {
+    float* out;  // width * height * RGBA
+    const char* err = nullptr;
 
-  size_t arr_index = 0;
-  for (size_t i = 0; i < width * height; i++) {
-    image[i].r = image_array[arr_index++];
-    image[i].g = image_array[arr_index++];
-    image[i].b = image_array[arr_index++];
+    int ret = LoadEXR(&out, &width, &height, ImageTexture_file.generic_string().c_str(), &err);
+
+    if (ret != TINYEXR_SUCCESS) {
+      if (err) {
+        fprintf(stderr, "ERR : %s\n", err);
+        FreeEXRErrorMessage(err);
+      }
+    } else {
+      // copy image data to vector. ignore alpha channel for now
+      image = std::vector<glm::vec3>(width * height);
+
+      for (size_t i = 0; i < width * height; i++) {
+        image[i] = glm::vec3(out[i * 4], out[i * 4 + 1], out[i * 4 + 2]);
+      }
+
+      free(out);  // release memory of image data
+    }
+  } else {
+    // already gamma corrected
+    float* image_array
+        = stbi_loadf(ImageTexture_file.string().c_str(), &width, &height, &channels, STBI_rgb);
+
+    image = std::vector<glm::vec3>(width * height);
+
+    size_t arr_index = 0;
+    for (size_t i = 0; i < width * height; i++) {
+      image[i].r = image_array[arr_index++];
+      image[i].g = image_array[arr_index++];
+      image[i].b = image_array[arr_index++];
+    }
   }
 
   return ImageTexture(image, width, height);
@@ -122,8 +150,8 @@ glm::vec3 ImageTexture::col_at_uv_mipmap(int mipmap_level, const glm::vec2& uv) 
   return glm::mix(a, b, glm::vec3(y_fraction));
 }
 
-glm::vec3 ImageTexture::col_at_uv(const glm::vec3& ray_in_dir, const RayCone& cone,
-                                  const HitInfo& surf_hit) const {
+glm::vec3 ImageTexture::col_at_ray_hit(const glm::vec3& ray_in_dir, const RayCone& cone,
+                                       const HitInfo& surf_hit) const {
   // calculate mipmap level. subtract so it isn't too aggressive
   float lambda = compute_texture_LOD(ray_in_dir, cone, surf_hit) - 2.f;
   lambda = std::clamp(lambda, 0.f, static_cast<float>(mipmap.size() - 1));
@@ -137,6 +165,21 @@ glm::vec3 ImageTexture::col_at_uv(const glm::vec3& ray_in_dir, const RayCone& co
 
   glm::vec3 col0 = col_at_uv_mipmap(mipmap_level0, surf_hit.uv);
   glm::vec3 col1 = col_at_uv_mipmap(mipmap_level1, surf_hit.uv);
+
+  return glm::mix(col0, col1, glm::vec3(fraction));
+}
+
+glm::vec3 ImageTexture::col_mipmap_interpolate(float lambda, const glm::vec2& uv) const {
+  lambda = std::clamp(lambda, 0.f, static_cast<float>(mipmap.size() - 1));
+  int mipmap_level0 = std::clamp(static_cast<int>(std::floor(lambda)), static_cast<int>(0),
+                                 static_cast<int>(mipmap.size() - 1));
+  int mipmap_level1
+      = std::clamp(mipmap_level0 + 1, static_cast<int>(0), static_cast<int>(mipmap.size() - 1));
+
+  float fraction = lambda - std::floor(lambda);
+
+  glm::vec3 col0 = col_at_uv_mipmap(mipmap_level0, uv);
+  glm::vec3 col1 = col_at_uv_mipmap(mipmap_level1, uv);
 
   return glm::mix(col0, col1, glm::vec3(fraction));
 }
