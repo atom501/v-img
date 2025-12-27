@@ -170,7 +170,7 @@ int main(int argc, char* argv[]) {
 
   // make bvh
   auto begin_time = std::chrono::steady_clock::now();
-  BVH bvh = BVH::build(list_bboxes, list_centers, NUM_BINS);
+  BVH bvh = BVH::build_bin_bvh(list_bboxes, list_centers, NUM_BINS);
   auto end_time = std::chrono::steady_clock::now();
 
   auto bvh_duration_ms

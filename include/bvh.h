@@ -54,8 +54,8 @@ public:
   ~BVH() = default;
 
   // input is list of bounding boxes of primitives and their centers
-  static BVH build(const std::vector<AABB>& bboxes, const std::vector<glm::vec3>& centers,
-                   const size_t num_bins);
+  static BVH build_bin_bvh(const std::vector<AABB>& bboxes, const std::vector<glm::vec3>& centers,
+                           const size_t num_bins);
 
   bool occlude(Ray& ray, std::vector<size_t>& thread_stack,
                const std::vector<std::unique_ptr<Surface>>& prims) const {

@@ -173,8 +173,8 @@ static void build_recursive(BVH& bvh, size_t node_index, size_t bb_index,
 }
 
 // Build and return BVH
-BVH BVH::build(const std::vector<AABB>& bboxes, const std::vector<glm::vec3>& centers,
-               const size_t num_bins) {
+BVH BVH::build_bin_bvh(const std::vector<AABB>& bboxes, const std::vector<glm::vec3>& centers,
+                       const size_t num_bins) {
   BVH bvh;
   size_t obj_count = centers.size();
 
