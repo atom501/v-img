@@ -11,6 +11,7 @@
 #include <cstdint>
 #include <glm/vec3.hpp>
 #include <memory>
+#include <span>
 #include <vector>
 
 struct BVHNode {
@@ -56,6 +57,11 @@ public:
   // input is list of bounding boxes of primitives and their centers
   static BVH build_bin_bvh(const std::vector<AABB>& bboxes, const std::vector<glm::vec3>& centers,
                            const size_t num_bins);
+
+  static BVH build_bonsai_bvh(const std::vector<AABB>& bboxes, bool prune);
+
+  static BVH build_sweep_bvh(const std::vector<AABB>& bboxes, const std::vector<glm::vec3>& centers,
+                             std::span<size_t> prim_indices);
 
   bool occlude(Ray& ray, std::vector<size_t>& thread_stack,
                const std::vector<std::unique_ptr<Surface>>& prims) const {

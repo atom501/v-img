@@ -69,6 +69,8 @@ int main(int argc, char* argv[]) {
   args::ValueFlag<std::string> set_debug_params(
       parser, "debug", "Only trace one pixel. Input value is 'x y'. out image x, height - y",
       {'d'});
+  args::ValueFlag<int> bvh_type(parser, "bvh", "Type of BVH to build. 0 for binned, 1 for sweepSAH",
+                                {'b'});
 
   try {
     parser.ParseCLI(argc, argv);
@@ -168,9 +170,29 @@ int main(int argc, char* argv[]) {
   // take a list of Surfaces and make a vector of AABBs and centers
   setup_for_bvh(list_objects, list_bboxes, list_centers);
 
+  int bvh_to_build = 0;
+  if (bvh_type) {
+    bvh_to_build = args::get(bvh_type);
+  }
+
   // make bvh
   auto begin_time = std::chrono::steady_clock::now();
-  BVH bvh = BVH::build_bin_bvh(list_bboxes, list_centers, NUM_BINS);
+  BVH bvh;
+
+  if (bvh_to_build == 0) {
+    fmt::println("Building binned BVH");
+    bvh = bvh = BVH::build_bin_bvh(list_bboxes, list_centers, NUM_BINS);
+  } else if (bvh_to_build == 1) {
+    fmt::println("Building sweep BVH");
+    std::vector<size_t> temp_indices(list_bboxes.size());
+    std::iota(temp_indices.begin(), temp_indices.end(), 0);
+
+    bvh = BVH::build_sweep_bvh(list_bboxes, list_centers, temp_indices);
+  } else {
+    fmt::println("Building binned BVH");
+    bvh = bvh = BVH::build_bin_bvh(list_bboxes, list_centers, NUM_BINS);
+  }
+
   auto end_time = std::chrono::steady_clock::now();
 
   auto bvh_duration_ms
