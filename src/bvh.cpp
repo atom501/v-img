@@ -113,10 +113,11 @@ static void build_recursive(BVH& bvh, size_t node_index, size_t bb_index,
                 [&](size_t i, size_t j) { return centers[i][axis] < centers[j][axis]; });
 
       first_right = curr_node.first_index + curr_node.obj_count / 2;
-    } else
+    } else {
       // Terminate with a leaf
       max_depth = 1;
-    return;
+      return;
+    }
   } else {
     /* The split was good, we need to partition the primitives. subtracted with
      * bvh.obj_indices.begin() to turn it into index and not get an iterator
