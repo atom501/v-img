@@ -492,7 +492,7 @@ BVH BVH::build_sweep_bvh(const std::vector<AABB>& bboxes, const std::vector<glm:
         std::span(prim_axis_sort[0]), std::span(prim_axis_sort[1]), std::span(prim_axis_sort[2])};
 
     // std::vector<uint8_t> used instead of std::vector<bool> does not need locks for shared writes
-    std::vector<uint8_t> is_left_mask(obj_count, 0);
+    std::vector<uint8_t> is_left_mask(bboxes.size(), 0);
 
     // build sweep bvh recursively
     build_sweep_recursive(bvh, 0, 0, node_count, bboxes, sorted_span, max_depth, 8, is_left_mask);
