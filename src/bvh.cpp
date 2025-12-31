@@ -325,7 +325,7 @@ Split sweep_best_span_split(uint8_t axis, std::span<size_t> prim_sorted,
 }
 
 void stable_partition(uint8_t fixed_axis, const std::vector<uint8_t>& is_left_mask,
-                      std::array<std::span<size_t>, 4> prim_axis_sort, const size_t first_right) {
+                      std::array<std::span<size_t>, 4>& prim_axis_sort, const size_t first_right) {
   for (size_t axis = 0; axis < 3; axis++) {
     if (axis == fixed_axis) continue;
 
@@ -342,13 +342,13 @@ void stable_partition(uint8_t fixed_axis, const std::vector<uint8_t>& is_left_ma
       }
     }
 
-    std::copy(prim_axis_sort[3].begin(), prim_axis_sort[3].end(), prim_axis_sort[axis].begin());
+    std::swap(prim_axis_sort[3], prim_axis_sort[axis]);
   }
 }
 
 static void build_sweep_recursive(BVH& bvh, size_t node_index, size_t bb_index,
                                   std::atomic<size_t>& node_count, const std::vector<AABB>& bboxes,
-                                  std::array<std::span<size_t>, 4> prim_axis_sort,
+                                  std::array<std::span<size_t>, 4>& prim_axis_sort,
                                   uint32_t& max_depth, const uint32_t max_node_prims,
                                   std::vector<uint8_t>& is_left_mask) {
   auto& curr_node = bvh.nodes[node_index];
@@ -439,9 +439,10 @@ static void build_sweep_recursive(BVH& bvh, size_t node_index, size_t bb_index,
   uint32_t right_depth = 0;
 
   if (left.obj_count >= 512) {
-    left_thread = std::thread(build_sweep_recursive, std::ref(bvh), first_child,
-                              first_child * 2 + 2, std::ref(node_count), std::ref(bboxes),
-                              left_prim_axis_sort, std::ref(left_depth), 8, ref(is_left_mask));
+    left_thread
+        = std::thread(build_sweep_recursive, std::ref(bvh), first_child, first_child * 2 + 2,
+                      std::ref(node_count), std::ref(bboxes), std::ref(left_prim_axis_sort),
+                      std::ref(left_depth), 8, ref(is_left_mask));
   } else {
     build_sweep_recursive(bvh, first_child, first_child * 2 + 2, node_count, bboxes,
                           left_prim_axis_sort, left_depth, 8, is_left_mask);
