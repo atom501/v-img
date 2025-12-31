@@ -283,7 +283,7 @@ BVH BVH::build_bonsai_bvh(const std::vector<AABB>& bboxes, bool prune) {
 
 Split sweep_best_span_split(uint8_t axis, std::span<size_t> prim_sorted,
                             const std::vector<AABB>& bboxes, const Split& prev_split) {
-  size_t first_right = 0;
+  size_t first_left = 0;
   size_t num_prims = prim_sorted.size();
   Bin extend_from_right(0, AABB(glm::vec3(+std::numeric_limits<float>::max()),
                                 glm::vec3(-std::numeric_limits<float>::max())));
@@ -298,7 +298,7 @@ Split sweep_best_span_split(uint8_t axis, std::span<size_t> prim_sorted,
     right_costs[i] = extend_from_right.cost();
 
     if (right_costs[i] > best_split.cost) {
-      first_right = i;
+      first_left = i - 1;
       break;
     }
   }
@@ -306,12 +306,12 @@ Split sweep_best_span_split(uint8_t axis, std::span<size_t> prim_sorted,
   Bin extend_from_left(0, AABB(glm::vec3(+std::numeric_limits<float>::max()),
                                glm::vec3(-std::numeric_limits<float>::max())));
 
-  for (size_t i = 0; i < first_right; i++) {
+  for (size_t i = 0; i < first_left; i++) {
     extend_from_left.aabb.extend(bboxes[prim_sorted[i]]);
     extend_from_left.obj_count++;
   }
 
-  for (size_t i = first_right; i < num_prims - 1; i++) {
+  for (size_t i = first_left; i < num_prims - 1; i++) {
     extend_from_left.aabb.extend(bboxes[prim_sorted[i]]);
     extend_from_left.obj_count++;
 
