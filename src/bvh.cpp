@@ -373,7 +373,7 @@ static void build_sweep_recursive(BVH& bvh, size_t node_index, size_t bb_index,
     return;
   }
 
-  const float leaf_cost = curr_node_aabb.half_SA() * curr_node_objs;
+  const float leaf_cost = curr_node_aabb.half_SA() * (curr_node_objs - 1);
   // get split for all axis
   Split best_split = Split{prim_axis_sort[0].size() / 2, leaf_cost, 0};
 
@@ -438,7 +438,7 @@ static void build_sweep_recursive(BVH& bvh, size_t node_index, size_t bb_index,
   uint32_t left_depth = 0;
   uint32_t right_depth = 0;
 
-  if (left.obj_count >= 512) {
+  if (left.obj_count >= 1024) {
     left_thread
         = std::thread(build_sweep_recursive, std::ref(bvh), first_child, first_child * 2 + 2,
                       std::ref(node_count), std::ref(bboxes), std::ref(left_prim_axis_sort),
