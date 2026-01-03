@@ -187,7 +187,7 @@ int main(int argc, char* argv[]) {
     std::vector<size_t> temp_indices(list_bboxes.size());
     std::iota(temp_indices.begin(), temp_indices.end(), 0);
 
-    bvh = BVH::build_sweep_bvh(list_bboxes, list_centers, temp_indices);
+    bvh = BVH::build_sweep_bvh(list_bboxes, list_centers, temp_indices, 8);
   } else {
     fmt::println("Building binned BVH");
     bvh = bvh = BVH::build_bin_bvh(list_bboxes, list_centers, NUM_BINS);
