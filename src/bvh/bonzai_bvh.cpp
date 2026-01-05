@@ -102,11 +102,12 @@ static void combine_minitrees(BVH& BVH_of_mini_trees, const std::vector<BVH>& mi
     assert(node.obj_count == 1);
     // copy root node of mini tree
     const BVHNode& mini_tree_root = mini_trees[node.first_index].nodes[0];
+    uint32_t tree_idx = node.first_index;
+
+    size_t offset
+        = mini_tree_root.is_leaf() ? obj_indices_offset[tree_idx] : node_offset[tree_idx];
 
     node = mini_tree_root;
-    size_t offset = mini_tree_root.is_leaf() ? obj_indices_offset[node.first_index]
-                                             : node_offset[node.first_index];
-
     node.first_index = mini_tree_root.first_index + offset;
   }
 
