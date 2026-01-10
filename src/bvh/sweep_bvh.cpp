@@ -40,7 +40,12 @@ static Split sweep_best_span_split(uint8_t axis, std::span<size_t> prim_sorted,
     float left_cost = extend_from_left.cost();
     float total_cost = left_cost + right_costs[i + 1];
 
-    if (total_cost < best_split.cost) best_split = Split{i + 1, total_cost, axis};
+    if (total_cost < best_split.cost) {
+      best_split = Split{i + 1, total_cost, axis};
+    } else if (left_cost > best_split.cost) {
+      // cost will only increase after this
+      break;
+    }
   }
 
   return best_split;
