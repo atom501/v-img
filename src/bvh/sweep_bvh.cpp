@@ -84,15 +84,12 @@ static void build_sweep_recursive(BVH& bvh, size_t node_index, size_t bb_index,
   size_t curr_node_objs = prim_axis_sort[0].size();
 
   // all sorted axis contain the same primitives. use one to create AABB over all primitives
-  AABB curr_node_aabb = bboxes[prim_axis_sort[0][0]];
-  for (size_t i = 1; i < curr_node_objs; i++) {
-    curr_node_aabb.extend(bboxes[prim_axis_sort[0][i]]);
-  }
+  AABB curr_node_aabb;
 
   // set AABB for current node
   for (size_t i = 0; i < 3; i++) {
-    bvh.BB_mins_maxes[bb_index][i] = curr_node_aabb.bboxes[0][i];
-    bvh.BB_mins_maxes[bb_index + 2][i] = curr_node_aabb.bboxes[1][i];
+    curr_node_aabb.bboxes[0][i] = bvh.BB_mins_maxes[bb_index][i];
+    curr_node_aabb.bboxes[1][i] = bvh.BB_mins_maxes[bb_index + 2][i];
   }
 
   if (curr_node_objs == 1) {
@@ -161,6 +158,27 @@ static void build_sweep_recursive(BVH& bvh, size_t node_index, size_t bb_index,
   left.first_index = curr_node.first_index;
   right.first_index = left.first_index + left.obj_count;
 
+  AABB left_bb = bboxes[left_prim_axis_sort[0][0]];
+  for (size_t i = 1; i < left.obj_count; ++i) left_bb.extend(bboxes[left_prim_axis_sort[0][i]]);
+
+  AABB right_bb = bboxes[right_prim_axis_sort[0][0]];
+  for (size_t i = 1; i < right.obj_count; ++i) right_bb.extend(bboxes[right_prim_axis_sort[0][i]]);
+
+  // right child should be larger for faster any hit test
+  if (left_bb.half_SA() > right_bb.half_SA()) {
+    std::swap(left_bb, right_bb);
+    std::swap(left, right);
+    std::swap(left_prim_axis_sort, right_prim_axis_sort);
+  }
+
+  size_t bb_start_idx = first_child * 2 + 2;
+  for (size_t axis = 0; axis < 3; axis++) {
+    bvh.BB_mins_maxes[bb_start_idx + 0][axis] = left_bb.bboxes[0][axis];
+    bvh.BB_mins_maxes[bb_start_idx + 1][axis] = right_bb.bboxes[0][axis];
+    bvh.BB_mins_maxes[bb_start_idx + 2][axis] = left_bb.bboxes[1][axis];
+    bvh.BB_mins_maxes[bb_start_idx + 3][axis] = right_bb.bboxes[1][axis];
+  }
+
   curr_node.first_index = first_child;
   curr_node.obj_count = 0;
 
@@ -217,6 +235,14 @@ BVH BVH::build_sweep_bvh(const std::vector<AABB>& bboxes, const std::vector<glm:
 
     bvh.nodes[0].obj_count = obj_count;
     bvh.nodes[0].first_index = 0;
+
+    AABB curr_node_aabb = bboxes[bvh.obj_indices[0]];
+    for (size_t i = 1; i < obj_count; ++i) curr_node_aabb.extend(bboxes[bvh.obj_indices[i]]);
+
+    for (size_t axis = 0; axis < 3; axis++) {
+      bvh.BB_mins_maxes[0][axis] = curr_node_aabb.bboxes[0][axis];
+      bvh.BB_mins_maxes[2][axis] = curr_node_aabb.bboxes[1][axis];
+    }
 
     std::atomic<size_t> node_count = 1;
     uint32_t max_depth = 0;
