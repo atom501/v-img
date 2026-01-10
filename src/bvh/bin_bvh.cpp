@@ -76,18 +76,15 @@ static void build_recursive(BVH& bvh, size_t node_index, size_t bb_index,
                             const std::vector<glm::vec3>& centers, const size_t num_bins,
                             uint32_t& max_depth) {
   auto& curr_node = bvh.nodes[node_index];
-  AABB curr_node_aabb = bboxes[bvh.obj_indices[curr_node.first_index]];
-  // set the AABB of current node
-  for (size_t i = 1; i < curr_node.obj_count; ++i)
-    curr_node_aabb.extend(bboxes[bvh.obj_indices[curr_node.first_index + i]]);
+  AABB curr_node_aabb;
 
-  bvh.BB_mins_maxes[bb_index][0] = curr_node_aabb.bboxes[0].x;
-  bvh.BB_mins_maxes[bb_index][1] = curr_node_aabb.bboxes[0].y;
-  bvh.BB_mins_maxes[bb_index][2] = curr_node_aabb.bboxes[0].z;
+  curr_node_aabb.bboxes[0].x = bvh.BB_mins_maxes[bb_index][0];
+  curr_node_aabb.bboxes[0].y = bvh.BB_mins_maxes[bb_index][1];
+  curr_node_aabb.bboxes[0].z = bvh.BB_mins_maxes[bb_index][2];
 
-  bvh.BB_mins_maxes[bb_index + 2][0] = curr_node_aabb.bboxes[1].x;
-  bvh.BB_mins_maxes[bb_index + 2][1] = curr_node_aabb.bboxes[1].y;
-  bvh.BB_mins_maxes[bb_index + 2][2] = curr_node_aabb.bboxes[1].z;
+  curr_node_aabb.bboxes[1].x = bvh.BB_mins_maxes[bb_index + 2][0];
+  curr_node_aabb.bboxes[1].y = bvh.BB_mins_maxes[bb_index + 2][1];
+  curr_node_aabb.bboxes[1].z = bvh.BB_mins_maxes[bb_index + 2][2];
 
   Split best_split
       = get_best_split(curr_node, bvh.obj_indices, bboxes, centers, num_bins, curr_node_aabb);
@@ -139,6 +136,28 @@ static void build_recursive(BVH& bvh, size_t node_index, size_t bb_index,
   left.first_index = curr_node.first_index;
   right.first_index = first_right;
 
+  AABB left_bb = bboxes[bvh.obj_indices[left.first_index]];
+  for (size_t i = 1; i < left.obj_count; ++i)
+    left_bb.extend(bboxes[bvh.obj_indices[left.first_index + i]]);
+
+  AABB right_bb = bboxes[bvh.obj_indices[right.first_index]];
+  for (size_t i = 1; i < right.obj_count; ++i)
+    right_bb.extend(bboxes[bvh.obj_indices[right.first_index + i]]);
+
+  // right child should be larger for faster any hit test
+  if (left_bb.half_SA() > right_bb.half_SA()) {
+    std::swap(left_bb, right_bb);
+    std::swap(left, right);
+  }
+
+  size_t bb_start_idx = first_child * 2 + 2;
+  for (size_t axis = 0; axis < 3; axis++) {
+    bvh.BB_mins_maxes[bb_start_idx + 0][axis] = left_bb.bboxes[0][axis];
+    bvh.BB_mins_maxes[bb_start_idx + 1][axis] = right_bb.bboxes[0][axis];
+    bvh.BB_mins_maxes[bb_start_idx + 2][axis] = left_bb.bboxes[1][axis];
+    bvh.BB_mins_maxes[bb_start_idx + 3][axis] = right_bb.bboxes[1][axis];
+  }
+
   curr_node.first_index = first_child;
   curr_node.obj_count = 0;
 
@@ -185,8 +204,17 @@ BVH BVH::build_bin_bvh(const std::vector<AABB>& bboxes, const std::vector<glm::v
     bvh.nodes.resize(2 * obj_count - 1);
     bvh.BB_mins_maxes.resize((2 * obj_count - 1) * 2 + 3);
 
+    // set root info
     bvh.nodes[0].obj_count = obj_count;
     bvh.nodes[0].first_index = 0;
+
+    AABB curr_node_aabb = bboxes[bvh.obj_indices[0]];
+    for (size_t i = 1; i < obj_count; ++i) curr_node_aabb.extend(bboxes[bvh.obj_indices[i]]);
+
+    for (size_t axis = 0; axis < 3; axis++) {
+      bvh.BB_mins_maxes[0][axis] = curr_node_aabb.bboxes[0][axis];
+      bvh.BB_mins_maxes[2][axis] = curr_node_aabb.bboxes[1][axis];
+    }
 
     std::atomic<size_t> node_count = 1;
     uint32_t max_depth = 0;
