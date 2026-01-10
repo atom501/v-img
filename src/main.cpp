@@ -188,9 +188,6 @@ int main(int argc, char* argv[]) {
     std::iota(temp_indices.begin(), temp_indices.end(), 0);
 
     bvh = BVH::build_sweep_bvh(list_bboxes, list_centers, temp_indices, 8);
-  } else if (bvh_to_build == 2) {
-    fmt::println("Building bonsai BVH");
-    bvh = BVH::build_bonsai_bvh(list_bboxes, false, 8);
   } else {
     fmt::println("Building binned BVH");
     bvh = bvh = BVH::build_bin_bvh(list_bboxes, list_centers, NUM_BINS);

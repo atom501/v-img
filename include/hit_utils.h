@@ -106,6 +106,11 @@ public:
     auto d = bboxes[1] - bboxes[0];
     return d[0] * d[1] + d[0] * d[2] + d[1] * d[2];
   }
+
+  float surface_area() const {
+    auto d = bboxes[1] - bboxes[0];
+    return 2.f * (d[0] * d[1] + d[0] * d[2] + d[1] * d[2]);
+  }
 };
 
 // ray-aabb slab test. result is returned in t_val variable

@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <mutex>
 #include <numeric>
+#include <thread>
 
 // split into groups using midpoints. returns the indices of splits in the prim_indices array
 static void midpoint_split(const std::vector<glm::vec3>& mid_points, std::span<size_t> prim_indices,
@@ -104,8 +105,7 @@ static void combine_minitrees(BVH& BVH_of_mini_trees, const std::vector<BVH>& mi
     const BVHNode& mini_tree_root = mini_trees[node.first_index].nodes[0];
     uint32_t tree_idx = node.first_index;
 
-    size_t offset
-        = mini_tree_root.is_leaf() ? obj_indices_offset[tree_idx] : node_offset[tree_idx];
+    size_t offset = mini_tree_root.is_leaf() ? obj_indices_offset[tree_idx] : node_offset[tree_idx];
 
     node = mini_tree_root;
     node.first_index = mini_tree_root.first_index + offset;

@@ -14,6 +14,11 @@
 #include <span>
 #include <vector>
 
+namespace BVHConst {
+  constexpr float intersection_cost = 1.f;
+  constexpr float traversal_cost = 0.5f;
+}
+
 struct BVHNode {
   uint32_t first_index;  // index of next node or list of objects in leaf
   uint32_t obj_count;    // number of objects in leaf
@@ -33,7 +38,7 @@ public:
 
   ~Bin() = default;
 
-  float cost() { return aabb.half_SA() * obj_count; }
+  float cost() { return aabb.surface_area() * obj_count; }
 };
 
 struct Split {

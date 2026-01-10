@@ -94,14 +94,13 @@ static void build_recursive(BVH& bvh, size_t node_index, size_t bb_index,
 
   // use the best_split
 
-  float curr_leaf_cost
-      = curr_node_aabb.half_SA() * (curr_node.obj_count - 1);  // TODO change 1 to be configurable
+  float curr_leaf_cost = BVHConst::intersection_cost * curr_node.obj_count;
+  float split_cost = BVHConst::traversal_cost + best_split.cost / curr_node_aabb.surface_area();
 
   size_t first_right;  // Index of the first primitive in the right child
 
   // condition for not splitting
-  if ((best_split.bin_split == std::numeric_limits<float>::max())
-      || best_split.cost >= curr_leaf_cost) {
+  if ((best_split.bin_split == std::numeric_limits<float>::max()) || split_cost >= curr_leaf_cost) {
     if (curr_node.obj_count > 8) {  // TODO change max prim to be configurable
       // use the median split if many primitives
       uint8_t axis = curr_node_aabb.largest_axis();

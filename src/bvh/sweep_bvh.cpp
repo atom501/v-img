@@ -96,16 +96,19 @@ static void build_sweep_recursive(BVH& bvh, size_t node_index, size_t bb_index,
     return;
   }
 
-  const float leaf_cost = curr_node_aabb.half_SA() * (curr_node_objs - 1);
+  const float leaf_cost = BVHConst::intersection_cost * curr_node_objs;
   // get split for all axis
-  Split best_split = Split{prim_axis_sort[0].size() / 2, leaf_cost, 0};
+  Split best_split = Split{prim_axis_sort[0].size() / 2, std::numeric_limits<float>::infinity(), 0};
 
   for (size_t i = 0; i < 3; i++) {
     best_split = sweep_best_span_split(i, prim_axis_sort[i], bboxes, best_split);
   }
 
+  const float split_cost
+      = BVHConst::traversal_cost + best_split.cost / curr_node_aabb.surface_area();
+
   // use median split if many primitives but cost is high. else use best_split
-  if (best_split.cost >= leaf_cost) {
+  if (split_cost >= leaf_cost) {
     if (curr_node_objs > max_node_prims) {
       // use the median split if cost too high but more than max_node_prims
       best_split.axis = curr_node_aabb.largest_axis();
