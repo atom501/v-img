@@ -11,7 +11,13 @@
 #include <cstdint>
 #include <glm/vec3.hpp>
 #include <memory>
+#include <span>
 #include <vector>
+
+namespace BVHConst {
+  constexpr float intersection_cost = 1.f;
+  constexpr float traversal_cost = 0.5f;
+}
 
 struct BVHNode {
   uint32_t first_index;  // index of next node or list of objects in leaf
@@ -32,7 +38,7 @@ public:
 
   ~Bin() = default;
 
-  float cost() { return aabb.half_SA() * obj_count; }
+  float cost() { return aabb.surface_area() * obj_count; }
 };
 
 struct Split {
@@ -54,8 +60,14 @@ public:
   ~BVH() = default;
 
   // input is list of bounding boxes of primitives and their centers
-  static BVH build(const std::vector<AABB>& bboxes, const std::vector<glm::vec3>& centers,
-                   const size_t num_bins);
+  static BVH build_bin_bvh(const std::vector<AABB>& bboxes, const std::vector<glm::vec3>& centers,
+                           const size_t num_bins);
+
+  static BVH build_bonsai_bvh(const std::vector<AABB>& bboxes, bool prune,
+                              const uint16_t max_node_primes);
+
+  static BVH build_sweep_bvh(const std::vector<AABB>& bboxes, const std::vector<glm::vec3>& centers,
+                             std::span<size_t> prim_indices, const uint16_t max_node_primes);
 
   bool occlude(Ray& ray, std::vector<size_t>& thread_stack,
                const std::vector<std::unique_ptr<Surface>>& prims) const {

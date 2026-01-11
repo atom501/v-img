@@ -96,10 +96,20 @@ public:
     bboxes[1] = glm::max(bboxes[1], box.bboxes[1]);
   }
 
+  void extend(const glm::vec3& point) {
+    bboxes[0] = glm::min(bboxes[0], point);
+    bboxes[1] = glm::max(bboxes[1], point);
+  }
+
   // half of surface area
   float half_SA() const {
     auto d = bboxes[1] - bboxes[0];
     return d[0] * d[1] + d[0] * d[2] + d[1] * d[2];
+  }
+
+  float surface_area() const {
+    auto d = bboxes[1] - bboxes[0];
+    return 2.f * (d[0] * d[1] + d[0] * d[2] + d[1] * d[2]);
   }
 };
 
