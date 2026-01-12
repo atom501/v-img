@@ -12,7 +12,14 @@ struct HitInfo;
 struct ScatterInfo {
   glm::vec3 wo;  // outgoing direction from hit point on material. Always normalized
   float eta;     // get eta for the case with refraction
+  bool is_specular;
 };
+
+namespace MatConst {
+  constexpr float regularize_min = 0.03f;
+  constexpr float regularize_max = 0.1f;
+  constexpr float roughness_threshold = 0.1f;
+}
 
 class Material {
 public:
@@ -23,7 +30,7 @@ public:
    *  hit: information of point of hit
    */
   virtual std::optional<ScatterInfo> sample_mat(const glm::vec3& wi, const HitInfo& hit,
-                                                pcg32_random_t& pcg_rng) const {
+                                                pcg32_random_t& pcg_rng, bool regularize) const {
     return std::nullopt;
   }
 
@@ -37,12 +44,13 @@ public:
   }
 
   virtual glm::vec3 eval_div_pdf(const glm::vec3& wi, const glm::vec3& wo, const HitInfo& hit,
-                                 const RayCone& cone) const {
+                                 const RayCone& cone, bool regularize) const {
     return glm::vec3(0.0f);
   }
 
   virtual std::pair<glm::vec3, float> eval_pdf_pair(const glm::vec3& wi, const glm::vec3& wo,
-                                                    const HitInfo& hit, const RayCone& cone) const {
+                                                    const HitInfo& hit, const RayCone& cone,
+                                                    bool regularize) const {
     return std::make_pair(glm::vec3(0.0f), 1.0f);
   }
 

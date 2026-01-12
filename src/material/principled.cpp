@@ -1,7 +1,7 @@
 #include <material/principled.h>
 
 std::optional<ScatterInfo> Principled::sample_mat(const glm::vec3& wi, const HitInfo& hit,
-                                                  pcg32_random_t& pcg_rng) const {
+                                                  pcg32_random_t& pcg_rng, bool regularize) const {
   glm::vec3 dir_in = -wi;
   ONB normal_frame = hit.n_frame;
 
@@ -13,7 +13,7 @@ std::optional<ScatterInfo> Principled::sample_mat(const glm::vec3& wi, const Hit
 
   if (glm::dot(hit.hit_n_g, dir_in) < 0) {
     return sample_disney_rough_glass(dir_in, hit, eta, anisotropic, roughness, normal_frame,
-                                     pcg_rng);
+                                     pcg_rng, regularize);
   }
 
   float diffuse_weight = (1.f - metallic) * (1.f - specular_transmission);
@@ -33,14 +33,15 @@ std::optional<ScatterInfo> Principled::sample_mat(const glm::vec3& wi, const Hit
   if (rnd <= choose_diff) {
     return sample_disney_diffuse(dir_in, hit, normal_frame, pcg_rng);
   } else if (rnd > choose_diff && rnd <= (choose_diff + choose_clearcoat)) {
-    return sample_disney_clearcoat(dir_in, hit, normal_frame, clearcoat_gloss, pcg_rng);
+    return sample_disney_clearcoat(dir_in, hit, normal_frame, clearcoat_gloss, pcg_rng, regularize);
   } else if (rnd > (choose_diff + choose_clearcoat)
              && rnd <= (choose_diff + choose_clearcoat + choose_metal)) {
-    return sample_disney_metal(dir_in, hit, roughness, anisotropic, normal_frame, pcg_rng);
+    return sample_disney_metal(dir_in, hit, roughness, anisotropic, normal_frame, pcg_rng,
+                               regularize);
   } else if (rnd > (choose_diff + choose_clearcoat + choose_metal)
              && rnd <= (choose_diff + choose_clearcoat + choose_metal + choose_glass)) {
     return sample_disney_rough_glass(dir_in, hit, eta, anisotropic, roughness, normal_frame,
-                                     pcg_rng);
+                                     pcg_rng, regularize);
   } else {
     // should be unreachable
     return std::nullopt;
@@ -125,12 +126,12 @@ float Principled::pdf(const glm::vec3& wi, const glm::vec3& wo, const HitInfo& h
 }
 
 glm::vec3 Principled::eval_div_pdf(const glm::vec3& wi, const glm::vec3& wo, const HitInfo& hit,
-                                   const RayCone& cone) const {
-  return eval_pdf<glm::vec3>(wi, wo, hit, cone);
+                                   const RayCone& cone, bool regularize) const {
+  return eval_pdf<glm::vec3>(wi, wo, hit, cone, regularize);
 }
 
 std::pair<glm::vec3, float> Principled::eval_pdf_pair(const glm::vec3& wi, const glm::vec3& wo,
-                                                      const HitInfo& hit,
-                                                      const RayCone& cone) const {
-  return eval_pdf<std::pair<glm::vec3, float>>(wi, wo, hit, cone);
+                                                      const HitInfo& hit, const RayCone& cone,
+                                                      bool regularize) const {
+  return eval_pdf<std::pair<glm::vec3, float>>(wi, wo, hit, cone, regularize);
 }

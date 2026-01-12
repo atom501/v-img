@@ -76,13 +76,19 @@ inline glm::vec3 sample_local_h_clearcoat(pcg32_random_t& pcg_rng, const float a
 inline std::optional<ScatterInfo> sample_disney_clearcoat(const glm::vec3& dir_in,
                                                           const HitInfo& hit, ONB normal_frame,
                                                           float clearcoat_gloss,
-                                                          pcg32_random_t& pcg_rng) {
+                                                          pcg32_random_t& pcg_rng,
+                                                          bool regularize) {
   if (glm::dot(hit.hit_n_g, dir_in) < 0) {
     // No light below the surface
     return std::nullopt;
   }
 
-  const float alpha_g = (1.f - clearcoat_gloss) * 0.1f + clearcoat_gloss * 0.001f;
+  float alpha_g = (1.f - clearcoat_gloss) * 0.1f + clearcoat_gloss * 0.001f;
+
+  if (regularize && alpha_g < MatConst::roughness_threshold) {
+    alpha_g = std::clamp(2.f * alpha_g, MatConst::regularize_min, MatConst::regularize_max);
+  }
+
   glm::vec3 local_h = sample_local_h_clearcoat(pcg_rng, alpha_g);
 
   if (glm::dot(normal_frame.w, dir_in) < 0) {
@@ -97,13 +103,13 @@ inline std::optional<ScatterInfo> sample_disney_clearcoat(const glm::vec3& dir_i
   if (glm::dot(hit.hit_n_g, reflected) <= 0) {
     return std::nullopt;
   } else {
-    return ScatterInfo{reflected, 0};
+    return ScatterInfo{reflected, 0, true};
   }
 }
 
 inline std::pair<glm::vec3, float> eval_pdf_disney_clearcoat(
     const glm::vec3& dir_in, const glm::vec3& dir_out, const HitInfo& hit,
-    const glm::vec3& base_col, float clearcoat_gloss, const glm::vec3& half_vec, ONB normal_frame) {
+    const glm::vec3& base_col, float alpha_g, const glm::vec3& half_vec, ONB normal_frame) {
   if (glm::dot(hit.hit_n_g, dir_in) < 0 || glm::dot(hit.hit_n_g, dir_out) < 0) {
     // No light below the surface
     return std::make_pair(glm::vec3{0.f, 0.f, 0.f}, 0.f);
@@ -118,7 +124,6 @@ inline std::pair<glm::vec3, float> eval_pdf_disney_clearcoat(
 
   float G = G_w(dir_in, 0.25, 0.25, normal_frame) * G_w(dir_out, 0.25, 0.25, normal_frame);
 
-  const float alpha_g = (1.f - clearcoat_gloss) * 0.1f + clearcoat_gloss * 0.001f;
   const float alpha_g_square = alpha_g * alpha_g;
 
   const glm::vec3 local_H = project_onto_onb(normal_frame, half_vec);

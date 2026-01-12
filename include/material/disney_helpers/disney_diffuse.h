@@ -65,7 +65,7 @@ inline std::optional<ScatterInfo> sample_disney_diffuse(const glm::vec3& dir_in,
   if (glm::dot(hit.hit_n_g, dir_out) <= 0) {
     return std::nullopt;
   } else {
-    return ScatterInfo{dir_out, 0.f};
+    return ScatterInfo{dir_out, 0.f, false};
   }
 }
 

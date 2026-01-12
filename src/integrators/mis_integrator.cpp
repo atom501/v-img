@@ -24,6 +24,7 @@ glm::vec3 mis_integrator(Ray& input_ray, std::vector<size_t>& thread_stack, cons
   glm::vec3 bounce_result = glm::vec3(0.0f);
   glm::vec3 throughput = glm::vec3(1.0f);
   size_t d = 0;
+  bool non_specular_bounce = false;
 
   // tracking eta_scale and removing it from the path contribution when doing russian roulette
   float eta_scale = 1;
@@ -66,7 +67,8 @@ glm::vec3 mis_integrator(Ray& input_ray, std::vector<size_t>& thread_stack, cons
         if (!light_is_occluded) {
           const auto [mat_eval, mat_pdf] = hit.value().mat->eval_pdf_pair(
               test_ray.dir, l_sample_info.wi, hit.value(),
-              propagate_reflect_cone(test_ray.ray_cone, surface_spread_angle * 2.f, hit_dist));
+              propagate_reflect_cone(test_ray.ray_cone, surface_spread_angle * 2.f, hit_dist),
+              non_specular_bounce);
 
           if (mat_pdf != 0 && !std::isnan(mat_pdf)) {
             float G = l_sample_info.G;
@@ -79,10 +81,14 @@ glm::vec3 mis_integrator(Ray& input_ray, std::vector<size_t>& thread_stack, cons
 
     // info for next bounce
     std::optional<ScatterInfo> scattered_mat
-        = hit.value().mat->sample_mat(test_ray.dir, hit.value(), hash_state);
+        = hit.value().mat->sample_mat(test_ray.dir, hit.value(), hash_state, non_specular_bounce);
 
     if (!scattered_mat.has_value()) {
       return bounce_result;
+    }
+
+    if (!scattered_mat.value().is_specular) {
+      non_specular_bounce = true;
     }
 
     if (scattered_mat.value().eta != 0.f) {
@@ -95,8 +101,9 @@ glm::vec3 mis_integrator(Ray& input_ray, std::vector<size_t>& thread_stack, cons
           = propagate_reflect_cone(test_ray.ray_cone, surface_spread_angle * 2.f, hit_dist);
     }
 
-    const auto [mat_sample_eval, mat_sample_pdf] = hit.value().mat->eval_pdf_pair(
-        test_ray.dir, scattered_mat.value().wo, hit.value(), test_ray.ray_cone);
+    const auto [mat_sample_eval, mat_sample_pdf]
+        = hit.value().mat->eval_pdf_pair(test_ray.dir, scattered_mat.value().wo, hit.value(),
+                                         test_ray.ray_cone, non_specular_bounce);
 
     if (std::isnan(mat_sample_pdf)) {
       /**

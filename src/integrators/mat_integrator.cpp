@@ -8,6 +8,7 @@ glm::vec3 material_integrator(Ray& input_ray, std::vector<size_t>& thread_stack,
   auto test_ray = input_ray;
   glm::vec3 throughput = glm::vec3(1.0f);
   constexpr uint32_t roulette_threshold = 5;
+  bool non_specular_bounce = false;
 
   // tracking eta_scale and removing it from the path contribution when doing russian roulette
   float eta_scale = 1;
@@ -23,10 +24,14 @@ glm::vec3 material_integrator(Ray& input_ray, std::vector<size_t>& thread_stack,
       // get information on scattered ray from material
 
       std::optional<ScatterInfo> scattered_ray
-          = hit.value().mat->sample_mat(test_ray.dir, hit.value(), hash_state);
+          = hit.value().mat->sample_mat(test_ray.dir, hit.value(), hash_state, non_specular_bounce);
 
       // get color from material (sample the material)
       if (scattered_ray.has_value()) {
+        if (!scattered_ray.value().is_specular) {
+          non_specular_bounce = true;
+        }
+
         // update the ray cone at hit point
         float hit_dist = glm::length(test_ray.o - hit.value().hit_p);
         float surface_spread_angle
@@ -44,9 +49,10 @@ glm::vec3 material_integrator(Ray& input_ray, std::vector<size_t>& thread_stack,
               = propagate_reflect_cone(test_ray.ray_cone, surface_spread_angle * 2.f, hit_dist);
         }
 
-        throughput *= emitted_col
-                      + hit.value().mat->eval_div_pdf(test_ray.dir, scattered_ray.value().wo,
-                                                      hit.value(), test_ray.ray_cone);
+        throughput
+            *= emitted_col
+               + hit.value().mat->eval_div_pdf(test_ray.dir, scattered_ray.value().wo, hit.value(),
+                                               test_ray.ray_cone, non_specular_bounce);
 
         // perform russian roulette
         if (d > roulette_threshold) {

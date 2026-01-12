@@ -105,11 +105,9 @@ inline float pdf_disney_rough_glass(const glm::vec3& dir_in, const glm::vec3& di
   }
 }
 
-inline std::optional<ScatterInfo> sample_disney_rough_glass(const glm::vec3& dir_in,
-                                                            const HitInfo& hit, float mat_eta,
-                                                            float anisotropic, float roughness,
-                                                            ONB normal_frame,
-                                                            pcg32_random_t& pcg_rng) {
+inline std::optional<ScatterInfo> sample_disney_rough_glass(
+    const glm::vec3& dir_in, const HitInfo& hit, float mat_eta, float anisotropic, float roughness,
+    ONB normal_frame, pcg32_random_t& pcg_rng, bool regularize) {
   // flip eta when going out of the surface
   float in_geo_dot = glm::dot(dir_in, hit.hit_n_g);
   float eta = in_geo_dot >= 0 ? mat_eta : 1.f / mat_eta;
@@ -121,8 +119,17 @@ inline std::optional<ScatterInfo> sample_disney_rough_glass(const glm::vec3& dir
 
   float roughness_square = roughness * roughness;
 
-  const float alphax = std::max(alpha_min, roughness_square / aspect);
-  const float alphay = std::max(alpha_min, roughness_square * aspect);
+  float alphax = std::max(alpha_min, roughness_square / aspect);
+  float alphay = std::max(alpha_min, roughness_square * aspect);
+
+  if (regularize) {
+    alphax = alphax < MatConst::roughness_threshold
+                 ? std::clamp(2.f * alphax, MatConst::regularize_min, MatConst::regularize_max)
+                 : alphax;
+    alphay = alphay < MatConst::roughness_threshold
+                 ? std::clamp(2.f * alphay, MatConst::regularize_min, MatConst::regularize_max)
+                 : alphay;
+  }
 
   glm::vec3 local_dir_in = project_onto_onb(normal_frame, dir_in);
   glm::vec3 local_micro_normal
@@ -144,7 +151,7 @@ inline std::optional<ScatterInfo> sample_disney_rough_glass(const glm::vec3& dir
     if (glm::dot(reflected, hit.hit_n_g) * glm::dot(dir_in, hit.hit_n_g) <= 0) {
       return std::nullopt;
     } else {
-      return ScatterInfo{reflected, 0.f};
+      return ScatterInfo{reflected, 0.f, true};
     }
   } else {
     // Refraction
@@ -172,7 +179,7 @@ inline std::optional<ScatterInfo> sample_disney_rough_glass(const glm::vec3& dir
       if ((1 - (1 - g_h_dot_in * g_h_dot_in) / (eta * eta)) <= 0) {
         return std::nullopt;
       } else {
-        return ScatterInfo{refracted, eta};
+        return ScatterInfo{refracted, eta, true};
       }
     }
   }

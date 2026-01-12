@@ -3,7 +3,7 @@
 #include <numbers>
 
 std::optional<ScatterInfo> Lambertian::sample_mat(const glm::vec3& wi, const HitInfo& hit,
-                                                  pcg32_random_t& pcg_rng) const {
+                                                  pcg32_random_t& pcg_rng, bool regularize) const {
   float rand1 = rand_float(pcg_rng);
   float rand2 = rand_float(pcg_rng);
 
@@ -17,7 +17,7 @@ std::optional<ScatterInfo> Lambertian::sample_mat(const glm::vec3& wi, const Hit
   glm::vec3 dir = xform_with_onb(onb, sample_hemisphere_cosine(rand1, rand2));
 
   if (front_face) {
-    return ScatterInfo{dir, 0.f};
+    return ScatterInfo{dir, 0.f, false};
   } else {
     // should not hit the material from back
     return std::nullopt;
@@ -40,13 +40,13 @@ float Lambertian::pdf(const glm::vec3& wi, const glm::vec3& wo, const HitInfo& h
 }
 
 glm::vec3 Lambertian::eval_div_pdf(const glm::vec3& wi, const glm::vec3& wo, const HitInfo& hit,
-                                   const RayCone& cone) const {
+                                   const RayCone& cone, bool regularize) const {
   return Lambertian::tex->col_at_ray_hit(wi, cone, hit);
 }
 
 std::pair<glm::vec3, float> Lambertian::eval_pdf_pair(const glm::vec3& wi, const glm::vec3& wo,
-                                                      const HitInfo& hit,
-                                                      const RayCone& cone) const {
+                                                      const HitInfo& hit, const RayCone& cone,
+                                                      bool regularize) const {
   float dot_product
       = static_cast<float>(std::max(0.0f, glm::dot(wo, hit.hit_n_s)) / std::numbers::pi);
 

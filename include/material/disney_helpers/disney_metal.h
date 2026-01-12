@@ -77,7 +77,8 @@ inline float pdf_disney_metal(const glm::vec3& dir_in, const glm::vec3& dir_out,
 
 inline std::optional<ScatterInfo> sample_disney_metal(const glm::vec3& dir_in, const HitInfo& hit,
                                                       float roughness, float anisotropic,
-                                                      ONB normal_frame, pcg32_random_t& pcg_rng) {
+                                                      ONB normal_frame, pcg32_random_t& pcg_rng,
+                                                      bool regularize) {
   if (glm::dot(hit.hit_n_g, dir_in) < 0) {
     // No light below the surface
     return std::nullopt;
@@ -92,8 +93,17 @@ inline std::optional<ScatterInfo> sample_disney_metal(const glm::vec3& dir_in, c
   float aspect = std::sqrt(1.f - 0.9f * anisotropic);
   float roughness_square = roughness * roughness;
 
-  const float alphax = std::max(alpha_min, roughness_square / aspect);
-  const float alphay = std::max(alpha_min, roughness_square * aspect);
+  float alphax = std::max(alpha_min, roughness_square / aspect);
+  float alphay = std::max(alpha_min, roughness_square * aspect);
+
+  if (regularize) {
+    alphax = alphax < MatConst::roughness_threshold
+                 ? std::clamp(2.f * alphax, MatConst::regularize_min, MatConst::regularize_max)
+                 : alphax;
+    alphay = alphay < MatConst::roughness_threshold
+                 ? std::clamp(2.f * alphay, MatConst::regularize_min, MatConst::regularize_max)
+                 : alphay;
+  }
 
   glm::vec3 local_micro_normal
       = anisotropic_sample_visible_normals(local_dir_in, alphax, alphay, pcg_rng);
@@ -106,7 +116,7 @@ inline std::optional<ScatterInfo> sample_disney_metal(const glm::vec3& dir_in, c
   if (glm::dot(reflected, hit.hit_n_g) <= 0) {
     return std::nullopt;
   } else {
-    return ScatterInfo{reflected, 0.f};
+    return ScatterInfo{reflected, 0.f, true};
   }
 }
 

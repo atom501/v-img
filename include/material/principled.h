@@ -56,22 +56,24 @@ public:
   ~Principled() = default;
 
   std::optional<ScatterInfo> sample_mat(const glm::vec3& wi, const HitInfo& hit,
-                                        pcg32_random_t& pcg_rng) const override;
+                                        pcg32_random_t& pcg_rng, bool regularize) const override;
   glm::vec3 eval(const glm::vec3& wi, const glm::vec3& wo, const HitInfo& hit,
                  const RayCone& cone) const override;
   float pdf(const glm::vec3& wi, const glm::vec3& wo, const HitInfo& hit) const override;
 
   glm::vec3 eval_div_pdf(const glm::vec3& wi, const glm::vec3& wo, const HitInfo& hit,
-                         const RayCone& cone) const override;
+                         const RayCone& cone, bool regularize) const override;
 
   std::pair<glm::vec3, float> eval_pdf_pair(const glm::vec3& wi, const glm::vec3& wo,
-                                            const HitInfo& hit, const RayCone& cone) const override;
+                                            const HitInfo& hit, const RayCone& cone,
+                                            bool regularize) const override;
 
   bool is_delta() const override { return false; }
 
   // return material eval pdf info as eval/pdf or (eval, pdf)
   template <MatReturnType T> T eval_pdf(const glm::vec3& wi, const glm::vec3& wo,
-                                        const HitInfo& hit, const RayCone& cone) const {
+                                        const HitInfo& hit, const RayCone& cone,
+                                        bool regularize) const {
     glm::vec3 dir_in = -wi;
     ONB normal_frame = hit.n_frame;
 
@@ -92,8 +94,17 @@ public:
 
     float roughness_square = roughness_clamp * roughness_clamp;
 
-    const float alphax = std::max(alpha_min, roughness_square / aspect);
-    const float alphay = std::max(alpha_min, roughness_square * aspect);
+    float alphax = std::max(alpha_min, roughness_square / aspect);
+    float alphay = std::max(alpha_min, roughness_square * aspect);
+
+    if (regularize) {
+      alphax = alphax < MatConst::roughness_threshold
+                   ? std::clamp(2.f * alphax, MatConst::regularize_min, MatConst::regularize_max)
+                   : alphax;
+      alphay = alphay < MatConst::roughness_threshold
+                   ? std::clamp(2.f * alphay, MatConst::regularize_min, MatConst::regularize_max)
+                   : alphay;
+    }
 
     float G_in = G_w(dir_in, alphax, alphay, normal_frame);
 
@@ -117,8 +128,14 @@ public:
     auto [eval_diff, pdf_diff] = eval_pdf_disney_diffuse(dir_in, wo, hit, base_color, subsurface,
                                                          roughness, half_vector, normal_frame);
 
+    float alpha_g = (1.f - clearcoat_gloss) * 0.1f + clearcoat_gloss * 0.001f;
+
+    alpha_g = regularize && (alpha_g < MatConst::roughness_threshold)
+                  ? std::clamp(2.f * alpha_g, MatConst::regularize_min, MatConst::regularize_max)
+                  : alpha_g;
+
     auto [eval_clearcoat, pdf_clearcoat] = eval_pdf_disney_clearcoat(
-        dir_in, wo, hit, base_color, clearcoat_gloss, half_vector, normal_frame);
+        dir_in, wo, hit, base_color, alpha_g, half_vector, normal_frame);
 
     auto [eval_metal, pdf_metal]
         = eval_pdf_disney_metal(dir_in, wo, hit, base_color, specular_tint, specular, eta, metallic,

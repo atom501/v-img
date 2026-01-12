@@ -25,7 +25,7 @@ static inline glm::vec3 refract_dir(const glm::vec3& wi, const glm::vec3& hit_p,
 // how ray will scatter after hitting dielectric material. Source: Reflections and Refractions in
 // Ray Tracing by Bram de Greve
 std::optional<ScatterInfo> Dielectric::sample_mat(const glm::vec3& wi, const HitInfo& hit,
-                                                  pcg32_random_t& pcg_rng) const {
+                                                  pcg32_random_t& pcg_rng, bool regularize) const {
   glm::vec3 wo;  // ray direction after hit
   float eta;
 
@@ -69,8 +69,7 @@ std::optional<ScatterInfo> Dielectric::sample_mat(const glm::vec3& wi, const Hit
     }
   }
 
-  ScatterInfo ret_inf = {wo, eta};
-  return std::make_optional(std::move(ret_inf));
+  return ScatterInfo{wo, eta, true};
 }
 
 // has no color of its own
@@ -85,6 +84,6 @@ float Dielectric::pdf(const glm::vec3& wi, const glm::vec3& wo, const HitInfo& h
 }
 
 glm::vec3 Dielectric::eval_div_pdf(const glm::vec3& wi, const glm::vec3& wo, const HitInfo& hit,
-                                   const RayCone& cone) const {
+                                   const RayCone& cone, bool regularize) const {
   return glm::vec3(1.f);
 }
