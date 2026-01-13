@@ -36,8 +36,9 @@ public:
 
   ~Sphere() = default;
 
-  std::optional<HitInfo> hit_surface(Ray& r) override;
+  std::optional<ForHitInfo> hit_surface(Ray& r) override;
   bool hit_check(Ray& r) override;
+  HitInfo hit_info(const Ray& r, const ForHitInfo& pre_calc) override;
 
   AABB bounds() const override;
   glm::vec3 get_center() const override;
@@ -50,10 +51,10 @@ public:
 
 private:
   // intersection test from ray tracing gems 1, chapter 7
-  template <
-      typename T,
-      std::enable_if_t<std::is_same_v<T, std::optional<HitInfo>> || std::is_same_v<T, bool>, bool>
-      = true>
+  template <typename T,
+            std::enable_if_t<
+                std::is_same_v<T, std::optional<ForHitInfo>> || std::is_same_v<T, bool>, bool>
+            = true>
   inline T sphere_hit_template(Ray& r) {
     float t0, t1;
     const float radius_squared = radius * radius;
@@ -69,7 +70,7 @@ private:
     if (discriminant < 0) {
       if constexpr (std::is_same_v<T, bool>) {
         return false;
-      } else if constexpr (std::is_same_v<T, std::optional<HitInfo>>) {
+      } else if constexpr (std::is_same_v<T, std::optional<ForHitInfo>>) {
         return std::nullopt;
       }
     }
@@ -82,7 +83,7 @@ private:
       if (t0 < r.minT || t0 > r.maxT) {
         if constexpr (std::is_same_v<T, bool>) {
           return false;
-        } else if constexpr (std::is_same_v<T, std::optional<HitInfo>>) {
+        } else if constexpr (std::is_same_v<T, std::optional<ForHitInfo>>) {
           return std::nullopt;
         }
       }
@@ -93,40 +94,8 @@ private:
 
     if constexpr (std::is_same_v<T, bool>) {
       return true;
-    } else if constexpr (std::is_same_v<T, std::optional<HitInfo>>) {
-      const glm::vec3 hit_p = r.o + r.dir * t0;
-      const glm::vec3 normal = glm::normalize(hit_p - center);
-
-      // calculate uv
-      float theta = std::acos(-normal.y);
-      float phi = std::atan2(-normal.z, normal.x) + std::numbers::pi;
-
-      float u = phi / (2.f * std::numbers::pi);
-      float v = theta / std::numbers::pi;
-
-      glm::vec3 dpdu{-Sphere::radius * normal.y, Sphere::radius * normal.x, 0.f};
-      glm::vec3 dpdv{Sphere::radius * std::cos(u) * std::cos(v),
-                     Sphere::radius * std::sin(u) * std::cos(v), -Sphere::radius * std::sin(v)};
-      // dpdu may not be orthogonal to shading normal:
-      // subtract the projection of shading_normal onto dpdu to make them orthogonal
-      glm::vec3 tangent = glm::normalize(dpdu - normal * dot(normal, dpdu));
-
-      // fixed value set for Sphere's data needed for texture filtering
-      // TODO either remove spheres or change the values
-      float mean_curvature = 1.f / Sphere::radius;
-
-      HitInfo hit = {mat,
-                     this,
-                     hit_p,
-                     normal,
-                     normal,
-                     glm::vec2(u, v),
-                     ONB{tangent, glm::normalize(glm::cross(normal, tangent)), normal},
-                     1.f,
-                     0.000001f,
-                     mean_curvature};
-
-      return std::make_optional(std::move(hit));
+    } else if constexpr (std::is_same_v<T, std::optional<ForHitInfo>>) {
+      return ForHitInfo{0.f, 0.f, 0.f, 0.f, this};
     }
   }
 };

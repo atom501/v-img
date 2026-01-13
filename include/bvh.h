@@ -87,6 +87,7 @@ public:
   T hit(Ray& ray, std::vector<size_t>& thread_stack,
         const std::vector<std::unique_ptr<Surface>>& prims) const {
     T return_variable;
+    std::optional<ForHitInfo> intermediate_hit = std::nullopt;
 
     if constexpr (std::is_same_v<T, std::optional<HitInfo>>) {
       return_variable = std::nullopt;
@@ -150,7 +151,7 @@ public:
           if constexpr (std::is_same_v<T, std::optional<HitInfo>>) {
             const auto hit_temp = prims[prim_index]->hit_surface(ray);
             // if ray hit the object replace the last hit_final
-            if (hit_temp.has_value()) return_variable = hit_temp;
+            if (hit_temp.has_value()) intermediate_hit = hit_temp;
           } else if constexpr (std::is_same_v<T, uint32_t>) {
             prims[prim_index]->hit_check(ray);
             // increment whenever a hit test is done on a primitive
@@ -202,6 +203,13 @@ public:
             thread_stack.push_back(first_child);
           }  // else don't push any child node
         }
+      }
+    }
+
+    if constexpr (std::is_same_v<T, std::optional<HitInfo>>) {
+      if (intermediate_hit.has_value()) {
+        auto& pre_calc = intermediate_hit.value();
+        return_variable = pre_calc.prim->hit_info(ray, pre_calc);
       }
     }
 

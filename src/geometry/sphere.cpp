@@ -3,11 +3,45 @@
 
 #include <glm/gtx/norm.hpp>
 
-std::optional<HitInfo> Sphere::hit_surface(Ray& ray) {
-  return sphere_hit_template<std::optional<HitInfo>>(ray);
+std::optional<ForHitInfo> Sphere::hit_surface(Ray& ray) {
+  return sphere_hit_template<std::optional<ForHitInfo>>(ray);
 }
 
 bool Sphere::hit_check(Ray& ray) { return sphere_hit_template<bool>(ray); }
+
+HitInfo Sphere::hit_info(const Ray& r, const ForHitInfo& pre_calc) {
+  const glm::vec3 hit_p = r.o + r.dir * r.maxT;
+  const glm::vec3 normal = glm::normalize(hit_p - center);
+
+  // calculate uv
+  float theta = std::acos(-normal.y);
+  float phi = std::atan2(-normal.z, normal.x) + std::numbers::pi;
+
+  float u = phi / (2.f * std::numbers::pi);
+  float v = theta / std::numbers::pi;
+
+  glm::vec3 dpdu{-Sphere::radius * normal.y, Sphere::radius * normal.x, 0.f};
+  glm::vec3 dpdv{Sphere::radius * std::cos(u) * std::cos(v),
+                 Sphere::radius * std::sin(u) * std::cos(v), -Sphere::radius * std::sin(v)};
+  // dpdu may not be orthogonal to shading normal:
+  // subtract the projection of shading_normal onto dpdu to make them orthogonal
+  glm::vec3 tangent = glm::normalize(dpdu - normal * dot(normal, dpdu));
+
+  // fixed value set for Sphere's data needed for texture filtering
+  // TODO either remove spheres or change the values
+  float mean_curvature = 1.f / Sphere::radius;
+
+  return {mat,
+          this,
+          hit_p,
+          normal,
+          normal,
+          glm::vec2(u, v),
+          ONB{tangent, glm::normalize(glm::cross(normal, tangent)), normal},
+          1.f,
+          0.000001f,
+          mean_curvature};
+}
 
 AABB Sphere::bounds() const {
   glm ::vec3 moving_diagonal = glm::vec3(radius, radius, radius);

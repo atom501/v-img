@@ -53,8 +53,9 @@ public:
 
   ~Triangle() = default;
 
-  std::optional<HitInfo> hit_surface(Ray& r) override;
+  std::optional<ForHitInfo> hit_surface(Ray& r) override;
   bool hit_check(Ray& r) override;
+  HitInfo hit_info(const Ray& r, const ForHitInfo& pre_calc) override;
 
   AABB bounds() const override;
   glm::vec3 get_center() const override;
@@ -70,10 +71,10 @@ private:
    * watertight ray triangle intersection. Source is pbrt and "Watertight Ray/Triangle Intersection"
    * paper
    */
-  template <
-      typename T,
-      std::enable_if_t<std::is_same_v<T, std::optional<HitInfo>> || std::is_same_v<T, bool>, bool>
-      = true>
+  template <typename T,
+            std::enable_if_t<
+                std::is_same_v<T, std::optional<ForHitInfo>> || std::is_same_v<T, bool>, bool>
+            = true>
   inline T tri_hit_template(Ray& ray) {
     const auto& tri_indices = obj_mesh->indices[tri_index];
     const auto& vertices_list = obj_mesh->vertices;
@@ -85,7 +86,7 @@ private:
     auto edge2 = p2 - p0;
 
     if (glm::length2(glm::cross(edge2, edge1)) == 0.f) {
-      if constexpr (std::is_same_v<T, std::optional<HitInfo>>) {
+      if constexpr (std::is_same_v<T, std::optional<ForHitInfo>>) {
         return std::nullopt;
       } else if constexpr (std::is_same_v<T, bool>) {
         return false;
@@ -133,7 +134,7 @@ private:
     }
 
     if ((e0 < 0 || e1 < 0 || e2 < 0) && (e0 > 0 || e1 > 0 || e2 > 0)) {
-      if constexpr (std::is_same_v<T, std::optional<HitInfo>>) {
+      if constexpr (std::is_same_v<T, std::optional<ForHitInfo>>) {
         return std::nullopt;
       } else if constexpr (std::is_same_v<T, bool>) {
         return false;
@@ -142,7 +143,7 @@ private:
 
     float det = e0 + e1 + e2;
     if (det == 0) {
-      if constexpr (std::is_same_v<T, std::optional<HitInfo>>) {
+      if constexpr (std::is_same_v<T, std::optional<ForHitInfo>>) {
         return std::nullopt;
       } else if constexpr (std::is_same_v<T, bool>) {
         return false;
@@ -154,13 +155,13 @@ private:
     p2t.z *= Sz;
     float tScaled = e0 * p0t.z + e1 * p1t.z + e2 * p2t.z;
     if (det < 0 && (tScaled >= 0 || tScaled < ray.maxT * det || tScaled > ray.minT * det)) {
-      if constexpr (std::is_same_v<T, std::optional<HitInfo>>) {
+      if constexpr (std::is_same_v<T, std::optional<ForHitInfo>>) {
         return std::nullopt;
       } else if constexpr (std::is_same_v<T, bool>) {
         return false;
       }
     } else if (det > 0 && (tScaled <= 0 || tScaled > ray.maxT * det || tScaled < ray.minT * det)) {
-      if constexpr (std::is_same_v<T, std::optional<HitInfo>>) {
+      if constexpr (std::is_same_v<T, std::optional<ForHitInfo>>) {
         return std::nullopt;
       } else if constexpr (std::is_same_v<T, bool>) {
         return false;
@@ -173,97 +174,8 @@ private:
 
     if constexpr (std::is_same_v<T, bool>) {
       return true;
-    } else if constexpr (std::is_same_v<T, std::optional<HitInfo>>) {
-      float u = e0 * invDet, v = e1 * invDet, w = e2 * invDet;
-
-      const glm::vec3 tri_normal = glm::normalize(glm::cross(edge1, edge2));
-
-      glm::vec3 n0, n1, n2;
-      glm::vec3 shading_normal;
-
-      const auto& normal_list = obj_mesh->normals;
-      if (obj_mesh->normals.size() > 0) {
-        n0 = normal_list[tri_indices[0]], n1 = normal_list[tri_indices[1]],
-        n2 = normal_list[tri_indices[2]];
-
-        shading_normal = glm::normalize(u * n0 + v * n1 + w * n2);
-      } else {
-        n0 = tri_normal, n1 = tri_normal, n2 = tri_normal;
-        shading_normal = tri_normal;
-      }
-      const glm::vec3 hit_p = u * p0 + v * p1 + w * p2;
-
-      const auto& texcoords_list = obj_mesh->texcoords;
-
-      glm::vec2 uv = glm::vec2(u, v);
-      glm::vec2 diff_uvs[3];
-      glm::vec2 uv0 = glm::vec2(0, 0), uv1 = glm::vec2(1, 0), uv2 = glm::vec2(1, 1);
-      if (obj_mesh->texcoords.size() > 0) {
-        uv0 = texcoords_list[tri_indices[0]], uv1 = texcoords_list[tri_indices[1]],
-        uv2 = texcoords_list[tri_indices[2]];
-
-        uv = u * uv0 + v * uv1 + w * uv2;
-      }
-
-      diff_uvs[0] = uv0;
-      diff_uvs[1] = uv1;
-      diff_uvs[2] = uv2;
-
-      // calculating surface differential
-      glm::vec2 duvds = diff_uvs[2] - diff_uvs[0];
-      glm::vec2 duvdt = diff_uvs[2] - diff_uvs[1];
-
-      float det = duvds[0] * duvdt[1] - duvdt[0] * duvds[1];
-
-      float dsdu = 0.f, dtdu = 0.f, dsdv = 0.f, dtdv = 0.f;
-      glm::vec3 dpdu, dpdv;
-      if (std::abs(det) > 1e-8f && !std::isnan(det)) {
-        dsdu = duvdt[1] / det;
-        dtdu = -duvds[1] / det;
-        dsdv = duvdt[0] / det;
-        dtdv = -duvds[0] / det;
-
-        // Now we just need to do the matrix multiplication
-        glm::vec3 dpds = p2 - p0;
-        glm::vec3 dpdt = p2 - p1;
-        dpdu = dpds * dsdu + dpdt * dtdu;
-        dpdv = dpds * dsdv + dpdt * dtdv;
-      } else {
-        // degenerate uvs. Use an arbitrary coordinate system
-        std::tie(dpdu, dpdv) = get_axis(shading_normal);
-      }
-
-      // dpdu may not be orthogonal to shading normal:
-      // subtract the projection of shading_normal onto dpdu to make them orthogonal
-      glm::vec3 tangent = normalize(dpdu - shading_normal * dot(shading_normal, dpdu));
-
-      // We want to compute dn/du & dn/dv for mean curvature.
-      // This is computed in a similar way to dpdu.
-      // dn/duv = dn/dst * dst/duv = dn/dst * (duv/dst)^{-1}
-      glm::vec3 dnds = n2 - n0;
-      glm::vec3 dndt = n2 - n1;
-      glm::vec3 dndu = dnds * dsdu + dndt * dtdu;
-      glm::vec3 dndv = dnds * dsdv + dndt * dtdv;
-      glm::vec3 bitangent = glm::normalize(glm::cross(shading_normal, tangent));
-      float mean_curvature = (glm::dot(dndu, tangent) + glm::dot(dndv, bitangent)) / 2.f;
-
-      float twice_tri_area = glm::length(glm::cross(p1 - p0, p2 - p0));
-
-      float uv_area
-          = std::abs((uv1.x - uv0.x) * (uv2.y - uv0.y) - (uv2.x - uv0.x) * (uv1.y - uv0.y));
-
-      HitInfo hit = {obj_mesh->mat,
-                     this,
-                     hit_p,
-                     shading_normal,
-                     tri_normal,
-                     uv,
-                     ONB{tangent, bitangent, shading_normal},
-                     twice_tri_area,
-                     uv_area,
-                     mean_curvature};
-
-      return std::make_optional(std::move(hit));
+    } else if constexpr (std::is_same_v<T, std::optional<ForHitInfo>>) {
+      return ForHitInfo{e0, e1, e2, invDet, this};
     }
   }
 };

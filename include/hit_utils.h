@@ -12,6 +12,7 @@
 
 class Material;
 class Emitter;
+class Surface;
 
 struct EmitterInfo {
   glm::vec3 wi;  // direction vector from look_from to point on surface
@@ -67,6 +68,14 @@ struct HitInfo {
   float primitive_area;
   float tex_coord_area;
   float mean_curvature;
+};
+
+struct ForHitInfo {
+  float e0;
+  float e1;
+  float e2;
+  float invDet;
+  Surface* prim;
 };
 
 // Axis-aligned bounding box
