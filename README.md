@@ -5,7 +5,9 @@ A toy ray tracer written in C++. For now only uses the CPU. The project was setu
 ## Features
 -  **Performance**
     - Using AVX2 simd intrinsics to intersect 2 sibling AABB with 1 ray at once
-    - SAH BVH with multi-threaded construction
+    - Fast Binned SAH BVH with multi-threaded construction
+    - High quality Sweep SAH BVH with multi-threaded construction. Optmimized O(n logn) construction, primitives are sorted once per axis and kept sorted within each subset
+during recursion 
     - Multi-importance sampling for better render quality
     - Russian roulette to stop paths with low contribution
 
@@ -73,16 +75,16 @@ Integrators that can be set in scene file are "normal", "material" and "mis".
 ### Sample renders
 All renders were done on a AMD Ryzen 7 7700, on Linux compiled with gcc.
 
-Samples per pixel set to 512, max ray depth set to infinite so relying on Russian roulette for stopping a path and AgX tonemapper on the result image. 
+Samples per pixel set to 512, max ray depth set to infinite so relying on Russian roulette for stopping a path and AgX tonemapper on the result image. High quality Sweep SAH BVH is used for all renders.
 
-Spheres rendered with Multi-importance sampling. Resolution 1800 x 800. Render time: 1m 19s
+- Spheres rendered with Multi-importance sampling. Resolution 1800 x 800. Render time: 57 sec
 ![Alt text](/renders/disney_spheres_agx_512.png?raw=true "Spheres with Disney BSDF. Rendered at 512 samples per pixel")
 
-Mitsuba matpreview rendered with Multi-importance sampling, to show a variety of materials supported by Disney BSDF. Render time: 6m 16s
+- Mitsuba matpreview rendered with Multi-importance sampling, to show a variety of materials supported by Disney BSDF. Resolution 1366 x 1024. Render time: 4 min 43 sec
 ![Alt text](/renders/disney_arr_agx_512.png?raw=true "Mitsuba matpreview with Disney BSDF. Rendered at 512 samples per pixel")
 
-Lego glb model rendered. Render time: 2m 30s
+- Lego glb model rendered. Resolution 1366 x 768. Render time: 2 min 24 sec
 ![Alt text](/renders/gandalf_lego_agx_512.png?raw=true "Lego minifigure. Rendered at 512 samples per pixel")
 
-Ajax and Roza statues with HDRI background. Showing off camera depth of field. Render time: 1m 32s
+- Ajax and Roza statues with HDRI background. Resolution 1366 x 768. Showing off camera depth of field. Render time: 1 min 21 sec
 ![Alt text](/renders/statues_dof_agx_512.png?raw=true "Ajax and Roza statues with HDRI background, focus on Roza. Rendered at 512 samples per pixel")
