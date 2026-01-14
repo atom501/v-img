@@ -2,6 +2,7 @@
 #include <hit_utils.h>
 #include <ray.h>
 #include <rng/pcg_rand.h>
+#include <texture.h>
 
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
@@ -16,6 +17,8 @@ struct ScatterInfo {
 
 class Material {
 public:
+  ImageTexture* normal_map;
+
   Material() = default;
   ~Material() = default;
 

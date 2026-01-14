@@ -14,8 +14,9 @@ public:
   std::vector<glm::vec3> vertices;  // coordinates of vertices loaded
 
   // optional attributes. may be empty vectors
-  std::vector<glm::vec3> normals;    // normals of vertices loaded
-  std::vector<glm::vec2> texcoords;  // uv of vertices loaded
+  std::vector<glm::vec3> normals;           // normals of vertices loaded
+  std::vector<glm::vec2> texcoords;         // uv of vertices loaded
+  std::vector<glm::vec2> normal_texcoords;  // uv of normal map
 
   Material* mat;
 

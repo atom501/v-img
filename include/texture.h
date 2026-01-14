@@ -70,7 +70,12 @@ public:
   ImageTexture() = default;
   ~ImageTexture() = default;
 
+  // use image to set mipmap
   ImageTexture(const std::vector<glm::vec3>& image, uint32_t width, uint32_t height);
+
+  // assign mipmap directly
+  ImageTexture(const std::vector<std::vector<glm::vec3>>& mipmap, uint32_t width, uint32_t height)
+      : mipmap(mipmap), width(width), height(height) {};
 
   // color when hitting a surface
   glm::vec3 col_at_ray_hit(const glm::vec3& ray_in_dir, const RayCone& cone,
