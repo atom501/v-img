@@ -62,7 +62,7 @@ inline float spread_angle_from_curvature(float mean_curvature, float rayConeWidt
 
 inline RayCone propagate_reflect_cone(const RayCone& cone, float surface_spread_angle,
                                       float hit_dist) {
-  float new_cone_width = cone.spread_angle * hit_dist + cone.cone_width;
+  float new_cone_width = std::abs(cone.spread_angle * hit_dist + cone.cone_width);
   float new_spread_angle = cone.spread_angle + surface_spread_angle;
   return RayCone{new_cone_width, new_spread_angle};
 }
