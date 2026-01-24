@@ -12,6 +12,22 @@
 #include "glm/vec2.hpp"
 #include "glm/vec3.hpp"
 
+// None means loaded as r,g,b with each channel 0 to 255. transform according to need
+enum class TextureType { None, Image, Normals };
+
+// fmt formater for TextureType
+inline auto format_as(TextureType t) {
+  switch (t) {
+    case TextureType::None:
+      return "TextureType::None";
+    case TextureType::Image:
+      return "TextureType::Image";
+    case TextureType::Normals:
+      return "TextureType::Normals";
+  }
+  return "unknown";
+};
+
 class Texture {
 public:
   Texture() = default;
@@ -82,6 +98,9 @@ public:
   glm::vec3 col_at_uv_mipmap(int mipmap_level, const glm::vec2& uv) const;
 
   void debug_mipmaps_to_file();
+
+  // converts sRGG [0, 255] to linear space [0, 1]
+  static void convert_sRGB_to_linear(std::vector<glm::vec3>& image);
 
 private:
   float compute_texture_LOD(const glm::vec3& ray_dir, const RayCone& cone,

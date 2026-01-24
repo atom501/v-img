@@ -1,5 +1,6 @@
 #include <texture.h>
 #define STB_IMAGE_IMPLEMENTATION
+#include <color_utils.h>
 #include <stb_image_write.h>
 #include <tinyexr.h>
 
@@ -247,5 +248,12 @@ void ImageTexture::debug_mipmaps_to_file() {
     prev_height = curr_h;
 
     delete[] pixels;
+  }
+}
+
+void ImageTexture::convert_sRGB_to_linear(std::vector<glm::vec3>& image) {
+  for (glm::vec3& pixel : image) {
+    pixel /= 255.f;
+    pixel = pix_sRGB_to_linear(pixel);
   }
 }

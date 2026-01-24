@@ -187,10 +187,11 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
       = TLCam(camToWorld, integrator_data.resolution, vfov_rad * (180.f / fastgltf::math::pi),
               aperture_radius, focal_dist);
 
-  // load images
-  std::vector<uint32_t> img_list_idx;
+  // load images as 24 bit. each channel having 8 bits. To be transformed when making materials
+  std::vector<std::vector<glm::vec3>> image_list;
+  std::vector<glm::ivec2> image_list_res;
   for (auto& img : asset->images) {
-    float* image_array;
+    unsigned char* image_loaded;
     int width, height, nrChannels;
 
     std::visit(
@@ -201,10 +202,10 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
               assert(filePath.uri.isLocalPath());
 
               const std::string path(filePath.uri.path().begin(), filePath.uri.path().end());
-              image_array = stbi_loadf(path.c_str(), &width, &height, &nrChannels, STBI_rgb);
+              image_loaded = stbi_load(path.c_str(), &width, &height, &nrChannels, STBI_rgb);
             },
             [&](fastgltf::sources::Array& vector) {
-              image_array = stbi_loadf_from_memory(
+              image_loaded = stbi_load_from_memory(
                   reinterpret_cast<const stbi_uc*>(vector.bytes.data()),
                   static_cast<int>(vector.bytes.size()), &width, &height, &nrChannels, STBI_rgb);
             },
@@ -214,7 +215,7 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
 
               std::visit(fastgltf::visitor{[](auto& arg) {},
                                            [&](fastgltf::sources::Array& vector) {
-                                             image_array = stbi_loadf_from_memory(
+                                             image_loaded = stbi_load_from_memory(
                                                  reinterpret_cast<const stbi_uc*>(
                                                      vector.bytes.data() + bufferView.byteOffset),
                                                  static_cast<int>(bufferView.byteLength), &width,
@@ -224,22 +225,21 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
             },
         },
         img.data);
+    std::vector<glm::vec3> image_255(width * height);
 
-    std::vector<glm::vec3> image(width * height);
-
-    size_t arr_index = 0;
-    for (size_t i = 0; i < width * height; i++) {
-      image[i].r = image_array[arr_index++];
-      image[i].g = image_array[arr_index++];
-      image[i].b = image_array[arr_index++];
+    for (size_t i = 0; i < image_255.size(); i++) {
+      for (size_t c = 0; c < 3; c++) image_255[i][c] = image_loaded[i * 3 + c];
     }
 
-    stbi_image_free(image_array);
-    texture_list.push_back(std::make_unique<ImageTexture>(image, width, height));
-    img_list_idx.push_back(texture_list.size() - 1);
+    stbi_image_free(image_loaded);
+    image_list.push_back(image_255);
+    image_list_res.push_back(glm::ivec2(width, height));
   }
 
   // load material
+  std::vector<std::pair<uint32_t, TextureType>> img_list_idx(asset->images.size(),
+                                                             std::make_pair(0, TextureType::None));
+
   for (auto& mat : asset->materials) {
     // check if material is emissive
     if (mat.emissiveFactor[0] == 0.f && mat.emissiveFactor[1] == 0.f
@@ -295,7 +295,27 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
         auto& texture = asset->textures[baseColorTexture->textureIndex];
         if (!texture.imageIndex.has_value()) return false;
 
-        img_tex = texture_list[img_list_idx[texture.imageIndex.value()]].get();
+        size_t image_idx = texture.imageIndex.value();
+        auto tex_type = img_list_idx[image_idx].second;
+
+        if (tex_type == TextureType::Image) {
+          img_tex = texture_list[img_list_idx[image_idx].first].get();
+        } else if (tex_type == TextureType::None) {
+          // create the image texture
+          auto& image = image_list[image_idx];
+          auto res = image_list_res[image_idx];
+
+          ImageTexture::convert_sRGB_to_linear(image);
+          texture_list.push_back(std::make_unique<ImageTexture>(image, res.x, res.y));
+
+          img_list_idx[image_idx] = std::make_pair(texture_list.size() - 1, TextureType::Image);
+          img_tex = texture_list.back().get();
+        } else {
+          fmt::println("Texture being loaded is already of some other type not. Type: {}",
+                       tex_type);
+          return false;
+        }
+
       } else {
         // add constant texture
         texture_list.push_back(std::make_unique<ConstColor>(
