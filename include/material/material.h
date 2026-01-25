@@ -2,6 +2,7 @@
 #include <hit_utils.h>
 #include <ray.h>
 #include <rng/pcg_rand.h>
+#include <texture.h>
 
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
@@ -22,8 +23,13 @@ namespace MatConst {
 }
 
 class Material {
+private:
+  ImageTexture* normal_map = nullptr;
+
 public:
   Material() = default;
+  Material(ImageTexture* normal_map) : normal_map(normal_map) {}
+
   ~Material() = default;
 
   /* wi: ray direction towards surface

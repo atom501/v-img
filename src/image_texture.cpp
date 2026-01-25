@@ -257,3 +257,15 @@ void ImageTexture::convert_sRGB_to_linear(std::vector<glm::vec3>& image) {
     pixel = pix_sRGB_to_linear(pixel);
   }
 }
+
+void ImageTexture::convert_RGB_to_normal(std::vector<glm::vec3>& image, float scale) {
+  for (glm::vec3& normal : image) {
+    normal /= 255.f;
+    normal = (normal * 2.f) - glm::vec3(1.f);
+
+    normal.x *= scale;
+    normal.y *= scale;
+
+    normal = glm::normalize(normal);
+  }
+}

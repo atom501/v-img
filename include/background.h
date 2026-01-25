@@ -13,7 +13,7 @@
 class Background : public Emitter {
 public:
   Background() = default;
-  ~Background() = default;
+  virtual ~Background() = default;
 
   virtual glm::vec3 background_emit(const glm::vec3& dir, const RayCone& cone) const = 0;
   virtual bool is_emissive() const = 0;
