@@ -269,3 +269,7 @@ void ImageTexture::convert_RGB_to_normal(std::vector<glm::vec3>& image, float sc
     normal = glm::normalize(normal);
   }
 }
+
+glm::vec3 ImageTexture::get_normal(const glm::vec2& uv) const {
+  return glm::normalize(col_at_uv_mipmap(0, uv));
+}

@@ -101,6 +101,9 @@ public:
   // return color for uv on given mipmap level. applies bilinear filtering
   glm::vec3 col_at_uv_mipmap(int mipmap_level, const glm::vec2& uv) const;
 
+  // only for normal maps. normalized after bilinear filtering
+  glm::vec3 get_normal(const glm::vec2& uv) const;
+
   void debug_mipmaps_to_file();
 
   // converts sRGB [0, 255] to linear space [0, 1]

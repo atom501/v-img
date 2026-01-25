@@ -23,10 +23,9 @@ namespace MatConst {
 }
 
 class Material {
-private:
+public:
   ImageTexture* normal_map = nullptr;
 
-public:
   Material() = default;
   Material(ImageTexture* normal_map) : normal_map(normal_map) {}
 
