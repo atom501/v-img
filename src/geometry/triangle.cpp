@@ -95,33 +95,16 @@ HitInfo Triangle::hit_info(const Ray& r, const ForHitInfo& pre_calc) {
 
     // get normal and transform using shading normal
     glm::vec3 n_tangent_space = mat->normal_map->get_normal(n_uv);
+    ONB onb_n_map = init_onb(shading_normal);
 
-    glm::vec2 deltaUV1 = n_uv1 - n_uv0;
-    glm::vec2 deltaUV2 = n_uv2 - n_uv0;
-
-    float det = deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y;
-
-    glm::vec3 tangent_for_n, bitangent_for_n;
-
-    if (std::abs(det) > 1e-8f && !std::isnan(det)) {
-      tangent_for_n = (deltaUV2.y * edge1 - deltaUV1.y * edge2) / det;
-      bitangent_for_n = (-deltaUV2.x * edge1 + deltaUV1.x * edge2) / det;
-    } else {
-      // degenerate uvs. Use an arbitrary coordinate system
-      std::tie(tangent_for_n, bitangent_for_n) = get_axis(shading_normal);
-    }
-
-    ONB onb_n_map = ONB{tangent_for_n, bitangent_for_n, shading_normal};
-
-    glm::vec3 xformed_n = xform_with_onb(onb_n_map, n_tangent_space);
+    glm::vec3 local_space_normal = xform_with_onb(onb_n_map, n_tangent_space);
 
     // set the new shading_normal, dpdu, dpdv
-
     float ulen = glm::length(dpdu), vlen = glm::length(dpdv);
 
-    dpdu = glm::normalize(GramSchmidt(dpdu, xformed_n)) * ulen;
-    dpdv = glm::normalize(glm::cross(xformed_n, dpdu)) * vlen;
-    shading_normal = xformed_n;
+    dpdu = glm::normalize(GramSchmidt(dpdu, local_space_normal)) * ulen;
+    dpdv = glm::normalize(glm::cross(local_space_normal, dpdu)) * vlen;
+    shading_normal = local_space_normal;
   }
 
   // dpdu may not be orthogonal to shading normal:
