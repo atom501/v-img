@@ -24,6 +24,29 @@ inline void simple_clamp(std::vector<glm::vec3>& input_col) {
   }
 }
 
+// pixel sRGB [0, 1] to linear [0, 1]
+inline glm::vec3 pix_sRGB_to_linear(const glm::vec3& pixel) {
+  glm::vec3 out;
+
+  if (pixel.x <= 0.04045f)
+    out.x = pixel.x / 12.92f;
+  else
+    out.x = std::pow((pixel.x + 0.055f) / 1.055f, 2.4f);
+
+  if (pixel.y <= 0.04045f)
+    out.y = pixel.y / 12.92f;
+  else
+    out.y = std::pow((pixel.y + 0.055f) / 1.055f, 2.4f);
+
+  if (pixel.z <= 0.04045f)
+    out.z = pixel.z / 12.92f;
+  else
+    out.z = std::pow((pixel.z + 0.055f) / 1.055f, 2.4f);
+
+  return out;
+}
+
+// linear to sRGB
 inline void sRGB_gamma_correction(std::vector<glm::vec3>& input_col) {
   for (glm::vec3& pixel : input_col) {
     pixel = glm::clamp(pixel, 0.0f, 1.0f);

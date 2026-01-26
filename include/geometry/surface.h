@@ -9,7 +9,7 @@
 class Surface {
 public:
   Surface() = default;
-  ~Surface() = default;
+  virtual ~Surface() = default;
 
   virtual std::optional<ForHitInfo> hit_surface(Ray& r) = 0;
   virtual bool hit_check(Ray& r) = 0;

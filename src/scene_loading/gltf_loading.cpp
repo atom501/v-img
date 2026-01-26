@@ -4,6 +4,7 @@
 #include <material/principled.h>
 #include <scene_loading/gltf_loading.h>
 #include <scene_loading/json_scene.h>
+#include <texture.h>
 
 #include <cstddef>
 #include <fastgltf/core.hpp>
@@ -187,10 +188,11 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
       = TLCam(camToWorld, integrator_data.resolution, vfov_rad * (180.f / fastgltf::math::pi),
               aperture_radius, focal_dist);
 
-  // load images
-  std::vector<uint32_t> img_list_idx;
+  // load images as 24 bit. each channel having 8 bits. To be transformed when making materials
+  std::vector<std::vector<glm::vec3>> image_list;
+  std::vector<glm::ivec2> image_list_res;
   for (auto& img : asset->images) {
-    float* image_array;
+    unsigned char* image_loaded;
     int width, height, nrChannels;
 
     std::visit(
@@ -201,10 +203,10 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
               assert(filePath.uri.isLocalPath());
 
               const std::string path(filePath.uri.path().begin(), filePath.uri.path().end());
-              image_array = stbi_loadf(path.c_str(), &width, &height, &nrChannels, STBI_rgb);
+              image_loaded = stbi_load(path.c_str(), &width, &height, &nrChannels, STBI_rgb);
             },
             [&](fastgltf::sources::Array& vector) {
-              image_array = stbi_loadf_from_memory(
+              image_loaded = stbi_load_from_memory(
                   reinterpret_cast<const stbi_uc*>(vector.bytes.data()),
                   static_cast<int>(vector.bytes.size()), &width, &height, &nrChannels, STBI_rgb);
             },
@@ -214,7 +216,7 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
 
               std::visit(fastgltf::visitor{[](auto& arg) {},
                                            [&](fastgltf::sources::Array& vector) {
-                                             image_array = stbi_loadf_from_memory(
+                                             image_loaded = stbi_load_from_memory(
                                                  reinterpret_cast<const stbi_uc*>(
                                                      vector.bytes.data() + bufferView.byteOffset),
                                                  static_cast<int>(bufferView.byteLength), &width,
@@ -224,22 +226,21 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
             },
         },
         img.data);
+    std::vector<glm::vec3> image_255(width * height);
 
-    std::vector<glm::vec3> image(width * height);
-
-    size_t arr_index = 0;
-    for (size_t i = 0; i < width * height; i++) {
-      image[i].r = image_array[arr_index++];
-      image[i].g = image_array[arr_index++];
-      image[i].b = image_array[arr_index++];
+    for (size_t i = 0; i < image_255.size(); i++) {
+      for (size_t c = 0; c < 3; c++) image_255[i][c] = image_loaded[i * 3 + c];
     }
 
-    stbi_image_free(image_array);
-    texture_list.push_back(std::make_unique<ImageTexture>(image, width, height));
-    img_list_idx.push_back(texture_list.size() - 1);
+    stbi_image_free(image_loaded);
+    image_list.push_back(image_255);
+    image_list_res.push_back(glm::ivec2(width, height));
   }
 
   // load material
+  std::vector<std::pair<uint32_t, TextureType>> img_list_idx(asset->images.size(),
+                                                             std::make_pair(0, TextureType::None));
+
   for (auto& mat : asset->materials) {
     // check if material is emissive
     if (mat.emissiveFactor[0] == 0.f && mat.emissiveFactor[1] == 0.f
@@ -293,9 +294,31 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
       if (baseColorTexture.has_value()) {
         // add image texture
         auto& texture = asset->textures[baseColorTexture->textureIndex];
-        if (!texture.imageIndex.has_value()) return false;
+        if (!texture.imageIndex.has_value()) {
+          fmt::println("Image texture has no image index");
+          return false;
+        }
 
-        img_tex = texture_list[img_list_idx[texture.imageIndex.value()]].get();
+        size_t image_idx = texture.imageIndex.value();
+        auto tex_type = img_list_idx[image_idx].second;
+
+        if (tex_type == TextureType::Image) {
+          img_tex = texture_list[img_list_idx[image_idx].first].get();
+        } else if (tex_type == TextureType::None) {
+          // create the image texture
+          auto& image = image_list[image_idx];
+          auto res = image_list_res[image_idx];
+
+          ImageTexture::convert_sRGB_to_linear(image);
+          texture_list.push_back(std::make_unique<ImageTexture>(image, res.x, res.y));
+
+          img_list_idx[image_idx] = std::make_pair(texture_list.size() - 1, TextureType::Image);
+          img_tex = texture_list.back().get();
+        } else {
+          fmt::println("Texture being loaded is already of type {} not a Image", tex_type);
+          return false;
+        }
+
       } else {
         // add constant texture
         texture_list.push_back(std::make_unique<ConstColor>(
@@ -305,9 +328,46 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
         img_tex = texture_list.back().get();
       }
 
+      ImageTexture* normal_tex = nullptr;
+
+      if (mat.normalTexture.has_value()) {
+        // load normal map if present
+
+        const auto& normal_tex_info = mat.normalTexture.value();
+        auto& normal_texture = asset->textures[normal_tex_info.textureIndex];
+
+        if (!normal_texture.imageIndex.has_value()) {
+          fmt::println("Normal texture has no image index");
+          return false;
+        }
+        size_t image_idx = normal_texture.imageIndex.value();
+        auto tex_type = img_list_idx[image_idx].second;
+
+        if (tex_type == TextureType::Normals) {
+          normal_tex
+              = dynamic_cast<ImageTexture*>(texture_list[img_list_idx[image_idx].first].get());
+        } else if (tex_type == TextureType::None) {
+          // make a normal texture
+          auto& image = image_list[image_idx];
+          auto res = image_list_res[image_idx];
+          float scale = normal_tex_info.scale;
+
+          ImageTexture::convert_RGB_to_normal(image, scale);
+          std::vector<std::vector<glm::vec3>> no_mipmap;
+          no_mipmap.push_back(image);
+
+          texture_list.push_back(std::make_unique<ImageTexture>(no_mipmap, res.x, res.y));
+
+          img_list_idx[image_idx] = std::make_pair(texture_list.size() - 1, TextureType::Normals);
+          normal_tex = dynamic_cast<ImageTexture*>(texture_list.back().get());
+        } else {
+          fmt::println("Texture being loaded is already of type {} not a Normal", tex_type);
+        }
+      }
+
       list_materials.push_back(std::make_unique<Principled>(
           img_tex, specular_transmission, metallic, subsurface, specular, roughness, spec_tint,
-          anisotropic, sheen, sheen_tint, clearcoat, clearcoat_gloss, eta));
+          anisotropic, sheen, sheen_tint, clearcoat, clearcoat_gloss, eta, normal_tex));
     } else {
       glm::vec3 emit
           = glm::vec3(mat.emissiveFactor[0], mat.emissiveFactor[1], mat.emissiveFactor[2]);
@@ -326,6 +386,7 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
       std::vector<glm::vec3> vertices;
       std::vector<glm::vec3> normals;
       std::vector<glm::vec2> texcoords;
+      std::vector<glm::vec2> normal_coords;
 
       std::vector<std::array<uint32_t, 3>> indices;
 
@@ -339,9 +400,8 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
         assert(positionIt
                != it->attributes
                       .end());  // A mesh primitive is required to hold the POSITION attribute.
-        assert(
-            it->indicesAccessor
-                .has_value());  // We specify GenerateMeshIndices, so we should always have indices
+        assert(it->indicesAccessor.has_value());  // We specify GenerateMeshIndices, so we should
+                                                  // always have indices
 
         // Get the output primitive
         auto index = std::distance(mesh.primitives.begin(), it);
@@ -403,6 +463,30 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
               }
             }
           }
+
+          if (material.normalTexture.has_value()) {
+            const auto& normal_tex_info = material.normalTexture.value();
+            auto& normal_texture = asset->textures[normal_tex_info.textureIndex];
+
+            if (normal_texture.imageIndex.has_value()) {
+              size_t normal_tex_coords_idx = normal_tex_info.texCoordIndex;
+
+              auto texcoordAttribute
+                  = std::string("TEXCOORD_") + std::to_string(normal_tex_coords_idx);
+
+              if (const auto* texcoord_acc = it->findAttribute(texcoordAttribute);
+                  texcoord_acc != it->attributes.end()) {
+                // normal coord
+                auto& texCoordAccessor = asset->accessors[texcoord_acc->accessorIndex];
+                if (!texCoordAccessor.bufferViewIndex.has_value()) continue;
+
+                fastgltf::iterateAccessor<fastgltf::math::fvec2>(
+                    asset.get(), texCoordAccessor, [&](fastgltf::math::fvec2 uv) {
+                      normal_coords.push_back(glm::vec2(uv.x(), uv.y()));
+                    });
+              }
+            }
+          }
         }
 
         // Create the index buffer and copy the indices into it.
@@ -432,7 +516,7 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
           continue;
         }
 
-        auto m = Mesh(indices, vertices, normals, texcoords, mat_ptr);
+        auto m = Mesh(indices, vertices, normals, texcoords, normal_coords, mat_ptr);
         list_meshes.push_back(std::make_unique<Mesh>(m));
 
         // add to list of surfaces

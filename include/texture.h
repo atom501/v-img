@@ -12,10 +12,26 @@
 #include "glm/vec2.hpp"
 #include "glm/vec3.hpp"
 
+// None means loaded as r,g,b with each channel 0 to 255. transform according to need
+enum class TextureType { None, Image, Normals };
+
+// fmt formater for TextureType
+inline auto format_as(TextureType t) {
+  switch (t) {
+    case TextureType::None:
+      return "TextureType::None";
+    case TextureType::Image:
+      return "TextureType::Image";
+    case TextureType::Normals:
+      return "TextureType::Normals";
+  }
+  return "unknown";
+};
+
 class Texture {
 public:
   Texture() = default;
-  ~Texture() = default;
+  virtual ~Texture() = default;
 
   virtual glm::vec3 col_at_ray_hit(const glm::vec3& ray_in_dir, const RayCone& cone,
                                    const HitInfo& surf_hit) const
@@ -72,6 +88,10 @@ public:
 
   ImageTexture(const std::vector<glm::vec3>& image, uint32_t width, uint32_t height);
 
+  // make image texture without making mipmaps
+  ImageTexture(const std::vector<std::vector<glm::vec3>>& image, uint32_t width, uint32_t height)
+      : width(width), height(height), mipmap(image) {};
+
   // color when hitting a surface
   glm::vec3 col_at_ray_hit(const glm::vec3& ray_in_dir, const RayCone& cone,
                            const HitInfo& surf_hit) const override;
@@ -81,7 +101,21 @@ public:
   // return color for uv on given mipmap level. applies bilinear filtering
   glm::vec3 col_at_uv_mipmap(int mipmap_level, const glm::vec2& uv) const;
 
+  // only for normal maps. normalized after bilinear filtering
+  glm::vec3 get_normal(const glm::vec2& uv) const;
+
   void debug_mipmaps_to_file();
+
+  // converts sRGB [0, 255] to linear space [0, 1]
+  static void convert_sRGB_to_linear(std::vector<glm::vec3>& image);
+
+  /*
+   * converts RGB [0, 255] to tangent space normal vectors. Z is perpedicular to the surface.
+   * Same as gltf spec: red [0.0 .. 1.0] to X [-1 .. 1], green [0.0 .. 1.0] to Y
+   * [-1 .. 1], blue (0.5 .. 1.0] maps to Z (0 .. 1]
+   * scale scales X and Y components. Vector is normalized after scaling
+   */
+  static void convert_RGB_to_normal(std::vector<glm::vec3>& image, float scale);
 
 private:
   float compute_texture_LOD(const glm::vec3& ray_dir, const RayCone& cone,

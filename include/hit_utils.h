@@ -28,15 +28,17 @@ struct ONB {
   glm::vec3 w;  // normal vector
 };
 
-// ray_dir should be unit vector
-inline glm::vec3 xform_with_onb(const ONB& onb, const glm::vec3& ray_dir) {
-  return (onb.u * ray_dir[0] + onb.v * ray_dir[1] + onb.w * ray_dir[2]);
+// vec should be unit vector. ONB to local
+inline glm::vec3 xform_with_onb(const ONB& onb, const glm::vec3& vec) {
+  return (onb.u * vec[0] + onb.v * vec[1] + onb.w * vec[2]);
 }
 
-// ray_dir should be unit vector
-inline glm::vec3 project_onto_onb(const ONB& onb, const glm::vec3& ray_dir) {
-  return glm::vec3{glm::dot(ray_dir, onb.u), glm::dot(ray_dir, onb.v), glm::dot(ray_dir, onb.w)};
+// vec should be unit vector. local to ONB
+inline glm::vec3 project_onto_onb(const ONB& onb, const glm::vec3& vec) {
+  return glm::vec3{glm::dot(vec, onb.u), glm::dot(vec, onb.v), glm::dot(vec, onb.w)};
 }
+
+inline glm::vec3 GramSchmidt(glm::vec3 v, glm::vec3 w) { return v - glm::dot(v, w) * w; }
 
 inline std::pair<glm::vec3, glm::vec3> get_axis(const glm::vec3& normal_vec) {
   if (normal_vec.z < (-0.9999999f)) {

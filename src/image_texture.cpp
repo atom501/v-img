@@ -1,5 +1,6 @@
 #include <texture.h>
 #define STB_IMAGE_IMPLEMENTATION
+#include <color_utils.h>
 #include <stb_image_write.h>
 #include <tinyexr.h>
 
@@ -248,4 +249,27 @@ void ImageTexture::debug_mipmaps_to_file() {
 
     delete[] pixels;
   }
+}
+
+void ImageTexture::convert_sRGB_to_linear(std::vector<glm::vec3>& image) {
+  for (glm::vec3& pixel : image) {
+    pixel /= 255.f;
+    pixel = pix_sRGB_to_linear(pixel);
+  }
+}
+
+void ImageTexture::convert_RGB_to_normal(std::vector<glm::vec3>& image, float scale) {
+  for (glm::vec3& normal : image) {
+    normal /= 255.f;
+    normal = (normal * 2.f) - glm::vec3(1.f);
+
+    normal.x *= scale;
+    normal.y *= scale;
+
+    normal = glm::normalize(normal);
+  }
+}
+
+glm::vec3 ImageTexture::get_normal(const glm::vec2& uv) const {
+  return glm::normalize(col_at_uv_mipmap(0, uv));
 }

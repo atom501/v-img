@@ -17,12 +17,24 @@ public:
   std::vector<glm::vec3> normals;    // normals of vertices loaded
   std::vector<glm::vec2> texcoords;  // uv of vertices loaded
 
+  std::vector<glm::vec2> normal_coords;  // uv of normal map loaded
+
   Material* mat;
 
   Mesh(const std::vector<std::array<uint32_t, 3>>& indices, const std::vector<glm::vec3>& vertices,
        const std::vector<glm::vec3>& normals, const std::vector<glm::vec2>& texcoords,
        Material* mat)
       : indices(indices), vertices(vertices), normals(normals), texcoords(texcoords), mat(mat) {}
+
+  Mesh(const std::vector<std::array<uint32_t, 3>>& indices, const std::vector<glm::vec3>& vertices,
+       const std::vector<glm::vec3>& normals, const std::vector<glm::vec2>& texcoords,
+       const std::vector<glm::vec2>& normal_coords, Material* mat)
+      : indices(indices),
+        vertices(vertices),
+        normals(normals),
+        texcoords(texcoords),
+        normal_coords(normal_coords),
+        mat(mat) {}
 
   ~Mesh() = default;
 };

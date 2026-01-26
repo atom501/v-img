@@ -53,6 +53,27 @@ public:
         clearcoat(clearcoat),
         clearcoat_gloss(clearcoat_gloss),
         eta(eta) {}
+
+  // when normal map is given
+  Principled(Texture* tex, float specular_transmission, float metallic, float subsurface,
+             float specular, float roughness, float specular_tint, float anisotropic, float sheen,
+             float sheen_tint, float clearcoat, float clearcoat_gloss, float eta,
+             ImageTexture* normal_map)
+      : Material(normal_map),
+        tex(tex),
+        specular_transmission(specular_transmission),
+        metallic(metallic),
+        subsurface(subsurface),
+        specular(specular),
+        roughness(roughness),
+        specular_tint(specular_tint),
+        anisotropic(anisotropic),
+        sheen(sheen),
+        sheen_tint(sheen_tint),
+        clearcoat(clearcoat),
+        clearcoat_gloss(clearcoat_gloss),
+        eta(eta) {}
+
   ~Principled() = default;
 
   std::optional<ScatterInfo> sample_mat(const glm::vec3& wi, const HitInfo& hit,

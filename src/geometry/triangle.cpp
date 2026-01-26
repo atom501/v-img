@@ -41,6 +41,7 @@ HitInfo Triangle::hit_info(const Ray& r, const ForHitInfo& pre_calc) {
   const glm::vec3 hit_p = u * p0 + v * p1 + w * p2;
 
   const auto& texcoords_list = obj_mesh->texcoords;
+  const auto& normalcoords_list = obj_mesh->normal_coords;
 
   glm::vec2 uv = glm::vec2(u, v);
   glm::vec2 diff_uvs[3];
@@ -78,6 +79,32 @@ HitInfo Triangle::hit_info(const Ray& r, const ForHitInfo& pre_calc) {
   } else {
     // degenerate uvs. Use an arbitrary coordinate system
     std::tie(dpdu, dpdv) = get_axis(shading_normal);
+  }
+
+  // use normal map if present
+  Material* mat = obj_mesh->mat;
+  if (mat->normal_map) {
+    glm::vec2 n_uv = glm::vec2(u, v);
+    glm::vec2 n_uv0 = glm::vec2(0, 0), n_uv1 = glm::vec2(1, 0), n_uv2 = glm::vec2(1, 1);
+    if (normalcoords_list.size() > 0) {
+      n_uv0 = normalcoords_list[tri_indices[0]], n_uv1 = normalcoords_list[tri_indices[1]],
+      n_uv2 = normalcoords_list[tri_indices[2]];
+
+      n_uv = u * n_uv0 + v * n_uv1 + w * n_uv2;
+    }
+
+    // get normal and transform using shading normal
+    glm::vec3 n_tangent_space = mat->normal_map->get_normal(n_uv);
+    ONB onb_n_map = init_onb(shading_normal);
+
+    glm::vec3 local_space_normal = xform_with_onb(onb_n_map, n_tangent_space);
+
+    // set the new shading_normal, dpdu, dpdv
+    float ulen = glm::length(dpdu), vlen = glm::length(dpdv);
+
+    dpdu = glm::normalize(GramSchmidt(dpdu, local_space_normal)) * ulen;
+    dpdv = glm::normalize(glm::cross(local_space_normal, dpdu)) * vlen;
+    shading_normal = local_space_normal;
   }
 
   // dpdu may not be orthogonal to shading normal:
