@@ -1,14 +1,14 @@
 #include <bvh.h>
 
 #include <algorithm>
+#include <execution>
 #include <thread>
 
 static Split sweep_best_span_split(uint8_t axis, std::span<size_t> prim_sorted,
                                    const std::vector<AABB>& bboxes, const Split& prev_split) {
   size_t first_left = 0;
   size_t num_prims = prim_sorted.size();
-  Bin extend_from_right(0, AABB(glm::vec3(+std::numeric_limits<float>::max()),
-                                glm::vec3(-std::numeric_limits<float>::max())));
+  Bin extend_from_right(0, AABB::empty_aabb());
   Split best_split = prev_split;
 
   std::vector<float> right_costs(num_prims, std::numeric_limits<float>::infinity());
@@ -25,9 +25,7 @@ static Split sweep_best_span_split(uint8_t axis, std::span<size_t> prim_sorted,
     }
   }
 
-  Bin extend_from_left(0, AABB(glm::vec3(+std::numeric_limits<float>::max()),
-                               glm::vec3(-std::numeric_limits<float>::max())));
-
+  Bin extend_from_left(0, AABB::empty_aabb());
   for (size_t i = 0; i < first_left; i++) {
     extend_from_left.aabb.extend(bboxes[prim_sorted[i]]);
     extend_from_left.obj_count++;
@@ -41,7 +39,7 @@ static Split sweep_best_span_split(uint8_t axis, std::span<size_t> prim_sorted,
     float total_cost = left_cost + right_costs[i + 1];
 
     if (total_cost < best_split.cost) {
-      best_split = Split{i + 1, total_cost, axis};
+      best_split = Split{i + 1, total_cost, axis, extend_from_left.aabb};
     } else if (left_cost > best_split.cost) {
       // cost will only increase after this
       break;
@@ -82,6 +80,7 @@ static void build_sweep_recursive(BVH& bvh, size_t node_index, size_t bb_index,
   auto& curr_node = bvh.nodes[node_index];
   size_t total_objs = bboxes.size();
   size_t curr_node_objs = prim_axis_sort[0].size();
+  bool left_aabb_reuse = true;
 
   // all sorted axis contain the same primitives. use one to create AABB over all primitives
   AABB curr_node_aabb;
@@ -100,7 +99,8 @@ static void build_sweep_recursive(BVH& bvh, size_t node_index, size_t bb_index,
 
   const float leaf_cost = BVHConst::intersection_cost * curr_node_objs;
   // get split for all axis
-  Split best_split = Split{prim_axis_sort[0].size() / 2, std::numeric_limits<float>::infinity(), 0};
+  Split best_split = Split{prim_axis_sort[0].size() / 2, std::numeric_limits<float>::infinity(), 0,
+                           AABB::empty_aabb()};
 
   for (size_t i = 0; i < 3; i++) {
     best_split = sweep_best_span_split(i, prim_axis_sort[i], bboxes, best_split);
@@ -111,6 +111,8 @@ static void build_sweep_recursive(BVH& bvh, size_t node_index, size_t bb_index,
 
   // use median split if many primitives but cost is high. else use best_split
   if (split_cost >= leaf_cost) {
+    left_aabb_reuse = false;
+
     if (curr_node_objs > max_node_prims) {
       // use the median split if cost too high but more than max_node_prims
       best_split.axis = curr_node_aabb.largest_axis();
@@ -158,8 +160,13 @@ static void build_sweep_recursive(BVH& bvh, size_t node_index, size_t bb_index,
   left.first_index = curr_node.first_index;
   right.first_index = left.first_index + left.obj_count;
 
-  AABB left_bb = bboxes[left_prim_axis_sort[0][0]];
-  for (size_t i = 1; i < left.obj_count; ++i) left_bb.extend(bboxes[left_prim_axis_sort[0][i]]);
+  AABB left_bb;
+  if (left_aabb_reuse) {
+    left_bb = best_split.left_aabb;
+  } else {
+    left_bb = bboxes[left_prim_axis_sort[0][0]];
+    for (size_t i = 1; i < left.obj_count; ++i) left_bb.extend(bboxes[left_prim_axis_sort[0][i]]);
+  }
 
   AABB right_bb = bboxes[right_prim_axis_sort[0][0]];
   for (size_t i = 1; i < right.obj_count; ++i) right_bb.extend(bboxes[right_prim_axis_sort[0][i]]);
@@ -224,9 +231,27 @@ BVH BVH::build_sweep_bvh(const std::vector<AABB>& bboxes, const std::vector<glm:
     std::array<std::vector<size_t>, 4> prim_axis_sort;
     for (size_t axis = 0; axis < 3; axis++) {
       prim_axis_sort[axis].assign(prim_indices.begin(), prim_indices.end());
-      std::sort(prim_axis_sort[axis].begin(), prim_axis_sort[axis].end(),
-                [&](size_t i, size_t j) { return centers[i][axis] < centers[j][axis]; });
     }
+
+    std::vector<std::thread> workers;
+    for (unsigned int axis = 0; axis < 3; axis++) {
+      // only give each axis to a thread if num objects is large
+      if (obj_count > 2048) {
+        workers.push_back(std::thread([&, axis]() {
+          std::sort(std::execution::par_unseq, prim_axis_sort[axis].begin(),
+                    prim_axis_sort[axis].end(),
+                    [&](size_t i, size_t j) { return centers[i][axis] < centers[j][axis]; });
+        }));
+      } else {
+        std::sort(prim_axis_sort[axis].begin(), prim_axis_sort[axis].end(),
+                  [&](size_t i, size_t j) { return centers[i][axis] < centers[j][axis]; });
+      }
+    }
+
+    for (auto& t : workers) {
+      t.join();
+    }
+
     prim_axis_sort[3].assign(prim_indices.begin(), prim_indices.end());
 
     // resize to maximum nodes possible

@@ -122,6 +122,11 @@ public:
     auto d = bboxes[1] - bboxes[0];
     return 2.f * (d[0] * d[1] + d[0] * d[2] + d[1] * d[2]);
   }
+
+  static AABB empty_aabb() {
+    return AABB(glm::vec3(+std::numeric_limits<float>::max()),
+                glm::vec3(-std::numeric_limits<float>::max()));
+  }
 };
 
 // ray-aabb slab test. result is returned in t_val variable

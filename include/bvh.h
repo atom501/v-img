@@ -45,6 +45,7 @@ struct Split {
   size_t bin_split;  // right bin to use for splitting
   float cost;
   uint8_t axis;
+  AABB left_aabb;
 };
 
 class BVH {

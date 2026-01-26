@@ -15,7 +15,8 @@ static size_t bin_index(uint8_t axis, const AABB& bbox, const glm::vec3& center,
 Split get_best_split(const BVHNode& node, const std::vector<size_t>& obj_indices,
                      const std::vector<AABB>& bboxes, const std::vector<glm::vec3>& centers,
                      const size_t num_bins, const AABB& aabb) {
-  Split best_split = {std::numeric_limits<size_t>::max(), std::numeric_limits<float>::max(), 0};
+  Split best_split = {std::numeric_limits<size_t>::max(), std::numeric_limits<float>::max(), 0,
+                      AABB::empty_aabb()};
 
   // temp bin for initialisation
   Bin init_bin(0, AABB(glm::vec3(+std::numeric_limits<float>::max()),
