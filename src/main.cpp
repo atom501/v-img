@@ -181,7 +181,7 @@ int main(int argc, char* argv[]) {
 
   if (bvh_to_build == 0) {
     fmt::println("Building binned BVH");
-    bvh = bvh = BVH::build_bin_bvh(list_bboxes, list_centers, NUM_BINS);
+    bvh = BVH::build_bin_bvh(list_bboxes, list_centers, NUM_BINS);
   } else if (bvh_to_build == 1) {
     fmt::println("Building sweep BVH");
     std::vector<size_t> temp_indices(list_bboxes.size());
@@ -190,7 +190,7 @@ int main(int argc, char* argv[]) {
     bvh = BVH::build_sweep_bvh(list_bboxes, list_centers, temp_indices, 8);
   } else {
     fmt::println("Building binned BVH");
-    bvh = bvh = BVH::build_bin_bvh(list_bboxes, list_centers, NUM_BINS);
+    bvh = BVH::build_bin_bvh(list_bboxes, list_centers, NUM_BINS);
   }
 
   auto end_time = std::chrono::steady_clock::now();

@@ -5,21 +5,20 @@
 #include <thread>
 
 static Split sweep_best_span_split(uint8_t axis, std::span<size_t> prim_sorted,
-                                   const std::vector<AABB>& bboxes, const Split& prev_split) {
+                                   const std::vector<AABB>& bboxes, const Split& prev_split,
+                                   float* right_cost_buff) {
   size_t first_left = 0;
   size_t num_prims = prim_sorted.size();
   Bin extend_from_right(0, AABB::empty_aabb());
   Split best_split = prev_split;
 
-  std::vector<float> right_costs(num_prims, std::numeric_limits<float>::infinity());
-
   for (int64_t i = num_prims - 1; i > 0; i--) {
     extend_from_right.aabb.extend(bboxes[prim_sorted[i]]);
     extend_from_right.obj_count++;
 
-    right_costs[i] = extend_from_right.cost();
+    right_cost_buff[i] = extend_from_right.cost();
 
-    if (right_costs[i] > best_split.cost) {
+    if (right_cost_buff[i] > best_split.cost) {
       first_left = i - 1;
       break;
     }
@@ -36,7 +35,7 @@ static Split sweep_best_span_split(uint8_t axis, std::span<size_t> prim_sorted,
     extend_from_left.obj_count++;
 
     float left_cost = extend_from_left.cost();
-    float total_cost = left_cost + right_costs[i + 1];
+    float total_cost = left_cost + right_cost_buff[i + 1];
 
     if (total_cost < best_split.cost) {
       best_split = Split{i + 1, total_cost, axis, extend_from_left.aabb};
@@ -97,20 +96,19 @@ static void build_sweep_recursive(BVH& bvh, size_t node_index, size_t bb_index,
     return;
   }
 
-  const float leaf_cost = BVHConst::intersection_cost * curr_node_objs;
+  const float leaf_cost
+      = ((BVHConst::intersection_cost * curr_node_objs) - BVHConst::traversal_cost)
+        * curr_node_aabb.surface_area();
   // get split for all axis
-  Split best_split = Split{prim_axis_sort[0].size() / 2, std::numeric_limits<float>::infinity(), 0,
-                           AABB::empty_aabb()};
+  Split best_split = Split{prim_axis_sort[0].size() / 2, leaf_cost, 0, AABB::empty_aabb()};
 
   for (size_t i = 0; i < 3; i++) {
-    best_split = sweep_best_span_split(i, prim_axis_sort[i], bboxes, best_split);
+    best_split = sweep_best_span_split(i, prim_axis_sort[i], bboxes, best_split,
+                                       reinterpret_cast<float*>(prim_axis_sort[3].data()));
   }
 
-  const float split_cost
-      = BVHConst::traversal_cost + best_split.cost / curr_node_aabb.surface_area();
-
   // use median split if many primitives but cost is high. else use best_split
-  if (split_cost >= leaf_cost) {
+  if (best_split.cost >= leaf_cost) {
     left_aabb_reuse = false;
 
     if (curr_node_objs > max_node_prims) {
