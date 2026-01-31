@@ -5,9 +5,9 @@ A toy ray tracer written in C++. For now only uses the CPU. The project was setu
 ## Features
 -  **Performance**
     - Using AVX2 simd intrinsics to intersect 2 sibling AABB with 1 ray at once
+    - AABBs arranged in a cache friendly layout for Ray-AABB intersection tests
     - Fast Binned SAH BVH with multi-threaded construction
-    - High quality Sweep SAH BVH with multi-threaded construction. Optmimized O(n logn) construction, primitives are sorted once per axis and kept sorted within each subset
-during recursion 
+    - High quality Sweep SAH BVH with multi-threaded construction. Optimized *O(n log n)* construction, primitives are sorted once per axis and kept sorted within each subset during recursion. As described in [Bonsai BVH paper](https://jcgt.org/published/0004/03/02/)
     - Multi-importance sampling for better render quality
     - Russian roulette to stop paths with low contribution
 
@@ -18,8 +18,9 @@ during recursion
 
 - **Textures**
     - HDR Environment Map with importance sampling
-    - Image textures
+    - Image textures with mipmapping
     - Trilinear Texture filtering, picking texture level of detail using Ray Cones
+    - Normal maps are supported
 
 - **Camera**
     - Using R2 sequence for per pixel sampling
