@@ -5,21 +5,22 @@ A toy ray tracer written in C++. For now only uses the CPU. The project was setu
 ## Features
 -  **Performance**
     - Using AVX2 simd intrinsics to intersect 2 sibling AABB with 1 ray at once
+    - AABBs arranged in a cache friendly layout for Ray-AABB intersection tests
     - Fast Binned SAH BVH with multi-threaded construction
-    - High quality Sweep SAH BVH with multi-threaded construction. Optmimized O(n logn) construction, primitives are sorted once per axis and kept sorted within each subset
-during recursion 
+    - High quality Sweep SAH BVH with multi-threaded construction. Optimized *O(n log n)* construction, primitives are sorted once per axis and kept sorted within each subset during recursion. As described in [Bonsai BVH paper](https://jcgt.org/published/0004/03/02/)
     - Multi-importance sampling for better render quality
     - Russian roulette to stop paths with low contribution
 
 - **Materials**
-    - Disney BSDF for variety of materials
+    - Disney BSDF for variety of materials. Path regularization enabled
     - Lambertian
     - Glass
 
 - **Textures**
     - HDR Environment Map with importance sampling
-    - Image textures
+    - Image textures with mipmapping
     - Trilinear Texture filtering, picking texture level of detail using Ray Cones
+    - Normal maps are supported
 
 - **Camera**
     - Using R2 sequence for per pixel sampling
@@ -83,8 +84,8 @@ Samples per pixel set to 512, max ray depth set to infinite so relying on Russia
 - Mitsuba matpreview rendered with Multi-importance sampling, to show a variety of materials supported by Disney BSDF. Resolution 1366 x 1024. Render time: 4 min 43 sec
 ![Alt text](/renders/disney_arr_agx_512.png?raw=true "Mitsuba matpreview with Disney BSDF. Rendered at 512 samples per pixel")
 
-- Lego glb model rendered. Resolution 1366 x 768. Render time: 2 min 24 sec
-![Alt text](/renders/gandalf_lego_agx_512.png?raw=true "Lego minifigure. Rendered at 512 samples per pixel")
+- Lego and a shoe glb scene rendered. The shoe has a normal map to render the rough surface. Resolution 1366 x 768. Render time: 3 min 21 sec
+![Alt text](/renders/gandalf_nmap_shoe.png?raw=true "Lego minifigure and a shoe. Rendered at 512 samples per pixel")
 
-- Ajax and Roza statues with HDRI background. Resolution 1366 x 768. Showing off camera depth of field. Render time: 1 min 21 sec
+- Ajax and Roza statues with HDRI background. Normal map add to Roza statue to render the slight damage. Resolution 1366 x 768. Showing off camera depth of field. Render time: 1 min 23 sec
 ![Alt text](/renders/statues_dof_agx_512.png?raw=true "Ajax and Roza statues with HDRI background, focus on Roza. Rendered at 512 samples per pixel")
