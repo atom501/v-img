@@ -680,10 +680,9 @@ namespace TPM_NAMESPACE {
     auto ref = ids.get(ref_id);
 
     if (flags & OT_PF(obj->type())) {
-      if (name)
-        obj->addNamedChild(convertCC(name, ctx.ConvertCamelCase), ref);
-      else
-        obj->addAnonymousChild(ref);
+      if (name) obj->changeName(convertCC(name, ctx.ConvertCamelCase));
+
+      obj->addChild(ref);
     } else {
       throw std::runtime_error("Id " + ref_id + " not of allowed type");
     }
@@ -760,8 +759,12 @@ namespace TPM_NAMESPACE {
               && strcmp(childElement->Name(), _parseElements[i].Name) == 0) {
             auto pluginType = childElement->Attribute("type");
             auto id = childElement->Attribute("id");
+
+            auto name = childElement->Attribute("name");
+            std::string obj_name = name ? convertCC(name, ctx.ConvertCamelCase) : "";
+
             child = std::make_shared<Object>(_parseElements[i].Type, pluginType ? pluginType : "",
-                                             id ? id : "");
+                                             id ? id : "", obj_name);
             parseObject(child.get(), nextCtx, ids, childElement, _parseElements[i].Flags);
             break;
           }
@@ -776,11 +779,7 @@ namespace TPM_NAMESPACE {
             }
           }
 
-          auto name = childElement->Attribute("name");
-          if (name)
-            obj->addNamedChild(convertCC(name, ctx.ConvertCamelCase), child);
-          else
-            obj->addAnonymousChild(child);
+          obj->addChild(child);
         } else {
           std::stringstream stream;
           stream << "Found invalid tag '" << childElement->Name() << "'";
