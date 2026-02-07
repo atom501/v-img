@@ -763,7 +763,8 @@ namespace TPM_NAMESPACE {
             auto name = childElement->Attribute("name");
             std::string obj_name = name ? convertCC(name, ctx.ConvertCamelCase) : "";
 
-            child = std::make_shared<Object>(_parseElements[i].Type, pluginType ? pluginType : "",
+            child = std::make_shared<Object>(_parseElements[i].Type,
+                                             pluginType ? unpackValues(pluginType, cnt) : "",
                                              id ? id : "", obj_name);
             parseObject(child.get(), nextCtx, ids, childElement, _parseElements[i].Flags);
             break;
