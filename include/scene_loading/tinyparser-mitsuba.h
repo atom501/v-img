@@ -513,7 +513,7 @@ public:
 	TPM_NODISCARD inline Property& operator[](const std::string& key) { return mProperties[key]; }
 	TPM_NODISCARD inline Property operator[](const std::string& key) const { return property(key); }
 
-	TPM_NODISCARD inline const std::vector<std::shared_ptr<Object>>& anonymousChildren() const { return mChildren; }
+	TPM_NODISCARD inline const std::vector<std::shared_ptr<Object>>& getAllChildren() const { return mChildren; }
 	inline void changeName(const std::string& name) { mName = name; };
 	inline void addChild(const std::shared_ptr<Object>& obj)
 	{ 
@@ -523,7 +523,7 @@ public:
 			mNamedChildren[obj->mName] = mChildren.size() - 1;
 		}
 	}
-	TPM_NODISCARD inline const std::unordered_map<std::string, u_int32_t>& namedChildren() const { return mNamedChildren; }
+	//TPM_NODISCARD inline const std::unordered_map<std::string, unsigned int>& namedChildren() const { return mNamedChildren; }
 	TPM_NODISCARD inline std::optional<uint32_t> namedChild(const std::string& key) const
 	{
 		if ( auto findit = mNamedChildren.find(key); findit != mNamedChildren.end() ) {
@@ -540,7 +540,7 @@ private:
 	std::string mName;
 	std::unordered_map<std::string, Property> mProperties;
 	std::vector<std::shared_ptr<Object>> mChildren;
-	std::unordered_map<std::string, u_int32_t> mNamedChildren;
+	std::unordered_map<std::string, unsigned int> mNamedChildren;
 };
 
 // --------------- Scene

@@ -85,14 +85,12 @@ Mesh create_quad_mesh(Material* mat_ptr, const glm::mat4& xform) {
 }
 
 void add_tri_list_to_scene(const Mesh& mesh, std::vector<std::unique_ptr<Surface>>& list_surfaces,
-                           std::vector<std::unique_ptr<Mesh>>& list_meshes,
-                           std::vector<Emitter*>& list_lights) {
+                           Mesh* mesh_ptr, std::vector<Emitter*>& list_lights) {
   size_t num_tri = mesh.indices.size();
 
   // add to list of surfaces
   for (size_t i = 0; i < num_tri; i++) {
-    list_surfaces.push_back(
-        std::make_unique<Triangle>(list_meshes[list_meshes.size() - 1].get(), i));
+    list_surfaces.push_back(std::make_unique<Triangle>(mesh_ptr, i));
   }
 
   // add to list of lights if needed

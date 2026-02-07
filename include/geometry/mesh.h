@@ -46,5 +46,4 @@ bool load_from_obj(std::string model_path_rel_file, std::vector<std::array<uint3
 Mesh create_quad_mesh(Material* mat_ptr, const glm::mat4& xform);
 
 void add_tri_list_to_scene(const Mesh& mesh, std::vector<std::unique_ptr<Surface>>& list_surfaces,
-                           std::vector<std::unique_ptr<Mesh>>& list_meshes,
-                           std::vector<Emitter*>& list_lights);
+                           Mesh* mesh_ptr, std::vector<Emitter*>& list_lights);

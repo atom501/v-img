@@ -48,16 +48,77 @@ void cube_mesh(std::vector<std::array<uint32_t, 3>>& indices, std::vector<glm::v
              {12, 13, 14}, {15, 12, 14}, {16, 17, 18}, {19, 16, 18}, {20, 21, 22}, {23, 20, 22}};
 }
 
+// make a texture, using color or something else
+static Texture* make_or_get_texture(
+    const tinyparser_mitsuba::Property& tex_p,
+    const std::vector<std::shared_ptr<tinyparser_mitsuba::Object>>& mat_children,
+    std::vector<std::unique_ptr<Texture>>& texture_list,
+    std::unordered_map<std::string, size_t>& id_to_tex) {
+  bool result;
+  tinyparser_mitsuba::Color reflectance
+      = tex_p.getColor(tinyparser_mitsuba::Color(0, 0, 0), &result);
+
+  if (result) {
+    glm::vec3 albedo = glm::vec3(reflectance.r, reflectance.g, reflectance.b);
+    texture_list.push_back(std::make_unique<ConstColor>(albedo));
+
+    return texture_list.back().get();
+  } else {
+    Texture* tex_created = nullptr;
+    std::string tex_id = "";
+
+    for (auto& child : mat_children) {
+      tex_id = "";
+
+      if (child->type() == tinyparser_mitsuba::OT_TEXTURE) {
+        // check if reuse texture
+        tex_id = child->id();
+
+        if (auto findit = id_to_tex.find(tex_id); findit != id_to_tex.end()) {
+          // if texture already exists return
+          size_t tex_idx = findit->second;
+          return texture_list[tex_idx].get();
+        } else {
+          if (child->pluginType() == "checkerboard") {
+            auto child_p = child->properties();
+            tinyparser_mitsuba::Color c0 = child_p["color0"].getColor();
+            tinyparser_mitsuba::Color c1 = child_p["color1"].getColor();
+            int t_width = child_p["uscale"].getNumber();
+            int t_height = child_p["vscale"].getNumber();
+
+            texture_list.push_back(std::make_unique<Checkerboard>(t_width * 2, t_height * 2,
+                                                                  glm::vec3(c0.r, c0.g, c0.b),
+                                                                  glm::vec3(c1.r, c1.g, c1.b)));
+
+            tex_created = texture_list.back().get();
+          }
+
+          if (tex_created) {
+            if (tex_id != "") {
+              id_to_tex[tex_id] = texture_list.size() - 1;
+            }
+
+            return tex_created;
+          }
+        }
+      }
+    }
+  }
+
+  return nullptr;
+}
+
 Material* mat_index_from_obj(std::shared_ptr<tinyparser_mitsuba::Object> mat_obj,
                              std::vector<std::unique_ptr<Texture>>& texture_list,
                              std::vector<std::unique_ptr<Material>>& list_materials,
-                             std::unordered_map<std::string, size_t>& name_to_mat) {
+                             std::unordered_map<std::string, size_t>& id_to_mat,
+                             std::unordered_map<std::string, size_t>& id_to_tex) {
   std::string plugin_type = mat_obj->pluginType();
   std::string bsdf_name = mat_obj->id();
 
-  if (auto findit = name_to_mat.find(bsdf_name); findit != name_to_mat.end()) {
+  if (auto findit = id_to_mat.find(bsdf_name); findit != id_to_mat.end()) {
     // if mat already found just assign
-    size_t mat_id = name_to_mat[findit->first];
+    size_t mat_id = findit->second;
     return list_materials[mat_id].get();
   } else {
     std::string plugin_type = mat_obj->pluginType();
@@ -71,63 +132,11 @@ Material* mat_index_from_obj(std::shared_ptr<tinyparser_mitsuba::Object> mat_obj
           tinyparser_mitsuba::Color reflectance
               = properties["reflectance"].getColor(tinyparser_mitsuba::Color(0, 0, 0), &result);
 
-          if (result) {
-            glm::vec3 albedo = glm::vec3(reflectance.r, reflectance.g, reflectance.b);
-            ConstColor col(albedo);
-            texture_list.push_back(std::make_unique<ConstColor>(col));
+          Texture* mat_tex = make_or_get_texture(
+              properties["reflectance"], mat_obj->getAllChildren(), texture_list, id_to_tex);
 
-            Lambertian l(texture_list[texture_list.size() - 1].get());
-            list_materials.push_back(std::make_unique<Lambertian>(l));
-          } else {
-            auto named_children = mat_obj->namedChildren();
-            bool found = false;
-
-            for (auto& [_, value] : named_children) {
-              if (value->type() == tinyparser_mitsuba::OT_TEXTURE) {
-                if (value->pluginType() == "checkerboard") {
-                  auto child_p = value->properties();
-                  tinyparser_mitsuba::Color c0 = child_p["color0"].getColor();
-                  tinyparser_mitsuba::Color c1 = child_p["color1"].getColor();
-                  int t_width = child_p["uscale"].getNumber();
-                  int t_height = child_p["vscale"].getNumber();
-
-                  Checkerboard ch(t_width * 2, t_height * 2, glm::vec3(c0.r, c0.g, c0.b),
-                                  glm::vec3(c1.r, c1.g, c1.b));
-                  texture_list.push_back(std::make_unique<Checkerboard>(ch));
-
-                  Lambertian l(texture_list[texture_list.size() - 1].get());
-                  list_materials.push_back(std::make_unique<Lambertian>(l));
-                  found = true;
-                  break;
-                }
-              }
-            }
-
-            if (!found) {
-              auto mat_c = mat_obj->anonymousChildren();
-              for (auto& value : mat_c) {
-                if (value->type() == tinyparser_mitsuba::OT_TEXTURE) {
-                  if (value->pluginType() == "checkerboard") {
-                    auto child_p = value->properties();
-                    tinyparser_mitsuba::Color c0 = child_p["color0"].getColor();
-                    tinyparser_mitsuba::Color c1 = child_p["color1"].getColor();
-                    int t_width = child_p["uscale"].getNumber();
-                    int t_height = child_p["vscale"].getNumber();
-
-                    Checkerboard ch(t_width, t_height, glm::vec3(c0.r, c0.g, c0.b),
-                                    glm::vec3(c1.r, c1.g, c1.b));
-                    texture_list.push_back(std::make_unique<Checkerboard>(ch));
-
-                    Lambertian l(texture_list[texture_list.size() - 1].get());
-                    list_materials.push_back(std::make_unique<Lambertian>(l));
-                    break;
-                  }
-                }
-              }
-            }
-          }
+          list_materials.push_back(std::make_unique<Lambertian>(mat_tex));
         } else if (plugin_type == "principled") {
-          fmt::println("principled");
           auto properties = mat_obj->properties();
 
           tinyparser_mitsuba::Color b_c = properties["base_color"].getColor();
@@ -178,7 +187,7 @@ Material* mat_index_from_obj(std::shared_ptr<tinyparser_mitsuba::Object> mat_obj
 
       // add material to list and associate a name with the index
       if (bsdf_name != "") {
-        name_to_mat[bsdf_name] = list_materials.size() - 1;
+        id_to_mat[bsdf_name] = list_materials.size() - 1;
       } else {
         // fmt::println("mat_name is empty");
       }
@@ -191,12 +200,13 @@ Material* mat_index_from_obj(std::shared_ptr<tinyparser_mitsuba::Object> mat_obj
   }
 }
 
-bool set_scene_from_xml(const std::filesystem::path& path_file, integrator_data& integrator_data,
-                        std::vector<std::unique_ptr<Surface>>& list_surfaces,
-                        std::vector<std::unique_ptr<Material>>& list_materials,
-                        std::vector<Emitter*>& list_lights,
-                        std::vector<std::unique_ptr<Mesh>>& list_meshes,
-                        std::vector<std::unique_ptr<Texture>>& texture_list) {
+bool set_scene_from_mitsuba_xml(const std::filesystem::path& path_file,
+                                integrator_data& integrator_data,
+                                std::vector<std::unique_ptr<Surface>>& list_surfaces,
+                                std::vector<std::unique_ptr<Material>>& list_materials,
+                                std::vector<Emitter*>& list_lights,
+                                std::vector<std::unique_ptr<Mesh>>& list_meshes,
+                                std::vector<std::unique_ptr<Texture>>& texture_list) {
   tinyparser_mitsuba::SceneLoader loader;
 
   // got the mitsuba file as scene object
@@ -204,11 +214,12 @@ bool set_scene_from_xml(const std::filesystem::path& path_file, integrator_data&
 
   integrator_data.background = std::make_unique<ConstBackground>(ConstBackground(glm::vec3(0)));
 
-  std::unordered_map<std::string, size_t> name_to_mat;
+  std::unordered_map<std::string, size_t> id_to_mat;
+  std::unordered_map<std::string, size_t> id_to_tex;
 
   // convert scene objects to v-img objects
   // loop through once and get integrator_data and envmap
-  for (const auto& obj : scene.anonymousChildren()) {
+  for (const auto& obj : scene.getAllChildren()) {
     switch (obj->type()) {
       case tinyparser_mitsuba::OT_SENSOR: {
         auto properties = obj->properties();
@@ -216,7 +227,7 @@ bool set_scene_from_xml(const std::filesystem::path& path_file, integrator_data&
         std::string fov_axis = properties["fov_axis"].getString("x");
 
         tinyparser_mitsuba::Transform to_world_m = properties["to_world"].getTransform();
-        for (const auto& obj_child : obj->anonymousChildren()) {
+        for (const auto& obj_child : obj->getAllChildren()) {
           switch (obj_child->type()) {
             case tinyparser_mitsuba::OT_FILM: {
               auto child_p = obj_child->properties();
@@ -353,10 +364,10 @@ bool set_scene_from_xml(const std::filesystem::path& path_file, integrator_data&
   /*
    * loop through again to get the meshes and material
    */
-  for (const auto& obj : scene.anonymousChildren()) {
+  for (const auto& obj : scene.getAllChildren()) {
     switch (obj->type()) {
       case tinyparser_mitsuba::OT_SHAPE: {
-        auto obj_children = obj->anonymousChildren();
+        auto obj_children = obj->getAllChildren();
         auto properties = obj->properties();
 
         tinyparser_mitsuba::Transform to_world_m = properties["to_world"].getTransform();
@@ -373,32 +384,13 @@ bool set_scene_from_xml(const std::filesystem::path& path_file, integrator_data&
 
         Material* mat_ptr = nullptr;
 
-        // loop over named children if present
-        // search for emitter
-        auto named_children = obj->namedChildren();
-        for (auto& [_, value] : named_children) {
-          if (value->type() == tinyparser_mitsuba::OT_EMITTER) {
-            mat_ptr = mat_index_from_obj(value, texture_list, list_materials, name_to_mat);
-            break;
-          }
-        }
-
-        // if emitter found skip mat if present
-        if (!mat_ptr) {
-          for (auto& [_, value] : named_children) {
-            if (value->type() == tinyparser_mitsuba::OT_BSDF) {
-              mat_ptr = mat_index_from_obj(value, texture_list, list_materials, name_to_mat);
-              break;
-            }
-          }
-        }
-
-        // loop over unnamed children if present. skip if named was already found
+        // loop over children if present. skip if named was already found
         // search for emitter
         if (!mat_ptr) {
           for (const auto& child : obj_children) {
             if (child->type() == tinyparser_mitsuba::OT_EMITTER) {
-              mat_ptr = mat_index_from_obj(child, texture_list, list_materials, name_to_mat);
+              mat_ptr
+                  = mat_index_from_obj(child, texture_list, list_materials, id_to_mat, id_to_tex);
               break;
             }
           }
@@ -408,7 +400,8 @@ bool set_scene_from_xml(const std::filesystem::path& path_file, integrator_data&
         if (!mat_ptr) {
           for (const auto& child : obj_children) {
             if (child->type() == tinyparser_mitsuba::OT_BSDF) {
-              mat_ptr = mat_index_from_obj(child, texture_list, list_materials, name_to_mat);
+              mat_ptr
+                  = mat_index_from_obj(child, texture_list, list_materials, id_to_mat, id_to_tex);
               break;
             }
           }
@@ -425,23 +418,7 @@ bool set_scene_from_xml(const std::filesystem::path& path_file, integrator_data&
           Mesh quad_mesh = create_quad_mesh(mat_ptr, transform);
           list_meshes.push_back(std::make_unique<Mesh>(quad_mesh));
 
-          int num_tri = quad_mesh.indices.size();
-
-          // add to list of surfaces
-          for (size_t i = 0; i < num_tri; i++) {
-            auto tri = Triangle(list_meshes[list_meshes.size() - 1].get(), i);
-            list_surfaces.push_back(std::make_unique<Triangle>(tri));
-          }
-
-          // add to list of lights if needed
-          size_t rev_count_index = list_surfaces.size() - 1;
-
-          if (mat_ptr->is_emissive()) {
-            for (size_t i = rev_count_index; i > (rev_count_index - num_tri); i--) {
-              Triangle* s_ptr = static_cast<Triangle*>(list_surfaces[i].get());
-              list_lights.push_back(s_ptr);
-            }
-          }
+          add_tri_list_to_scene(quad_mesh, list_surfaces, list_meshes.back().get(), list_lights);
         } else if (obj->pluginType() == "cube") {
           // manually set cube mesh
           std::vector<glm::vec3> vertices;
@@ -474,23 +451,7 @@ bool set_scene_from_xml(const std::filesystem::path& path_file, integrator_data&
           auto tri_mesh = Mesh(indices, vertices, normals, texcoords, mat_ptr);
           list_meshes.push_back(std::make_unique<Mesh>(tri_mesh));
 
-          int num_tri = indices.size();
-
-          // add to list of surfaces
-          for (size_t i = 0; i < num_tri; i++) {
-            auto tri = Triangle(list_meshes[list_meshes.size() - 1].get(), i);
-            list_surfaces.push_back(std::make_unique<Triangle>(tri));
-          }
-
-          // add to list of lights if needed
-          size_t rev_count_index = list_surfaces.size() - 1;
-
-          if (mat_ptr->is_emissive()) {
-            for (size_t i = rev_count_index; i > (rev_count_index - num_tri); i--) {
-              Triangle* s_ptr = static_cast<Triangle*>(list_surfaces[i].get());
-              list_lights.push_back(s_ptr);
-            }
-          }
+          add_tri_list_to_scene(tri_mesh, list_surfaces, list_meshes.back().get(), list_lights);
         } else if (obj->pluginType() == "serialized") {
           std::string s_file = properties["filename"].getString();
           std::filesystem::path model_filename = properties["filename"].getString();
@@ -504,23 +465,8 @@ bool set_scene_from_xml(const std::filesystem::path& path_file, integrator_data&
 
           list_meshes.push_back(std::make_unique<Mesh>(serialized_mesh));
 
-          int num_tri = serialized_mesh.indices.size();
-
-          // add to list of surfaces
-          for (size_t i = 0; i < num_tri; i++) {
-            auto tri = Triangle(list_meshes[list_meshes.size() - 1].get(), i);
-            list_surfaces.push_back(std::make_unique<Triangle>(tri));
-          }
-
-          // add to list of lights if needed
-          size_t rev_count_index = list_surfaces.size() - 1;
-
-          if (mat_ptr->is_emissive()) {
-            for (size_t i = rev_count_index; i > (rev_count_index - num_tri); i--) {
-              Triangle* s_ptr = static_cast<Triangle*>(list_surfaces[i].get());
-              list_lights.push_back(s_ptr);
-            }
-          }
+          add_tri_list_to_scene(serialized_mesh, list_surfaces, list_meshes.back().get(),
+                                list_lights);
         } else if (obj->pluginType() == "sphere") {
           fmt::println("sphere");
           float radius = properties["radius"].getNumber(1.0f);
@@ -557,23 +503,7 @@ bool set_scene_from_xml(const std::filesystem::path& path_file, integrator_data&
           auto tri_mesh = Mesh(indices, vertices, normals, texcoords, mat_ptr);
           list_meshes.push_back(std::make_unique<Mesh>(tri_mesh));
 
-          int num_tri = indices.size();
-
-          // add to list of surfaces
-          for (size_t i = 0; i < num_tri; i++) {
-            auto tri = Triangle(list_meshes[list_meshes.size() - 1].get(), i);
-            list_surfaces.push_back(std::make_unique<Triangle>(tri));
-          }
-
-          // add to list of lights if needed
-          size_t rev_count_index = list_surfaces.size() - 1;
-
-          if (mat_ptr->is_emissive()) {
-            for (size_t i = 0; i < num_tri; i++, rev_count_index--) {
-              Triangle* s_ptr = static_cast<Triangle*>(list_surfaces[rev_count_index].get());
-              list_lights.push_back(s_ptr);
-            }
-          }
+          add_tri_list_to_scene(tri_mesh, list_surfaces, list_meshes.back().get(), list_lights);
         } else {
           fmt::println("shape plugin {} is not supported", obj->pluginType());
         }
