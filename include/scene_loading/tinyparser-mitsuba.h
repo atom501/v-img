@@ -5,6 +5,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <optional>
 
 #ifdef _WIN32
 #ifdef TPM_EXPORT
@@ -481,12 +482,12 @@ private:
 // --------------- Object
 class TPM_LIB Object {
 public:
-	inline explicit Object(ObjectType type, const std::string& pluginType, const std::string& id)
+	inline explicit Object(ObjectType type, const std::string& pluginType, const std::string& id, const std::string& name)
 		: mType(type)
 		, mPluginType(pluginType)
 		, mID(id)
-	{
-	}
+		, mName(name)
+	{}
 
 	Object(const Object& other) = default;
 	Object(Object&& other)		= default;
@@ -512,23 +513,34 @@ public:
 	TPM_NODISCARD inline Property& operator[](const std::string& key) { return mProperties[key]; }
 	TPM_NODISCARD inline Property operator[](const std::string& key) const { return property(key); }
 
-	inline void addAnonymousChild(const std::shared_ptr<Object>& obj) { mChildren.push_back(obj); }
-	TPM_NODISCARD inline const std::vector<std::shared_ptr<Object>>& anonymousChildren() const { return mChildren; }
-
-	inline void addNamedChild(const std::string& key, const std::shared_ptr<Object>& obj) { mNamedChildren[key] = obj; }
-	TPM_NODISCARD inline const std::unordered_map<std::string, std::shared_ptr<Object>>& namedChildren() const { return mNamedChildren; }
-	TPM_NODISCARD inline std::shared_ptr<Object> namedChild(const std::string& key) const
+	TPM_NODISCARD inline const std::vector<std::shared_ptr<Object>>& getAllChildren() const { return mChildren; }
+	inline void changeName(const std::string& name) { mName = name; };
+	inline void addChild(const std::shared_ptr<Object>& obj)
+	{ 
+		mChildren.push_back(obj);
+		// if has name add to mNamedChildren
+		if(obj->mName != "") {
+			mNamedChildren[obj->mName] = mChildren.size() - 1;
+		}
+	}
+	//TPM_NODISCARD inline const std::unordered_map<std::string, unsigned int>& namedChildren() const { return mNamedChildren; }
+	TPM_NODISCARD inline std::optional<uint32_t> namedChild(const std::string& key) const
 	{
-		return mNamedChildren.count(key) ? mNamedChildren.at(key) : nullptr;
+		if ( auto findit = mNamedChildren.find(key); findit != mNamedChildren.end() ) {
+			return findit->second;
+		} else {
+			return std::nullopt;
+		}
 	}
 
 private:
 	ObjectType mType;
 	std::string mPluginType;
 	std::string mID;
+	std::string mName;
 	std::unordered_map<std::string, Property> mProperties;
 	std::vector<std::shared_ptr<Object>> mChildren;
-	std::unordered_map<std::string, std::shared_ptr<Object>> mNamedChildren;
+	std::unordered_map<std::string, unsigned int> mNamedChildren;
 };
 
 // --------------- Scene
@@ -548,7 +560,7 @@ public:
 
 private:
 	inline Scene()
-		: Object(OT_SCENE, "", "")
+		: Object(OT_SCENE, "", "", "")
 	{
 	}
 

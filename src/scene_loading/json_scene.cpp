@@ -75,8 +75,6 @@ static glm::mat4 get_transform(const nlohmann::json& json_xform) {
 
   // loop over and apply transforms to xform
   for (auto& transform_entry : json_array) {
-    fmt::println("Transform entry {}", transform_entry.dump());
-
     if (transform_entry.contains("scale")) {
       if (transform_entry["scale"].is_array()) {
         glm::vec3 scale = transform_entry["scale"].template get<glm::vec3>();
@@ -163,7 +161,6 @@ bool set_integrator_data(const nlohmann::json& json_settings, integrator_data& i
     // set resolution
     if (cam_set.contains("resolution")) {
       res = cam_set["resolution"].template get<glm::vec2>();
-      fmt::println("resolution {}, {} set", res[0], res[1]);
     } else {
       fmt::println("Resolution not given. Default 500, 500 set");
     }
@@ -194,8 +191,6 @@ bool set_integrator_data(const nlohmann::json& json_settings, integrator_data& i
 
     samples = sampler_json.value("samples", samples);
     depth = sampler_json.value("depth", depth);
-
-    fmt::println("Samples {} and max depth {}", samples, depth);
   } else {
     fmt::println("Sampler not given. Default 30 samples and 30 depth set");
   }
@@ -214,26 +209,20 @@ bool set_integrator_data(const nlohmann::json& json_settings, integrator_data& i
   integrator_func func = integrator_func::s_normal;
   if (json_settings.contains("integrator")) {
     std::string integrator_string = json_settings["integrator"]["type"];
-    fmt::println("function type read {}", integrator_string);
 
     if (integrator_string == "s_normal") {
       func = integrator_func::s_normal;
-      fmt::println("Shading normal integrator set");
     } else if (integrator_string == "g_normal") {
       func = integrator_func::g_normal;
-      fmt::println("Shading normal integrator set");
     } else if (integrator_string == "material") {
       func = integrator_func::material;
-      fmt::println("Material integrator set");
     } else if (integrator_string == "mis") {
       func = integrator_func::mis;
-      fmt::println("MIS integrator set");
     } else {
-      func = integrator_func::s_normal;
       fmt::println("Integrator {} is not defined. Set to shading normal", integrator_string);
     }
   } else {
-    fmt::println("Integrator function not given. Default normal integrator set");
+    fmt::println("Integrator function not given. Default shading normal integrator set");
   }
 
   integrator_data.func = func;
@@ -345,105 +334,60 @@ bool set_list_of_objects(const nlohmann::json& json_settings,
                          std::vector<Emitter*>& list_lights,
                          const std::unordered_map<std::string, size_t>& name_to_index,
                          std::vector<std::unique_ptr<Mesh>>& list_meshes) {
-  if (json_settings.contains("surfaces")) {
-    auto json_surface_list = json_settings["surfaces"];
-
-    for (auto& surf_data : json_surface_list) {
-      if (surf_data["type"] == "quad") {
-        glm::mat4 surf_xform = get_transform(surf_data);
-        std::string mat_name = surf_data["mat_name"];
-        Material* mat_ptr = list_materials[name_to_index.at(mat_name)].get();
-
-        // create quad
-        Mesh quad_mesh = create_quad_mesh(mat_ptr, surf_xform);
-        list_meshes.push_back(std::make_unique<Mesh>(quad_mesh));
-
-        int num_tri = quad_mesh.indices.size();
-
-        // add to list of surfaces
-        for (size_t i = 0; i < num_tri; i++) {
-          auto tri = Triangle(list_meshes[list_meshes.size() - 1].get(), i);
-          list_surfaces.push_back(std::make_unique<Triangle>(tri));
-        }
-
-        // add to list of lights if needed
-        size_t rev_count_index = list_surfaces.size() - 1;
-
-        if (mat_ptr->is_emissive()) {
-          for (size_t i = rev_count_index; i > (rev_count_index - num_tri); i--) {
-            Triangle* s_ptr = static_cast<Triangle*>(list_surfaces[i].get());
-            list_lights.push_back(s_ptr);
-          }
-        }
-      } else if (surf_data["type"] == "sphere") {
-        glm::mat4 surf_transform = glm::mat4(1.0f);
-
-        glm::vec3 center;
-
-        center = surf_data["center"].template get<glm::vec3>();
-
-        float radius = surf_data.value("radius", 1.0f);
-
-        std::string mat_name = surf_data["mat_name"];
-        Material* mat_ptr = list_materials[name_to_index.at(mat_name)].get();
-
-        auto sphere = Sphere(center, radius, mat_ptr);
-        list_surfaces.push_back(std::make_unique<Sphere>(sphere));
-
-        if (mat_ptr->is_emissive()) {
-          Sphere* s_ptr = static_cast<Sphere*>(list_surfaces[list_surfaces.size() - 1].get());
-          list_lights.push_back(s_ptr);
-        }
-      } else if (surf_data["type"] == "mesh") {
-        std::filesystem::path model_filename = surf_data["filename"];
-        std::filesystem::path scene_filename = json_settings["scene_file_path"];
-
-        const auto model_path_rel_file = scene_filename.remove_filename() / model_filename;
-
-        // data for mesh object
-        std::vector<glm::vec3> vertices;
-        std::vector<glm::vec3> normals;
-        std::vector<glm::vec2> texcoords;
-
-        std::vector<std::array<uint32_t, 3>> indices;
-
-        glm::mat4 surf_xform = get_transform(surf_data);
-
-        load_from_obj(model_path_rel_file.string(), indices, vertices, normals, texcoords,
-                      surf_xform);
-
-        std::string mat_name = surf_data["mat_name"];
-        Material* mat_ptr = list_materials[name_to_index.at(mat_name)].get();
-
-        auto tri_mesh = Mesh(indices, vertices, normals, texcoords, mat_ptr);
-        list_meshes.push_back(std::make_unique<Mesh>(tri_mesh));
-
-        int num_tri = indices.size();
-
-        // add to list of surfaces
-        for (size_t i = 0; i < num_tri; i++) {
-          auto tri = Triangle(list_meshes[list_meshes.size() - 1].get(), i);
-          list_surfaces.push_back(std::make_unique<Triangle>(tri));
-        }
-
-        // add to list of lights if needed
-        size_t rev_count_index = list_surfaces.size() - 1;
-
-        if (mat_ptr->is_emissive()) {
-          for (size_t i = 0; i < num_tri; i++, rev_count_index--) {
-            Triangle* s_ptr = static_cast<Triangle*>(list_surfaces[rev_count_index].get());
-            list_lights.push_back(s_ptr);
-          }
-        }
-      } else {
-        std::string surf_name = surf_data["type"];
-        fmt::println("Unknown surface {}", surf_name);
-        return false;
-      }
-    }
-    return true;
-  } else
+  if (!json_settings.contains("surfaces")) {
+    fmt::println("Json file does not contain surfaces");
     return false;
+  }
+  auto json_surface_list = json_settings["surfaces"];
+
+  for (auto& surf_data : json_surface_list) {
+    glm::mat4 surf_xform = get_transform(surf_data);
+    Material* mat_ptr = list_materials[name_to_index.at(surf_data["mat_name"])].get();
+
+    if (surf_data["type"] == "quad") {
+      // create quad
+      Mesh quad_mesh = create_quad_mesh(mat_ptr, surf_xform);
+      list_meshes.push_back(std::make_unique<Mesh>(quad_mesh));
+
+      add_tri_list_to_scene(quad_mesh, list_surfaces, list_meshes.back().get(), list_lights);
+    } else if (surf_data["type"] == "sphere") {
+      glm::vec3 center = surf_data["center"].template get<glm::vec3>();
+      float radius = surf_data.value("radius", 1.0f);
+
+      auto sphere = Sphere(center, radius, mat_ptr);
+      list_surfaces.push_back(std::make_unique<Sphere>(sphere));
+
+      if (mat_ptr->is_emissive()) {
+        Sphere* s_ptr = static_cast<Sphere*>(list_surfaces[list_surfaces.size() - 1].get());
+        list_lights.push_back(s_ptr);
+      }
+    } else if (surf_data["type"] == "mesh") {
+      std::filesystem::path model_filename = surf_data["filename"];
+      std::filesystem::path scene_filename = json_settings["scene_file_path"];
+
+      const auto model_path_rel_file = scene_filename.remove_filename() / model_filename;
+
+      // data for mesh object
+      std::vector<glm::vec3> vertices;
+      std::vector<glm::vec3> normals;
+      std::vector<glm::vec2> texcoords;
+
+      std::vector<std::array<uint32_t, 3>> indices;
+
+      load_from_obj(model_path_rel_file.string(), indices, vertices, normals, texcoords,
+                    surf_xform);
+
+      auto tri_mesh = Mesh(indices, vertices, normals, texcoords, mat_ptr);
+      list_meshes.push_back(std::make_unique<Mesh>(tri_mesh));
+
+      add_tri_list_to_scene(tri_mesh, list_surfaces, list_meshes.back().get(), list_lights);
+    } else {
+      fmt::println("Unknown surface {}", surf_data["type"]);
+      return false;
+    }
+  }
+
+  return true;
 }
 
 bool set_scene_from_json(const std::filesystem::path& path_file, integrator_data& integrator_data,
@@ -467,9 +411,7 @@ bool set_scene_from_json(const std::filesystem::path& path_file, integrator_data
   json_settings["scene_file_path"] = path_file;
 
   // set integrator data
-  if (set_integrator_data(json_settings, integrator_data)) {
-    fmt::println("Integrator data is set");
-  } else {
+  if (!set_integrator_data(json_settings, integrator_data)) {
     fmt::println("Integrator data set failed");
     return false;
   }

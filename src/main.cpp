@@ -122,8 +122,8 @@ int main(int argc, char* argv[]) {
     scene_load_check = set_scene_from_json(scene_file_path, rendering_settings, list_objects,
                                            mat_list, list_lights, list_meshes, texture_list);
   } else if (extension.string() == ".xml") {
-    scene_load_check = set_scene_from_xml(scene_file_path, rendering_settings, list_objects,
-                                          mat_list, list_lights, list_meshes, texture_list);
+    scene_load_check = set_scene_from_mitsuba_xml(scene_file_path, rendering_settings, list_objects,
+                                                  mat_list, list_lights, list_meshes, texture_list);
   } else if (extension.string() == ".gltf" || extension.string() == ".glb") {
     // load parameters not set for gltf
     std::filesystem::path json_gltf_file = set_jsonfilename ? args::get(set_jsonfilename) : "";

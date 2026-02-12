@@ -1,11 +1,10 @@
 #include <fmt/core.h>
 #include <geometry/mesh.h>
 #define TINYOBJLOADER_IMPLEMENTATION
+#include <geometry/triangle.h>
 #include <tiny_obj_loader.h>
 
-#include <filesystem>
 #include <glm/matrix.hpp>
-#include <unordered_map>
 
 // struct ArrayHasher {
 //   std::size_t operator()(const std::array<int, 3>& a) const {
@@ -83,4 +82,23 @@ Mesh create_quad_mesh(Material* mat_ptr, const glm::mat4& xform) {
   std::vector<std::array<uint32_t, 3>> indices = {{0, 2, 1}, {2, 0, 3}};
 
   return Mesh(indices, vertices, normals, texcoords, mat_ptr);
+}
+
+void add_tri_list_to_scene(const Mesh& mesh, std::vector<std::unique_ptr<Surface>>& list_surfaces,
+                           Mesh* mesh_ptr, std::vector<Emitter*>& list_lights) {
+  size_t num_tri = mesh.indices.size();
+
+  // add to list of surfaces
+  for (size_t i = 0; i < num_tri; i++) {
+    list_surfaces.push_back(std::make_unique<Triangle>(mesh_ptr, i));
+  }
+
+  // add to list of lights if needed
+  if (mesh.mat->is_emissive()) {
+    size_t rev_count_index = list_surfaces.size() - 1;
+
+    for (size_t i = rev_count_index; i > (rev_count_index - num_tri); i--) {
+      list_lights.push_back(static_cast<Triangle*>(list_surfaces[i].get()));
+    }
+  }
 }
