@@ -12,6 +12,9 @@
 #include "glm/vec2.hpp"
 #include "glm/vec3.hpp"
 
+// fix mipmap level to 0 if true
+constexpr bool DEBUG_MIPMAPS = false;
+
 // None means loaded as r,g,b with each channel 0 to 255. transform according to need
 enum class TextureType { None, Image, Normals };
 

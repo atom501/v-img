@@ -1,4 +1,5 @@
 #pragma once
+
 #include <geometry/emitters.h>
 #include <ray.h>
 #include <texture.h>
@@ -93,7 +94,12 @@ public:
     float v = std::acos(dir.y) * std::numbers::inv_pi;
 
     // calculate mipmap level
-    float lambda = std::log2(std::abs(cone.spread_angle) * (image.height / std::numbers::pi));
+    float lambda;
+    if constexpr (DEBUG_MIPMAPS) {
+      lambda = 0.f;
+    } else {
+      lambda = std::log2(std::abs(cone.spread_angle) * (image.height / std::numbers::pi));
+    }
 
     lambda = std::isnan(lambda) ? 0.f : lambda;
 

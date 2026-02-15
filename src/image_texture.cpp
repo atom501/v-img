@@ -153,8 +153,14 @@ glm::vec3 ImageTexture::col_at_uv_mipmap(int mipmap_level, const glm::vec2& uv) 
 
 glm::vec3 ImageTexture::col_at_ray_hit(const glm::vec3& ray_in_dir, const RayCone& cone,
                                        const HitInfo& surf_hit) const {
-  // calculate mipmap level. subtract so it isn't too aggressive
-  float lambda = compute_texture_LOD(ray_in_dir, cone, surf_hit) - 2.f;
+  float lambda;
+  if constexpr (DEBUG_MIPMAPS) {
+    lambda = 0;
+  } else {
+    // calculate mipmap level. subtract so it isn't too aggressive
+    lambda = compute_texture_LOD(ray_in_dir, cone, surf_hit) - 2.f;
+  }
+
   lambda = std::clamp(lambda, 0.f, static_cast<float>(mipmap.size() - 1));
 
   int mipmap_level0 = std::clamp(static_cast<int>(std::floor(lambda)), static_cast<int>(0),
