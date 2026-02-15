@@ -7,6 +7,19 @@
 #include "fmt/core.h"
 #include "stb_image.h"
 
+TextureWrappingMode gltf_wrap_convert(const fastgltf::Wrap gltf_wrap) {
+  switch (gltf_wrap) {
+    case fastgltf::Wrap::Repeat:
+      return TextureWrappingMode::Repeat;
+    case fastgltf::Wrap::MirroredRepeat:
+      return TextureWrappingMode::MirroredRepeat;
+    case fastgltf::Wrap::ClampToEdge:
+      return TextureWrappingMode::ClampToEdge;
+    default:
+      return TextureWrappingMode::Repeat;
+  }
+}
+
 // loading image from disk and constructing ImageTexture from it
 ImageTexture load_imagetexture(const std::filesystem::path& ImageTexture_file) {
   int width, height, channels;
@@ -51,14 +64,20 @@ ImageTexture load_imagetexture(const std::filesystem::path& ImageTexture_file) {
     }
   }
 
-  return ImageTexture(image, width, height);
+  return ImageTexture(image, width, height, TextureWrappingMode::ClampToEdge,
+                      TextureWrappingMode::ClampToEdge);
 }
 
-ImageTexture::ImageTexture(const std::vector<glm::vec3>& image, uint32_t width, uint32_t height) {
+ImageTexture::ImageTexture(const std::vector<glm::vec3>& image, uint32_t width, uint32_t height,
+                           TextureWrappingMode u_wrapping_mode,
+                           TextureWrappingMode v_wrapping_mode) {
   // original image is given as parameter
   ImageTexture::mipmap.push_back(image);
   ImageTexture::width = width;
   ImageTexture::height = height;
+
+  ImageTexture::u_wrapping_mode = u_wrapping_mode;
+  ImageTexture::v_wrapping_mode = v_wrapping_mode;
 
   // fmt::println("mipmap level 0. Width {}, Height {}", width, height);
 
@@ -125,8 +144,8 @@ glm::vec3 ImageTexture::col_at_uv_mipmap(int mipmap_level, const glm::vec2& uv) 
   uint32_t mip_h = std::max(ImageTexture::height >> mipmap_level, 1u);
 
   // get value on the mipmap level
-  float pixel_u = uv[0] * mip_w;
-  float pixel_v = uv[1] * mip_h;
+  float pixel_u = handle_wrapping(uv[0], ImageTexture::u_wrapping_mode) * mip_w;
+  float pixel_v = handle_wrapping(uv[1], ImageTexture::v_wrapping_mode) * mip_h;
 
   // get pixel value using sampling
   int curr_x = std::clamp(static_cast<int>(pixel_u), 0, static_cast<int>(mip_w) - 1);
@@ -161,19 +180,7 @@ glm::vec3 ImageTexture::col_at_ray_hit(const glm::vec3& ray_in_dir, const RayCon
     lambda = compute_texture_LOD(ray_in_dir, cone, surf_hit) - 2.f;
   }
 
-  lambda = std::clamp(lambda, 0.f, static_cast<float>(mipmap.size() - 1));
-
-  int mipmap_level0 = std::clamp(static_cast<int>(std::floor(lambda)), static_cast<int>(0),
-                                 static_cast<int>(mipmap.size() - 1));
-  int mipmap_level1
-      = std::clamp(mipmap_level0 + 1, static_cast<int>(0), static_cast<int>(mipmap.size() - 1));
-
-  float fraction = lambda - std::floor(lambda);
-
-  glm::vec3 col0 = col_at_uv_mipmap(mipmap_level0, surf_hit.uv);
-  glm::vec3 col1 = col_at_uv_mipmap(mipmap_level1, surf_hit.uv);
-
-  return glm::mix(col0, col1, glm::vec3(fraction));
+  return col_mipmap_interpolate(lambda, surf_hit.uv);
 }
 
 glm::vec3 ImageTexture::col_mipmap_interpolate(float lambda, const glm::vec2& uv) const {

@@ -8,6 +8,7 @@
 #include <utility>
 #include <vector>
 
+#include "fastgltf/types.hpp"
 #include "glm/common.hpp"
 #include "glm/vec2.hpp"
 #include "glm/vec3.hpp"
@@ -17,6 +18,9 @@ constexpr bool DEBUG_MIPMAPS = false;
 
 // None means loaded as r,g,b with each channel 0 to 255. transform according to need
 enum class TextureType { None, Image, Normals };
+
+// effects the handling of texture UVs when out of [0, 1] range
+enum class TextureWrappingMode { ClampToEdge, MirroredRepeat, Repeat };
 
 // fmt formater for TextureType
 inline auto format_as(TextureType t) {
@@ -83,17 +87,30 @@ class ImageTexture : public Texture {
 public:
   uint32_t width;
   uint32_t height;
-  std::vector<std::vector<glm::vec3>> mipmap;  // flattened size width * height. Top left corner is
-                                               // 0,0 index. mipmap level 0 is original image
+  /*
+   * flattened size width * height. Top left corner is
+   * 0,0 index. mipmap level 0 is original image
+   */
+  std::vector<std::vector<glm::vec3>> mipmap;
+
+  TextureWrappingMode u_wrapping_mode = TextureWrappingMode::Repeat;
+  TextureWrappingMode v_wrapping_mode = TextureWrappingMode::Repeat;
+
 public:
   ImageTexture() = default;
   ~ImageTexture() = default;
 
-  ImageTexture(const std::vector<glm::vec3>& image, uint32_t width, uint32_t height);
+  ImageTexture(const std::vector<glm::vec3>& image, uint32_t width, uint32_t height,
+               TextureWrappingMode u_wrapping_mode, TextureWrappingMode v_wrapping_mode);
 
   // make image texture without making mipmaps
-  ImageTexture(const std::vector<std::vector<glm::vec3>>& image, uint32_t width, uint32_t height)
-      : width(width), height(height), mipmap(image) {};
+  ImageTexture(const std::vector<std::vector<glm::vec3>>& image, uint32_t width, uint32_t height,
+               TextureWrappingMode u_wrapping_mode, TextureWrappingMode v_wrapping_mode)
+      : width(width),
+        height(height),
+        mipmap(image),
+        u_wrapping_mode(u_wrapping_mode),
+        v_wrapping_mode(v_wrapping_mode) {};
 
   // color when hitting a surface
   glm::vec3 col_at_ray_hit(const glm::vec3& ray_in_dir, const RayCone& cone,
@@ -136,3 +153,37 @@ private:
 };
 
 ImageTexture load_imagetexture(const std::filesystem::path& ImageTexture_file);
+TextureWrappingMode gltf_wrap_convert(const fastgltf::Wrap gltf_wrap);
+
+inline float handle_wrapping(float coord, TextureWrappingMode mode) {
+  switch (mode) {
+    case TextureWrappingMode::ClampToEdge:
+      return std::clamp(coord, 0.f, 1.f);
+
+    case TextureWrappingMode::Repeat: {
+      float fraction = coord - static_cast<int>(coord);
+
+      if (std::signbit(fraction))
+        return 1.f + fraction;
+      else
+        return fraction;
+    }
+
+    case TextureWrappingMode::MirroredRepeat: {
+      int int_part = static_cast<int>(coord);
+      float fraction = coord - int_part;
+
+      if (std::signbit(fraction)) {
+        if (int_part % 2)
+          return std::fabs(fraction);
+        else
+          return 1.f + fraction;
+
+      } else
+        return fraction;
+    }
+
+    default:
+      return std::clamp(coord, 0.f, 1.f);
+  }
+}

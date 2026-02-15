@@ -309,8 +309,18 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
           auto& image = image_list[image_idx];
           auto res = image_list_res[image_idx];
 
+          TextureWrappingMode u_mode = TextureWrappingMode::Repeat;
+          TextureWrappingMode v_mode = TextureWrappingMode::Repeat;
+          if (texture.samplerIndex) {
+            const auto& sampler_info = asset->samplers[texture.samplerIndex.value()];
+
+            u_mode = gltf_wrap_convert(sampler_info.wrapS);
+            v_mode = gltf_wrap_convert(sampler_info.wrapT);
+          }
+
           ImageTexture::convert_sRGB_to_linear(image);
-          texture_list.push_back(std::make_unique<ImageTexture>(image, res.x, res.y));
+          texture_list.push_back(
+              std::make_unique<ImageTexture>(image, res.x, res.y, u_mode, v_mode));
 
           img_list_idx[image_idx] = std::make_pair(texture_list.size() - 1, TextureType::Image);
           img_tex = texture_list.back().get();
@@ -352,11 +362,21 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
           auto res = image_list_res[image_idx];
           float scale = normal_tex_info.scale;
 
+          TextureWrappingMode u_mode = TextureWrappingMode::Repeat;
+          TextureWrappingMode v_mode = TextureWrappingMode::Repeat;
+          if (normal_texture.samplerIndex) {
+            const auto& sampler_info = asset->samplers[normal_texture.samplerIndex.value()];
+
+            u_mode = gltf_wrap_convert(sampler_info.wrapS);
+            v_mode = gltf_wrap_convert(sampler_info.wrapT);
+          }
+
           ImageTexture::convert_RGB_to_normal(image, scale);
           std::vector<std::vector<glm::vec3>> no_mipmap;
           no_mipmap.push_back(image);
 
-          texture_list.push_back(std::make_unique<ImageTexture>(no_mipmap, res.x, res.y));
+          texture_list.push_back(
+              std::make_unique<ImageTexture>(no_mipmap, res.x, res.y, u_mode, v_mode));
 
           img_list_idx[image_idx] = std::make_pair(texture_list.size() - 1, TextureType::Normals);
           normal_tex = dynamic_cast<ImageTexture*>(texture_list.back().get());
