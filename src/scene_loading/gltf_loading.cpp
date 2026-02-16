@@ -13,6 +13,7 @@
 #include <glm/gtx/transform.hpp>
 #include <variant>
 
+#include "fastgltf/tools.hpp"
 #include "fastgltf/types.hpp"
 #include "stb_image.h"
 
@@ -399,163 +400,190 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
 
   // load meshes and transform them
 
-  // loop over nodes check if meshindex, load transform, load mesh. (set default material for now)
-  for (auto& node : asset->nodes) {
-    if (node.meshIndex.has_value()) {
-      // data for mesh object
-      std::vector<glm::vec3> vertices;
-      std::vector<glm::vec3> normals;
-      std::vector<glm::vec2> texcoords;
-      std::vector<glm::vec2> normal_coords;
+  // loop over nodes in hierarchy check if meshindex, load transform, load mesh. (set default
+  // material for now)
+  for (size_t scene_idx = 0; scene_idx < asset->scenes.size(); scene_idx++) {
+    fastgltf::iterateSceneNodes(
+        asset.get(), scene_idx, fastgltf::math::fmat4x4(),
+        [&](fastgltf::Node& node, fastgltf::math::fmat4x4 node_matrix) {
+          if (node.meshIndex.has_value()) {
+            // data for mesh object
+            std::vector<glm::vec3> vertices;
+            std::vector<glm::vec3> normals;
+            std::vector<glm::vec2> texcoords;
+            std::vector<glm::vec2> normal_coords;
 
-      std::vector<std::array<uint32_t, 3>> indices;
+            std::vector<std::array<uint32_t, 3>> indices;
 
-      fastgltf::Mesh& mesh = asset->meshes[node.meshIndex.value()];
+            fastgltf::Mesh& mesh = asset->meshes[node.meshIndex.value()];
+            glm::mat4 mesh_to_world;
 
-      std::variant<fastgltf::TRS, fastgltf::math::fmat4x4>& mesh_xform = node.transform;
-      glm::mat4 mesh_to_world = get_mat_transform(mesh_xform);
+            for (size_t x = 0; x < 4; x++) {
+              for (size_t y = 0; y < 4; y++) {
+                mesh_to_world[x][y] = node_matrix[x][y];
+              }
+            }
 
-      for (auto it = mesh.primitives.begin(); it != mesh.primitives.end(); ++it) {
-        auto* positionIt = it->findAttribute("POSITION");
-        assert(positionIt
-               != it->attributes
-                      .end());  // A mesh primitive is required to hold the POSITION attribute.
-        assert(it->indicesAccessor.has_value());  // We specify GenerateMeshIndices, so we should
-                                                  // always have indices
+            for (auto it = mesh.primitives.begin(); it != mesh.primitives.end(); ++it) {
+              auto* positionIt = it->findAttribute("POSITION");
+              assert(positionIt != it->attributes.end());  // A mesh primitive is required to hold
+                                                           // the POSITION attribute.
+              assert(it->indicesAccessor.has_value());     // We specify GenerateMeshIndices, so we
+                                                           // should always have indices
 
-        // Get the output primitive
-        auto index = std::distance(mesh.primitives.begin(), it);
+              // Get the output primitive
+              auto index = std::distance(mesh.primitives.begin(), it);
 
-        // loading vertex positions
-        auto& positionAccessor = asset->accessors[positionIt->accessorIndex];
-        if (!positionAccessor.bufferViewIndex.has_value()) continue;
+              // loading vertex positions
+              auto& positionAccessor = asset->accessors[positionIt->accessorIndex];
+              if (!positionAccessor.bufferViewIndex.has_value()) {
+                fmt::println(
+                    "positionAccessor.bufferViewIndex has no value. skipping mesh.primitive");
+                continue;
+              }
 
-        fastgltf::iterateAccessor<fastgltf::math::fvec3>(
-            asset.get(), positionAccessor, [&](fastgltf::math::fvec3 pos) {
-              auto vec = glm::vec3(pos.x(), pos.y(), pos.z());
-              glm::vec4 result = mesh_to_world * glm::vec4(vec, 1);
-              result /= result.w;
-              vertices.push_back(result);
-            });
+              fastgltf::iterateAccessor<fastgltf::math::fvec3>(
+                  asset.get(), positionAccessor, [&](fastgltf::math::fvec3 pos) {
+                    auto vec = glm::vec3(pos.x(), pos.y(), pos.z());
+                    glm::vec4 result = mesh_to_world * glm::vec4(vec, 1);
+                    result /= result.w;
+                    vertices.push_back(result);
+                  });
 
-        // load normals
-        if (const auto* normal_att = it->findAttribute("NORMAL");
-            normal_att != it->attributes.end()) {
-          auto& normalAccessor = asset->accessors[normal_att->accessorIndex];
-          if (normalAccessor.bufferViewIndex.has_value()) {
-            const glm::mat4 normal_xform = glm::transpose(glm::inverse(mesh_to_world));
+              // load normals
+              if (const auto* normal_att = it->findAttribute("NORMAL");
+                  normal_att != it->attributes.end()) {
+                auto& normalAccessor = asset->accessors[normal_att->accessorIndex];
+                if (normalAccessor.bufferViewIndex.has_value()) {
+                  const glm::mat4 normal_xform = glm::transpose(glm::inverse(mesh_to_world));
 
-            fastgltf::iterateAccessor<fastgltf::math::fvec3>(
-                asset.get(), normalAccessor, [&](fastgltf::math::fvec3 normal) {
-                  auto norm = glm::vec3(normal.x(), normal.y(), normal.z());
-                  glm::vec4 result = normal_xform * glm::vec4(norm, 0);
-                  normals.push_back(glm::normalize(glm::vec3(result)));
-                });
-          }
-        }
+                  fastgltf::iterateAccessor<fastgltf::math::fvec3>(
+                      asset.get(), normalAccessor, [&](fastgltf::math::fvec3 normal) {
+                        auto norm = glm::vec3(normal.x(), normal.y(), normal.z());
+                        glm::vec4 result = normal_xform * glm::vec4(norm, 0);
+                        normals.push_back(glm::normalize(glm::vec3(result)));
+                      });
+                }
+              }
 
-        // load texcoords
-        if (it->materialIndex.has_value()) {
-          auto& material = asset->materials[it->materialIndex.value()];
+              // load texcoords
+              if (it->materialIndex.has_value()) {
+                auto& material = asset->materials[it->materialIndex.value()];
 
-          auto& baseColorTexture = material.pbrData.baseColorTexture;
+                auto& baseColorTexture = material.pbrData.baseColorTexture;
 
-          if (baseColorTexture.has_value()) {
-            auto& texture = asset->textures[baseColorTexture->textureIndex];
+                if (baseColorTexture.has_value()) {
+                  auto& texture = asset->textures[baseColorTexture->textureIndex];
 
-            if (texture.imageIndex.has_value()) {
-              // texture transformation not supported
-              size_t baseColorTexcoordIndex = material.pbrData.baseColorTexture->texCoordIndex;
+                  if (texture.imageIndex.has_value()) {
+                    // texture transformation not supported
+                    size_t baseColorTexcoordIndex
+                        = material.pbrData.baseColorTexture->texCoordIndex;
 
-              auto texcoordAttribute
-                  = std::string("TEXCOORD_") + std::to_string(baseColorTexcoordIndex);
+                    auto texcoordAttribute
+                        = std::string("TEXCOORD_") + std::to_string(baseColorTexcoordIndex);
 
-              if (const auto* texcoord_acc = it->findAttribute(texcoordAttribute);
-                  texcoord_acc != it->attributes.end()) {
-                // Tex coord
-                auto& texCoordAccessor = asset->accessors[texcoord_acc->accessorIndex];
-                if (!texCoordAccessor.bufferViewIndex.has_value()) continue;
+                    if (const auto* texcoord_acc = it->findAttribute(texcoordAttribute);
+                        texcoord_acc != it->attributes.end()) {
+                      // Tex coord
+                      auto& texCoordAccessor = asset->accessors[texcoord_acc->accessorIndex];
+                      if (!texCoordAccessor.bufferViewIndex.has_value()) {
+                        fmt::println(
+                            "texCoordAccessor.bufferViewIndex has no value. skipping "
+                            "mesh.primitive");
+                        continue;
+                      }
 
-                fastgltf::iterateAccessor<fastgltf::math::fvec2>(
-                    asset.get(), texCoordAccessor, [&](fastgltf::math::fvec2 uv) {
-                      texcoords.push_back(glm::vec2(uv.x(), uv.y()));
-                    });
+                      fastgltf::iterateAccessor<fastgltf::math::fvec2>(
+                          asset.get(), texCoordAccessor, [&](fastgltf::math::fvec2 uv) {
+                            texcoords.push_back(glm::vec2(uv.x(), uv.y()));
+                          });
+                    }
+                  }
+                }
+
+                if (material.normalTexture.has_value()) {
+                  const auto& normal_tex_info = material.normalTexture.value();
+                  auto& normal_texture = asset->textures[normal_tex_info.textureIndex];
+
+                  if (normal_texture.imageIndex.has_value()) {
+                    size_t normal_tex_coords_idx = normal_tex_info.texCoordIndex;
+
+                    auto texcoordAttribute
+                        = std::string("TEXCOORD_") + std::to_string(normal_tex_coords_idx);
+
+                    if (const auto* texcoord_acc = it->findAttribute(texcoordAttribute);
+                        texcoord_acc != it->attributes.end()) {
+                      // normal coord
+                      auto& texCoordAccessor = asset->accessors[texcoord_acc->accessorIndex];
+                      if (!texCoordAccessor.bufferViewIndex.has_value()) {
+                        fmt::println(
+                            "normal map texCoordAccessor.bufferViewIndex has no value. skipping "
+                            "mesh.primitive");
+                        continue;
+                      }
+
+                      fastgltf::iterateAccessor<fastgltf::math::fvec2>(
+                          asset.get(), texCoordAccessor, [&](fastgltf::math::fvec2 uv) {
+                            normal_coords.push_back(glm::vec2(uv.x(), uv.y()));
+                          });
+                    }
+                  }
+                }
+              }
+
+              // Create the index buffer and copy the indices into it.
+
+              std::vector<uint32_t> tri_vertex;
+
+              auto& indexAccessor = asset->accessors[it->indicesAccessor.value()];
+              if (!indexAccessor.bufferViewIndex.has_value()) {
+                fmt::println(
+                    "triangle indexAccessor.bufferViewIndex has no value. skipping mesh.primitive");
+                continue;
+              }
+
+              fastgltf::iterateAccessor<std::uint32_t>(
+                  asset.get(), indexAccessor, [&](std::uint32_t i) { tri_vertex.push_back(i); });
+
+              for (size_t i = 0; i < tri_vertex.size(); i += 3) {
+                std::array<uint32_t, 3> tri_indexes
+                    = {tri_vertex[i], tri_vertex[i + 1], tri_vertex[i + 2]};
+
+                indices.push_back(tri_indexes);
+              }
+
+              // load material
+              Material* mat_ptr = nullptr;
+              if (it->materialIndex.has_value()) {
+                size_t mat_id = it->materialIndex.value();
+                mat_ptr = list_materials[mat_id].get();
+              } else {
+                fmt::println("can't load mat. skipping mesh.primitive");
+                continue;
+              }
+
+              auto m = Mesh(indices, vertices, normals, texcoords, normal_coords, mat_ptr);
+              list_meshes.push_back(std::make_unique<Mesh>(m));
+
+              // add to list of surfaces
+              for (size_t i = 0; i < tri_vertex.size() / 3; i++) {
+                Triangle t = Triangle(list_meshes[list_meshes.size() - 1].get(), i);
+                list_surfaces.push_back(std::make_unique<Triangle>(t));
+              }
+
+              // add to list of lights if needed
+              size_t rev_count_index = list_surfaces.size() - 1;
+
+              if (mat_ptr->is_emissive()) {
+                for (size_t i = 0; i < tri_vertex.size() / 3; i++, rev_count_index--) {
+                  Triangle* s_ptr = static_cast<Triangle*>(list_surfaces[rev_count_index].get());
+                  list_lights.push_back(s_ptr);
+                }
               }
             }
           }
-
-          if (material.normalTexture.has_value()) {
-            const auto& normal_tex_info = material.normalTexture.value();
-            auto& normal_texture = asset->textures[normal_tex_info.textureIndex];
-
-            if (normal_texture.imageIndex.has_value()) {
-              size_t normal_tex_coords_idx = normal_tex_info.texCoordIndex;
-
-              auto texcoordAttribute
-                  = std::string("TEXCOORD_") + std::to_string(normal_tex_coords_idx);
-
-              if (const auto* texcoord_acc = it->findAttribute(texcoordAttribute);
-                  texcoord_acc != it->attributes.end()) {
-                // normal coord
-                auto& texCoordAccessor = asset->accessors[texcoord_acc->accessorIndex];
-                if (!texCoordAccessor.bufferViewIndex.has_value()) continue;
-
-                fastgltf::iterateAccessor<fastgltf::math::fvec2>(
-                    asset.get(), texCoordAccessor, [&](fastgltf::math::fvec2 uv) {
-                      normal_coords.push_back(glm::vec2(uv.x(), uv.y()));
-                    });
-              }
-            }
-          }
-        }
-
-        // Create the index buffer and copy the indices into it.
-
-        std::vector<uint32_t> tri_vertex;
-
-        auto& indexAccessor = asset->accessors[it->indicesAccessor.value()];
-        if (!indexAccessor.bufferViewIndex.has_value()) return false;
-
-        fastgltf::iterateAccessor<std::uint32_t>(asset.get(), indexAccessor,
-                                                 [&](std::uint32_t i) { tri_vertex.push_back(i); });
-
-        for (size_t i = 0; i < tri_vertex.size(); i += 3) {
-          std::array<uint32_t, 3> tri_indexes
-              = {tri_vertex[i], tri_vertex[i + 1], tri_vertex[i + 2]};
-
-          indices.push_back(tri_indexes);
-        }
-
-        // load material
-        Material* mat_ptr = nullptr;
-        if (it->materialIndex.has_value()) {
-          size_t mat_id = it->materialIndex.value();
-          mat_ptr = list_materials[mat_id].get();
-        } else {
-          fmt::println("can't load mat");
-          continue;
-        }
-
-        auto m = Mesh(indices, vertices, normals, texcoords, normal_coords, mat_ptr);
-        list_meshes.push_back(std::make_unique<Mesh>(m));
-
-        // add to list of surfaces
-        for (size_t i = 0; i < tri_vertex.size() / 3; i++) {
-          Triangle t = Triangle(list_meshes[list_meshes.size() - 1].get(), i);
-          list_surfaces.push_back(std::make_unique<Triangle>(t));
-        }
-
-        // add to list of lights if needed
-        size_t rev_count_index = list_surfaces.size() - 1;
-
-        if (mat_ptr->is_emissive()) {
-          for (size_t i = 0; i < tri_vertex.size() / 3; i++, rev_count_index--) {
-            Triangle* s_ptr = static_cast<Triangle*>(list_surfaces[rev_count_index].get());
-            list_lights.push_back(s_ptr);
-          }
-        }
-      }
-    }
+        });
   }
 
   return true;
