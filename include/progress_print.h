@@ -1,5 +1,7 @@
 #pragma once
 
+#include <fmt/chrono.h>
+
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
@@ -29,3 +31,30 @@ private:
   mutable std::mutex m;
   bool terminate = false;
 };
+
+inline void print_time_taken(const std::chrono::steady_clock::time_point& start_time,
+                             const std::chrono::steady_clock::time_point& end_time,
+                             const std::string& activity) {
+  auto duration_micro
+      = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
+
+  auto duration_ms = std::chrono::duration_cast<std::chrono::milliseconds>(duration_micro);
+  duration_micro %= std::chrono::milliseconds(1);
+
+  auto duration_sec = std::chrono::duration_cast<std::chrono::seconds>(duration_ms);
+  duration_ms %= std::chrono::seconds(1);
+
+  auto duration_min = std::chrono::duration_cast<std::chrono::minutes>(duration_sec);
+  duration_sec %= std::chrono::minutes(1);
+
+  if (duration_min.count() > 0) {
+    fmt::println("Time take by {}: {} {} {} {}", activity, duration_min, duration_sec, duration_ms,
+                 duration_micro);
+  } else if (duration_sec.count() > 0) {
+    fmt::println("Time take by {}: {} {} {}", activity, duration_sec, duration_ms, duration_micro);
+  } else if (duration_ms.count() > 0) {
+    fmt::println("Time take by {}: {} {}", activity, duration_ms, duration_micro);
+  } else {
+    fmt::println("Time take by {}: {}", activity, duration_micro);
+  }
+}
