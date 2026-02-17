@@ -101,7 +101,8 @@ ImageTexture::ImageTexture(const std::vector<glm::vec3>& image, uint32_t width, 
 
     uint32_t old_size = prev_width * prev_height;
 
-    for (size_t y = 0; y < next_h; y++) {
+#pragma omp parallel for if (next_w * next_h > 4096)
+    for (int y = 0; y < next_h; y++) {
       for (size_t x = 0; x < next_w; x++) {
         glm::vec3 sum = glm::vec3(0.f);
 
@@ -265,21 +266,23 @@ void ImageTexture::debug_mipmaps_to_file() {
 }
 
 void ImageTexture::convert_sRGB_to_linear(std::vector<glm::vec3>& image) {
-  for (glm::vec3& pixel : image) {
-    pixel /= 255.f;
-    pixel = pix_sRGB_to_linear(pixel);
+#pragma omp parallel for
+  for (int pixel = 0; pixel < image.size(); pixel++) {
+    image[pixel] /= 255.f;
+    image[pixel] = pix_sRGB_to_linear(image[pixel]);
   }
 }
 
 void ImageTexture::convert_RGB_to_normal(std::vector<glm::vec3>& image, float scale) {
-  for (glm::vec3& normal : image) {
-    normal /= 255.f;
-    normal = (normal * 2.f) - glm::vec3(1.f);
+#pragma omp parallel for
+  for (int normal = 0; normal < image.size(); normal++) {
+    image[normal] /= 255.f;
+    image[normal] = (image[normal] * 2.f) - glm::vec3(1.f);
 
-    normal.x *= scale;
-    normal.y *= scale;
+    image[normal].x *= scale;
+    image[normal].y *= scale;
 
-    normal = glm::normalize(normal);
+    image[normal] = glm::normalize(image[normal]);
   }
 }
 
