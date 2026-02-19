@@ -49,6 +49,67 @@ static inline glm::mat4 get_mat_transform(
   return glm_xform;
 }
 
+// image and img_pair will change
+static ImageTexture* make_texture(std::vector<glm::vec3>& image, const glm::ivec2& res,
+                                  const std::optional<fastgltf::Sampler>& sampler_info,
+                                  TextureType tex_type,
+                                  std::vector<std::unique_ptr<Texture>>& texture_list,
+                                  std::pair<uint32_t, TextureType>& img_pair, float scale) {
+  // create the image texture
+  TextureWrappingMode u_mode = TextureWrappingMode::Repeat;
+  TextureWrappingMode v_mode = TextureWrappingMode::Repeat;
+
+  std::vector<std::vector<glm::vec3>> no_mipmap;
+
+  if (sampler_info) {
+    u_mode = gltf_wrap_convert(sampler_info.value().wrapS);
+    v_mode = gltf_wrap_convert(sampler_info.value().wrapT);
+  }
+
+  switch (tex_type) {
+    case TextureType::Image:
+      ImageTexture::convert_sRGB_to_linear(image);
+      texture_list.push_back(std::make_unique<ImageTexture>(image, res.x, res.y, u_mode, v_mode));
+      break;
+    case TextureType::Normals:
+      ImageTexture::convert_RGB_to_normal(image, scale);
+      no_mipmap.push_back(image);
+      texture_list.push_back(
+          std::make_unique<ImageTexture>(no_mipmap, res.x, res.y, u_mode, v_mode));
+      break;
+    default:
+      fmt::println("Error, not covered image texture type");
+      return nullptr;
+      break;
+  }
+
+  img_pair = std::make_pair(texture_list.size() - 1, tex_type);
+  return dynamic_cast<ImageTexture*>(texture_list.back().get());
+}
+
+std::vector<glm::vec2> get_texcoords(size_t texcoord_idx, const fastgltf::Primitive& primitive,
+                                     const fastgltf::Asset& asset) {
+  auto texcoordAttribute = std::string("TEXCOORD_") + std::to_string(texcoord_idx);
+  std::vector<glm::vec2> texcoords;
+
+  if (const auto* texcoord_acc = primitive.findAttribute(texcoordAttribute);
+      texcoord_acc != primitive.attributes.end()) {
+    // Tex coord
+    auto& texCoordAccessor = asset.accessors[texcoord_acc->accessorIndex];
+    if (!texCoordAccessor.bufferViewIndex.has_value()) {
+      fmt::println(
+          "texCoordAccessor.bufferViewIndex has no value. skipping "
+          "mesh.primitive");
+    }
+
+    fastgltf::iterateAccessor<fastgltf::math::fvec2>(
+        asset, texCoordAccessor,
+        [&](fastgltf::math::fvec2 uv) { texcoords.push_back(glm::vec2(uv.x(), uv.y())); });
+  }
+
+  return texcoords;
+}
+
 bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data& integrator_data,
                          std::vector<std::unique_ptr<Surface>>& list_surfaces,
                          std::vector<std::unique_ptr<Material>>& list_materials,
@@ -307,24 +368,14 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
           img_tex = texture_list[img_list_idx[image_idx].first].get();
         } else if (tex_type == TextureType::None) {
           // create the image texture
-          auto& image = image_list[image_idx];
-          auto res = image_list_res[image_idx];
 
-          TextureWrappingMode u_mode = TextureWrappingMode::Repeat;
-          TextureWrappingMode v_mode = TextureWrappingMode::Repeat;
+          std::optional<fastgltf::Sampler> sampler_info = std::nullopt;
           if (texture.samplerIndex) {
-            const auto& sampler_info = asset->samplers[texture.samplerIndex.value()];
-
-            u_mode = gltf_wrap_convert(sampler_info.wrapS);
-            v_mode = gltf_wrap_convert(sampler_info.wrapT);
+            sampler_info = asset->samplers[texture.samplerIndex.value()];
           }
 
-          ImageTexture::convert_sRGB_to_linear(image);
-          texture_list.push_back(
-              std::make_unique<ImageTexture>(image, res.x, res.y, u_mode, v_mode));
-
-          img_list_idx[image_idx] = std::make_pair(texture_list.size() - 1, TextureType::Image);
-          img_tex = texture_list.back().get();
+          img_tex = make_texture(image_list[image_idx], image_list_res[image_idx], sampler_info,
+                                 TextureType::Image, texture_list, img_list_idx[image_idx], 0.f);
         } else {
           fmt::println("Texture being loaded is already of type {} not a Image", tex_type);
           return false;
@@ -359,28 +410,15 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
               = dynamic_cast<ImageTexture*>(texture_list[img_list_idx[image_idx].first].get());
         } else if (tex_type == TextureType::None) {
           // make a normal texture
-          auto& image = image_list[image_idx];
-          auto res = image_list_res[image_idx];
-          float scale = normal_tex_info.scale;
 
-          TextureWrappingMode u_mode = TextureWrappingMode::Repeat;
-          TextureWrappingMode v_mode = TextureWrappingMode::Repeat;
+          std::optional<fastgltf::Sampler> sampler_info = std::nullopt;
           if (normal_texture.samplerIndex) {
-            const auto& sampler_info = asset->samplers[normal_texture.samplerIndex.value()];
-
-            u_mode = gltf_wrap_convert(sampler_info.wrapS);
-            v_mode = gltf_wrap_convert(sampler_info.wrapT);
+            sampler_info = asset->samplers[normal_texture.samplerIndex.value()];
           }
 
-          ImageTexture::convert_RGB_to_normal(image, scale);
-          std::vector<std::vector<glm::vec3>> no_mipmap;
-          no_mipmap.push_back(image);
-
-          texture_list.push_back(
-              std::make_unique<ImageTexture>(no_mipmap, res.x, res.y, u_mode, v_mode));
-
-          img_list_idx[image_idx] = std::make_pair(texture_list.size() - 1, TextureType::Normals);
-          normal_tex = dynamic_cast<ImageTexture*>(texture_list.back().get());
+          normal_tex = make_texture(image_list[image_idx], image_list_res[image_idx], sampler_info,
+                                    TextureType::Normals, texture_list, img_list_idx[image_idx],
+                                    normal_tex_info.scale);
         } else {
           fmt::println("Texture being loaded is already of type {} not a Normal", tex_type);
         }
@@ -477,57 +515,17 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
 
                   if (texture.imageIndex.has_value()) {
                     // texture transformation not supported
-                    size_t baseColorTexcoordIndex
-                        = material.pbrData.baseColorTexture->texCoordIndex;
-
-                    auto texcoordAttribute
-                        = std::string("TEXCOORD_") + std::to_string(baseColorTexcoordIndex);
-
-                    if (const auto* texcoord_acc = it->findAttribute(texcoordAttribute);
-                        texcoord_acc != it->attributes.end()) {
-                      // Tex coord
-                      auto& texCoordAccessor = asset->accessors[texcoord_acc->accessorIndex];
-                      if (!texCoordAccessor.bufferViewIndex.has_value()) {
-                        fmt::println(
-                            "texCoordAccessor.bufferViewIndex has no value. skipping "
-                            "mesh.primitive");
-                        continue;
-                      }
-
-                      fastgltf::iterateAccessor<fastgltf::math::fvec2>(
-                          asset.get(), texCoordAccessor, [&](fastgltf::math::fvec2 uv) {
-                            texcoords.push_back(glm::vec2(uv.x(), uv.y()));
-                          });
-                    }
+                    size_t baseColorTexcoordIndex = baseColorTexture->texCoordIndex;
+                    texcoords = get_texcoords(baseColorTexcoordIndex, *it, asset.get());
                   }
                 }
 
                 if (material.normalTexture.has_value()) {
-                  const auto& normal_tex_info = material.normalTexture.value();
-                  auto& normal_texture = asset->textures[normal_tex_info.textureIndex];
+                  auto& normal_texture = asset->textures[material.normalTexture->textureIndex];
 
                   if (normal_texture.imageIndex.has_value()) {
-                    size_t normal_tex_coords_idx = normal_tex_info.texCoordIndex;
-
-                    auto texcoordAttribute
-                        = std::string("TEXCOORD_") + std::to_string(normal_tex_coords_idx);
-
-                    if (const auto* texcoord_acc = it->findAttribute(texcoordAttribute);
-                        texcoord_acc != it->attributes.end()) {
-                      // normal coord
-                      auto& texCoordAccessor = asset->accessors[texcoord_acc->accessorIndex];
-                      if (!texCoordAccessor.bufferViewIndex.has_value()) {
-                        fmt::println(
-                            "normal map texCoordAccessor.bufferViewIndex has no value. skipping "
-                            "mesh.primitive");
-                        continue;
-                      }
-
-                      fastgltf::iterateAccessor<fastgltf::math::fvec2>(
-                          asset.get(), texCoordAccessor, [&](fastgltf::math::fvec2 uv) {
-                            normal_coords.push_back(glm::vec2(uv.x(), uv.y()));
-                          });
-                    }
+                    size_t normal_tex_coords_idx = material.normalTexture->texCoordIndex;
+                    normal_coords = get_texcoords(normal_tex_coords_idx, *it, asset.get());
                   }
                 }
               }
