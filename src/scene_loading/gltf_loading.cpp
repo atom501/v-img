@@ -14,6 +14,7 @@
 #include <glm/gtx/transform.hpp>
 #include <variant>
 
+#include "fastgltf/glm_element_traits.hpp"
 #include "fastgltf/tools.hpp"
 #include "fastgltf/types.hpp"
 #include "stb_image.h"
@@ -103,9 +104,8 @@ std::vector<glm::vec2> get_texcoords(size_t texcoord_idx, const fastgltf::Primit
           "mesh.primitive");
     }
 
-    fastgltf::iterateAccessor<fastgltf::math::fvec2>(
-        asset, texCoordAccessor,
-        [&](fastgltf::math::fvec2 uv) { texcoords.push_back(glm::vec2(uv.x(), uv.y())); });
+    fastgltf::iterateAccessor<glm::vec2>(asset, texCoordAccessor,
+                                         [&](glm::vec2 uv) { texcoords.push_back(uv); });
   }
 
   return texcoords;
@@ -525,10 +525,9 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
                 continue;
               }
 
-              fastgltf::iterateAccessor<fastgltf::math::fvec3>(
-                  asset.get(), positionAccessor, [&](fastgltf::math::fvec3 pos) {
-                    auto vec = glm::vec3(pos.x(), pos.y(), pos.z());
-                    glm::vec4 result = mesh_to_world * glm::vec4(vec, 1);
+              fastgltf::iterateAccessor<glm::vec3>(
+                  asset.get(), positionAccessor, [&](glm::vec3 pos) {
+                    glm::vec4 result = mesh_to_world * glm::vec4(pos, 1);
                     result /= result.w;
                     vertices.push_back(result);
                   });
@@ -540,10 +539,9 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
                 if (normalAccessor.bufferViewIndex.has_value()) {
                   const glm::mat4 normal_xform = glm::transpose(glm::inverse(mesh_to_world));
 
-                  fastgltf::iterateAccessor<fastgltf::math::fvec3>(
-                      asset.get(), normalAccessor, [&](fastgltf::math::fvec3 normal) {
-                        auto norm = glm::vec3(normal.x(), normal.y(), normal.z());
-                        glm::vec4 result = normal_xform * glm::vec4(norm, 0);
+                  fastgltf::iterateAccessor<glm::vec3>(
+                      asset.get(), normalAccessor, [&](glm::vec3 normal) {
+                        glm::vec4 result = normal_xform * glm::vec4(normal, 0);
                         normals.push_back(glm::normalize(glm::vec3(result)));
                       });
                 }
