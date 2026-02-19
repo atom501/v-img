@@ -1,3 +1,4 @@
+#include <comptime_settings.h>
 #include <geometry/mesh.h>
 #include <geometry/triangle.h>
 #include <material/diffuse_light.h>
@@ -200,37 +201,51 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
     integrator_data.func = integrator_func::s_normal;
   }
 
-  integrator_data.background = std::make_unique<ConstBackground>(ConstBackground(glm::vec3(0)));
-  if (extra_settings.contains("background")) {
-    if (extra_settings["background"].is_array()) {
-      const auto& val = extra_settings["background"];
-      integrator_data.background = std::make_unique<ConstBackground>(
-          ConstBackground(extra_settings["background"].template get<glm::vec3>()));
-      list_lights.push_back(static_cast<ConstBackground*>(integrator_data.background.get()));
-    } else {
-      std::filesystem::path env_filepath = extra_settings["background"];
-      // read exr file
-      std::string env_type = env_filepath.extension().generic_string();
-      if (env_type == ".exr") {
-        std::filesystem::path scene_filename = path_file;
-        const auto env_path_rel_file = scene_filename.remove_filename() / env_filepath;
+  std::thread background_loader = std::thread([&]() {
+    std::chrono::steady_clock::time_point begin_time;
 
-        ImageTexture image = load_imagetexture(env_path_rel_file);
+    if constexpr (CompileConsts::profile_gltf) {
+      begin_time = std::chrono::steady_clock::now();
+    }
 
-        float radiance_scale = extra_settings.value("radiance_scale", 1.f);
+    integrator_data.background = std::make_unique<ConstBackground>(ConstBackground(glm::vec3(0)));
 
-        // set env map
-        integrator_data.background = std::make_unique<EnvMap>(
-            EnvMap(image, glm::mat4(1.0f), glm::mat4(1.0f), radiance_scale));
-
-        list_lights.push_back(static_cast<EnvMap*>(integrator_data.background.get()));
-
+    if (extra_settings.contains("background")) {
+      if (extra_settings["background"].is_array()) {
+        const auto& val = extra_settings["background"];
+        integrator_data.background = std::make_unique<ConstBackground>(
+            ConstBackground(extra_settings["background"].template get<glm::vec3>()));
+        list_lights.push_back(static_cast<ConstBackground*>(integrator_data.background.get()));
       } else {
-        fmt::println("env map file type {} is not supported. Settings background to black",
-                     env_type);
+        std::filesystem::path env_filepath = extra_settings["background"];
+        // read exr file
+        std::string env_type = env_filepath.extension().generic_string();
+        if (env_type == ".exr") {
+          std::filesystem::path scene_filename = path_file;
+          const auto env_path_rel_file = scene_filename.remove_filename() / env_filepath;
+
+          ImageTexture image = load_imagetexture(env_path_rel_file);
+
+          float radiance_scale = extra_settings.value("radiance_scale", 1.f);
+
+          // set env map
+          integrator_data.background = std::make_unique<EnvMap>(
+              EnvMap(image, glm::mat4(1.0f), glm::mat4(1.0f), radiance_scale));
+
+          list_lights.push_back(static_cast<EnvMap*>(integrator_data.background.get()));
+
+        } else {
+          fmt::println("env map file type {} is not supported. Settings background to black",
+                       env_type);
+        }
       }
     }
-  }
+
+    if constexpr (CompileConsts::profile_gltf) {
+      auto end_time = std::chrono::steady_clock::now();
+      print_time_taken(begin_time, end_time, "loading gltf background");
+    }
+  });
 
   // use the passed in vertical resolution and aspect ratio
   integrator_data.resolution.y = extra_settings.value("yres", 768);
@@ -251,9 +266,17 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
               aperture_radius, focal_dist);
 
   // load images as 24 bit. each channel having 8 bits. To be transformed when making materials
-  std::vector<std::vector<glm::vec3>> image_list;
-  std::vector<glm::ivec2> image_list_res;
-  for (auto& img : asset->images) {
+  std::vector<std::vector<glm::vec3>> image_list(asset->images.size());
+  std::vector<glm::ivec2> image_list_res(asset->images.size());
+
+  std::chrono::steady_clock::time_point begin_time;
+
+  if constexpr (CompileConsts::profile_gltf) {
+    begin_time = std::chrono::steady_clock::now();
+  }
+
+#pragma omp parallel for
+  for (int img_idx = 0; img_idx < asset->images.size(); img_idx++) {
     unsigned char* image_loaded;
     int width, height, nrChannels;
 
@@ -287,21 +310,32 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
                          buffer.data);
             },
         },
-        img.data);
-    std::vector<glm::vec3> image_255(width * height);
+        asset->images[img_idx].data);
 
-    for (size_t i = 0; i < image_255.size(); i++) {
-      for (size_t c = 0; c < 3; c++) image_255[i][c] = image_loaded[i * 3 + c];
+    image_list[img_idx] = std::vector<glm::vec3>(width * height);
+
+    for (size_t i = 0; i < image_list[img_idx].size(); i++) {
+      image_list[img_idx][i].x = image_loaded[i * 3];
+      image_list[img_idx][i].y = image_loaded[i * 3 + 1];
+      image_list[img_idx][i].z = image_loaded[i * 3 + 2];
     }
 
     stbi_image_free(image_loaded);
-    image_list.push_back(image_255);
-    image_list_res.push_back(glm::ivec2(width, height));
+    image_list_res[img_idx] = glm::ivec2(width, height);
+  }
+
+  if constexpr (CompileConsts::profile_gltf) {
+    auto end_time = std::chrono::steady_clock::now();
+    print_time_taken(begin_time, end_time, "loading gltf images");
   }
 
   // load material
   std::vector<std::pair<uint32_t, TextureType>> img_list_idx(asset->images.size(),
                                                              std::make_pair(0, TextureType::None));
+
+  if constexpr (CompileConsts::profile_gltf) {
+    begin_time = std::chrono::steady_clock::now();
+  }
 
   for (auto& mat : asset->materials) {
     // check if material is emissive
@@ -436,7 +470,18 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
     }
   }
 
+  if constexpr (CompileConsts::profile_gltf) {
+    auto end_time = std::chrono::steady_clock::now();
+    print_time_taken(begin_time, end_time, "loading gltf materials");
+  }
+
+  background_loader.join();
+
   // load meshes and transform them
+
+  if constexpr (CompileConsts::profile_gltf) {
+    begin_time = std::chrono::steady_clock::now();
+  }
 
   // loop over nodes in hierarchy check if meshindex, load transform, load mesh. (set default
   // material for now)
@@ -582,6 +627,11 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
             }
           }
         });
+  }
+
+  if constexpr (CompileConsts::profile_gltf) {
+    auto end_time = std::chrono::steady_clock::now();
+    print_time_taken(begin_time, end_time, "loading gltf meshes");
   }
 
   return true;
