@@ -592,14 +592,6 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
         asset.get(), scene_idx, fastgltf::math::fmat4x4(),
         [&](fastgltf::Node& node, fastgltf::math::fmat4x4 node_matrix) {
           if (node.meshIndex.has_value()) {
-            // data for mesh object
-            std::vector<glm::vec3> vertices;
-            std::vector<glm::vec3> normals;
-            std::vector<glm::vec2> texcoords;
-            std::vector<glm::vec2> normal_coords;
-
-            std::vector<std::array<uint32_t, 3>> indices;
-
             fastgltf::Mesh& mesh = asset->meshes[node.meshIndex.value()];
             glm::mat4 mesh_to_world;
 
@@ -610,6 +602,14 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
             }
 
             for (auto it = mesh.primitives.begin(); it != mesh.primitives.end(); ++it) {
+              // data for mesh object
+              std::vector<glm::vec3> vertices;
+              std::vector<glm::vec3> normals;
+              std::vector<glm::vec2> texcoords;
+              std::vector<glm::vec2> normal_coords;
+
+              std::vector<std::array<uint32_t, 3>> indices;
+
               auto* positionIt = it->findAttribute("POSITION");
               assert(positionIt != it->attributes.end());  // A mesh primitive is required to hold
                                                            // the POSITION attribute.
