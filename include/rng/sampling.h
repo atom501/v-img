@@ -173,7 +173,6 @@ public:
 
     constexpr glm::vec3 lum_const = glm::vec3(0.2126f, 0.7152f, 0.0722f);
 
-#pragma omp parallel for if (width * height > 4096)
     for (int y = 0; y < height; y++) {
       float v = (static_cast<float>(y) + 0.5f) / static_cast<float>(height);
       float sin_elevation = std::sin(std::numbers::pi * v);
@@ -186,7 +185,6 @@ public:
     std::vector<float> row_integral_vals(height);
     image_probabilities = std::vector<ArraySampling1D>(height);
 
-#pragma omp parallel for if (width * height > 4096)
     for (int h = 0; h < height; h++) {
       std::span<const float> img_span(image_luminance.data() + (h * width), width);
 

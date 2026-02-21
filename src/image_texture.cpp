@@ -276,8 +276,7 @@ void ImageTexture::convert_sRGB_to_linear(std::vector<glm::vec3>& image) {
 void ImageTexture::convert_RGB_to_normal(std::vector<glm::vec3>& image, float scale) {
 #pragma omp parallel for
   for (int normal = 0; normal < image.size(); normal++) {
-    image[normal] /= 255.f;
-    image[normal] = (image[normal] * 2.f) - glm::vec3(1.f);
+    image[normal] = (image[normal] * 127.5f) - glm::vec3(1.f);
 
     image[normal].x *= scale;
     image[normal].y *= scale;

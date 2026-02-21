@@ -3,10 +3,12 @@
 #include <geometry/triangle.h>
 #include <material/diffuse_light.h>
 #include <material/principled.h>
+#include <omp.h>
 #include <scene_loading/gltf_loading.h>
 #include <scene_loading/json_scene.h>
 #include <texture.h>
 
+#include <atomic>
 #include <cstddef>
 #include <fastgltf/core.hpp>
 #include <fastgltf/tools.hpp>
@@ -51,42 +53,108 @@ static inline glm::mat4 get_mat_transform(
   return glm_xform;
 }
 
-// image and img_pair will change
-static ImageTexture* make_texture(std::vector<glm::vec3>& image, const glm::ivec2& res,
-                                  const std::optional<fastgltf::Sampler>& sampler_info,
-                                  TextureType tex_type,
-                                  std::vector<std::unique_ptr<Texture>>& texture_list,
-                                  std::pair<uint32_t, TextureType>& img_pair, float scale) {
-  // create the image texture
-  TextureWrappingMode u_mode = TextureWrappingMode::Repeat;
-  TextureWrappingMode v_mode = TextureWrappingMode::Repeat;
-
-  std::vector<std::vector<glm::vec3>> no_mipmap;
-
-  if (sampler_info) {
-    u_mode = gltf_wrap_convert(sampler_info.value().wrapS);
-    v_mode = gltf_wrap_convert(sampler_info.value().wrapT);
+static inline void set_vals(
+    fastgltf::Optional<size_t> sampler_idx, fastgltf::Optional<size_t> image_idx,
+    const fastgltf::Asset& asset, TextureType type,
+    std::vector<std::tuple<TextureType, TextureWrappingMode, TextureWrappingMode, float>>&
+        img_type_idx,
+    float scale) {
+  if (!image_idx.has_value()) {
+    fmt::println("Image texture has no image index");
   }
 
+  if (sampler_idx) {
+    auto sampler_info = asset.samplers[sampler_idx.value()];
+
+    get<1>(img_type_idx[image_idx.value()]) = gltf_wrap_convert(sampler_info.wrapS);
+    get<2>(img_type_idx[image_idx.value()]) = gltf_wrap_convert(sampler_info.wrapT);
+  }
+
+  get<0>(img_type_idx[image_idx.value()]) = type;
+  get<3>(img_type_idx[image_idx.value()]) = scale;
+}
+
+static void set_image_type_list(
+    std::vector<std::tuple<TextureType, TextureWrappingMode, TextureWrappingMode, float>>&
+        img_type_idx,
+    const fastgltf::Asset& asset, bool& unique_imgs) {
+  size_t total_images = img_type_idx.size();
+  size_t img_found = 0;
+
+  if (total_images == 0) {
+    return;
+  }
+
+  for (const auto& mat : asset.materials) {
+    auto& baseColorTexture = mat.pbrData.baseColorTexture;
+    if (baseColorTexture.has_value()) {
+      auto& texture = asset.textures[baseColorTexture->textureIndex];
+
+      set_vals(texture.samplerIndex, texture.imageIndex, asset, TextureType::Image, img_type_idx,
+               0.f);
+
+      img_found++;
+    }
+
+    if (mat.normalTexture.has_value()) {
+      const auto& normal_tex_info = mat.normalTexture.value();
+      auto& normal_texture = asset.textures[normal_tex_info.textureIndex];
+
+      set_vals(normal_texture.samplerIndex, normal_texture.imageIndex, asset, TextureType::Normals,
+               img_type_idx, normal_tex_info.scale);
+
+      img_found++;
+    }
+  }
+
+  if (img_found > total_images) {
+    fmt::println("Error one image is being used for as a texture and a normalmap");
+    unique_imgs = false;
+  }
+}
+
+// image and img_pair will change
+static void make_texture(unsigned char* char_arr, const glm::ivec2& res, TextureWrappingMode u_mode,
+                         TextureWrappingMode v_mode, TextureType tex_type,
+                         std::vector<std::unique_ptr<Texture>>& texture_list, float scale,
+                         size_t tex_write_idx) {
+  std::vector<glm::vec3> image(res.x * res.y);
+
+  for (size_t i = 0; i < image.size(); i++) {
+    image[i].x = char_arr[i * 3];
+    image[i].y = char_arr[i * 3 + 1];
+    image[i].z = char_arr[i * 3 + 2];
+  }
+
+  // create the image texture
   switch (tex_type) {
-    case TextureType::Image:
+    case TextureType::Image: {
       ImageTexture::convert_sRGB_to_linear(image);
-      texture_list.push_back(std::make_unique<ImageTexture>(image, res.x, res.y, u_mode, v_mode));
+
+      std::unique_ptr<ImageTexture> img_tex
+          = std::make_unique<ImageTexture>(std::move(image), res.x, res.y, u_mode, v_mode);
+
+      texture_list[tex_write_idx] = std::move(img_tex);
+
       break;
-    case TextureType::Normals:
+    }
+    case TextureType::Normals: {
+      std::vector<std::vector<glm::vec3>> no_mipmap;
+
       ImageTexture::convert_RGB_to_normal(image, scale);
       no_mipmap.push_back(image);
-      texture_list.push_back(
-          std::make_unique<ImageTexture>(no_mipmap, res.x, res.y, u_mode, v_mode));
+
+      std::unique_ptr<ImageTexture> n_tex
+          = std::make_unique<ImageTexture>(std::move(no_mipmap), res.x, res.y, u_mode, v_mode);
+
+      texture_list[tex_write_idx] = std::move(n_tex);
+
       break;
+    }
     default:
       fmt::println("Error, not covered image texture type");
-      return nullptr;
       break;
   }
-
-  img_pair = std::make_pair(texture_list.size() - 1, tex_type);
-  return dynamic_cast<ImageTexture*>(texture_list.back().get());
 }
 
 std::vector<glm::vec2> get_texcoords(size_t texcoord_idx, const fastgltf::Primitive& primitive,
@@ -118,6 +186,9 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
                          std::vector<std::unique_ptr<Mesh>>& list_meshes,
                          std::vector<std::unique_ptr<Texture>>& texture_list,
                          const nlohmann::json& extra_settings) {
+  omp_set_max_active_levels(2);
+  bool unique_imgs = true;
+
   fastgltf::Expected<fastgltf::GltfDataBuffer> gltfFile
       = fastgltf::GltfDataBuffer::FromPath(path_file);
 
@@ -247,6 +318,14 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
     }
   });
 
+  std::vector<std::tuple<TextureType, TextureWrappingMode, TextureWrappingMode, float>>
+      img_type_list(asset->images.size(),
+                    std::make_tuple(TextureType::None, TextureWrappingMode::Repeat,
+                                    TextureWrappingMode::Repeat, 0.f));
+
+  std::thread set_img_types = std::thread(set_image_type_list, std::ref(img_type_list),
+                                          std::ref(asset.get()), std::ref(unique_imgs));
+
   // use the passed in vertical resolution and aspect ratio
   integrator_data.resolution.y = extra_settings.value("yres", 768);
   integrator_data.resolution.x = std::ceil(integrator_data.resolution.y * aspect_ratio);
@@ -266,7 +345,7 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
               aperture_radius, focal_dist);
 
   // load images as 24 bit. each channel having 8 bits. To be transformed when making materials
-  std::vector<std::vector<glm::vec3>> image_list(asset->images.size());
+  std::vector<unsigned char*> image_list(asset->images.size());
   std::vector<glm::ivec2> image_list_res(asset->images.size());
 
   std::chrono::steady_clock::time_point begin_time;
@@ -312,15 +391,7 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
         },
         asset->images[img_idx].data);
 
-    image_list[img_idx] = std::vector<glm::vec3>(width * height);
-
-    for (size_t i = 0; i < image_list[img_idx].size(); i++) {
-      image_list[img_idx][i].x = image_loaded[i * 3];
-      image_list[img_idx][i].y = image_loaded[i * 3 + 1];
-      image_list[img_idx][i].z = image_loaded[i * 3 + 2];
-    }
-
-    stbi_image_free(image_loaded);
+    image_list[img_idx] = image_loaded;
     image_list_res[img_idx] = glm::ivec2(width, height);
   }
 
@@ -329,15 +400,61 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
     print_time_taken(begin_time, end_time, "loading gltf images");
   }
 
-  // load material
-  std::vector<std::pair<uint32_t, TextureType>> img_list_idx(asset->images.size(),
-                                                             std::make_pair(0, TextureType::None));
+  /*
+   * set maximum possible number of textures to avoid lock and push_back. (assumes one image is not
+   * used as normal map and also a pbr color)
+   */
+  texture_list
+      = std::vector<std::unique_ptr<Texture>>(asset->materials.size() + asset->images.size() + 1);
+
+  list_materials = std::vector<std::unique_ptr<Material>>(asset->materials.size());
+  set_img_types.join();
+
+  if (!unique_imgs) {
+    return false;
+  }
+
+  // set textures
+  if constexpr (CompileConsts::profile_gltf) {
+    begin_time = std::chrono::steady_clock::now();
+  }
+
+#pragma omp parallel for
+  for (size_t t_idx = 0; t_idx < img_type_list.size(); t_idx++) {
+    auto [tex_type, u_wrap, v_wrap, scale] = img_type_list[t_idx];
+    switch (tex_type) {
+      case TextureType::Image: {
+        make_texture(image_list[t_idx], image_list_res[t_idx], u_wrap, v_wrap, TextureType::Image,
+                     texture_list, 0.f, t_idx);
+        break;
+      }
+      case TextureType::Normals: {
+        make_texture(image_list[t_idx], image_list_res[t_idx], u_wrap, v_wrap, TextureType::Normals,
+                     texture_list, scale, t_idx);
+        break;
+      }
+      default:
+        break;
+    }
+  }
+
+  if constexpr (CompileConsts::profile_gltf) {
+    auto end_time = std::chrono::steady_clock::now();
+    print_time_taken(begin_time, end_time, "creating textures");
+  }
+
+  // idx where new texture is to be written. start adding consts after imgs
+  std::atomic<unsigned int> tex_write_idx = img_type_list.size();
 
   if constexpr (CompileConsts::profile_gltf) {
     begin_time = std::chrono::steady_clock::now();
   }
 
-  for (auto& mat : asset->materials) {
+// load material
+#pragma omp parallel for
+  for (int mat_idx = 0; mat_idx < asset->materials.size(); mat_idx++) {
+    const auto& mat = asset->materials[mat_idx];
+
     // check if material is emissive
     if (mat.emissiveFactor[0] == 0.f && mat.emissiveFactor[1] == 0.f
         && mat.emissiveFactor[2] == 0.f) {
@@ -392,36 +509,27 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
         auto& texture = asset->textures[baseColorTexture->textureIndex];
         if (!texture.imageIndex.has_value()) {
           fmt::println("Image texture has no image index");
-          return false;
         }
 
         size_t image_idx = texture.imageIndex.value();
-        auto tex_type = img_list_idx[image_idx].second;
+
+        TextureType tex_type;
+        std::tie(tex_type, std::ignore, std::ignore, std::ignore) = img_type_list[image_idx];
 
         if (tex_type == TextureType::Image) {
-          img_tex = texture_list[img_list_idx[image_idx].first].get();
-        } else if (tex_type == TextureType::None) {
-          // create the image texture
-
-          std::optional<fastgltf::Sampler> sampler_info = std::nullopt;
-          if (texture.samplerIndex) {
-            sampler_info = asset->samplers[texture.samplerIndex.value()];
-          }
-
-          img_tex = make_texture(image_list[image_idx], image_list_res[image_idx], sampler_info,
-                                 TextureType::Image, texture_list, img_list_idx[image_idx], 0.f);
+          img_tex = texture_list[image_idx].get();
         } else {
           fmt::println("Texture being loaded is already of type {} not a Image", tex_type);
-          return false;
         }
 
       } else {
         // add constant texture
-        texture_list.push_back(std::make_unique<ConstColor>(
-            glm::vec3(mat.pbrData.baseColorFactor.x(), mat.pbrData.baseColorFactor.y(),
-                      mat.pbrData.baseColorFactor.z())));
+        auto idx = tex_write_idx.fetch_add(1);
 
-        img_tex = texture_list.back().get();
+        texture_list[idx] = std::make_unique<ConstColor>(
+            glm::vec3(mat.pbrData.baseColorFactor.x(), mat.pbrData.baseColorFactor.y(),
+                      mat.pbrData.baseColorFactor.z()));
+        img_tex = texture_list[idx].get();
       }
 
       ImageTexture* normal_tex = nullptr;
@@ -434,39 +542,28 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
 
         if (!normal_texture.imageIndex.has_value()) {
           fmt::println("Normal texture has no image index");
-          return false;
         }
         size_t image_idx = normal_texture.imageIndex.value();
-        auto tex_type = img_list_idx[image_idx].second;
+
+        TextureType tex_type;
+        std::tie(tex_type, std::ignore, std::ignore, std::ignore) = img_type_list[image_idx];
 
         if (tex_type == TextureType::Normals) {
-          normal_tex
-              = dynamic_cast<ImageTexture*>(texture_list[img_list_idx[image_idx].first].get());
-        } else if (tex_type == TextureType::None) {
-          // make a normal texture
-
-          std::optional<fastgltf::Sampler> sampler_info = std::nullopt;
-          if (normal_texture.samplerIndex) {
-            sampler_info = asset->samplers[normal_texture.samplerIndex.value()];
-          }
-
-          normal_tex = make_texture(image_list[image_idx], image_list_res[image_idx], sampler_info,
-                                    TextureType::Normals, texture_list, img_list_idx[image_idx],
-                                    normal_tex_info.scale);
+          normal_tex = dynamic_cast<ImageTexture*>(texture_list[image_idx].get());
         } else {
           fmt::println("Texture being loaded is already of type {} not a Normal", tex_type);
         }
       }
 
-      list_materials.push_back(std::make_unique<Principled>(
+      list_materials[mat_idx] = std::make_unique<Principled>(
           img_tex, specular_transmission, metallic, subsurface, specular, roughness, spec_tint,
-          anisotropic, sheen, sheen_tint, clearcoat, clearcoat_gloss, eta, normal_tex));
+          anisotropic, sheen, sheen_tint, clearcoat, clearcoat_gloss, eta, normal_tex);
     } else {
       glm::vec3 emit
           = glm::vec3(mat.emissiveFactor[0], mat.emissiveFactor[1], mat.emissiveFactor[2]);
       emit *= mat.emissiveStrength;
 
-      list_materials.push_back(std::make_unique<DiffuseLight>(emit));
+      list_materials[mat_idx] = std::make_unique<DiffuseLight>(emit);
     }
   }
 
@@ -476,6 +573,11 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
   }
 
   background_loader.join();
+  for (auto& ptr : image_list) {
+    stbi_image_free(ptr);
+  }
+
+  texture_list.resize(tex_write_idx.load());
 
   // load meshes and transform them
 
