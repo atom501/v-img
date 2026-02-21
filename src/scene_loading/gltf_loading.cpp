@@ -709,21 +709,7 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
               auto m = Mesh(indices, vertices, normals, texcoords, normal_coords, mat_ptr);
               list_meshes.push_back(std::make_unique<Mesh>(m));
 
-              // add to list of surfaces
-              for (size_t i = 0; i < tri_vertex.size() / 3; i++) {
-                Triangle t = Triangle(list_meshes[list_meshes.size() - 1].get(), i);
-                list_surfaces.push_back(std::make_unique<Triangle>(t));
-              }
-
-              // add to list of lights if needed
-              size_t rev_count_index = list_surfaces.size() - 1;
-
-              if (mat_ptr->is_emissive()) {
-                for (size_t i = 0; i < tri_vertex.size() / 3; i++, rev_count_index--) {
-                  Triangle* s_ptr = static_cast<Triangle*>(list_surfaces[rev_count_index].get());
-                  list_lights.push_back(s_ptr);
-                }
-              }
+              add_tri_list_to_scene(list_surfaces, list_meshes.back().get(), list_lights);
             }
           }
         });

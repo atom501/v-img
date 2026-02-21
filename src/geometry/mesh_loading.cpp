@@ -84,9 +84,9 @@ Mesh create_quad_mesh(Material* mat_ptr, const glm::mat4& xform) {
   return Mesh(indices, vertices, normals, texcoords, mat_ptr);
 }
 
-void add_tri_list_to_scene(const Mesh& mesh, std::vector<std::unique_ptr<Surface>>& list_surfaces,
-                           Mesh* mesh_ptr, std::vector<Emitter*>& list_lights) {
-  size_t num_tri = mesh.indices.size();
+void add_tri_list_to_scene(std::vector<std::unique_ptr<Surface>>& list_surfaces, Mesh* mesh_ptr,
+                           std::vector<Emitter*>& list_lights) {
+  size_t num_tri = mesh_ptr->indices.size();
 
   // add to list of surfaces
   for (size_t i = 0; i < num_tri; i++) {
@@ -94,7 +94,7 @@ void add_tri_list_to_scene(const Mesh& mesh, std::vector<std::unique_ptr<Surface
   }
 
   // add to list of lights if needed
-  if (mesh.mat->is_emissive()) {
+  if (mesh_ptr->mat->is_emissive()) {
     size_t rev_count_index = list_surfaces.size() - 1;
 
     for (size_t i = rev_count_index; i > (rev_count_index - num_tri); i--) {

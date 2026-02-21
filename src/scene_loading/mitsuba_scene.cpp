@@ -418,7 +418,7 @@ bool set_scene_from_mitsuba_xml(const std::filesystem::path& path_file,
           Mesh quad_mesh = create_quad_mesh(mat_ptr, transform);
           list_meshes.push_back(std::make_unique<Mesh>(quad_mesh));
 
-          add_tri_list_to_scene(quad_mesh, list_surfaces, list_meshes.back().get(), list_lights);
+          add_tri_list_to_scene(list_surfaces, list_meshes.back().get(), list_lights);
         } else if (obj->pluginType() == "cube") {
           // manually set cube mesh
           std::vector<glm::vec3> vertices;
@@ -451,7 +451,7 @@ bool set_scene_from_mitsuba_xml(const std::filesystem::path& path_file,
           auto tri_mesh = Mesh(indices, vertices, normals, texcoords, mat_ptr);
           list_meshes.push_back(std::make_unique<Mesh>(tri_mesh));
 
-          add_tri_list_to_scene(tri_mesh, list_surfaces, list_meshes.back().get(), list_lights);
+          add_tri_list_to_scene(list_surfaces, list_meshes.back().get(), list_lights);
         } else if (obj->pluginType() == "serialized") {
           std::string s_file = properties["filename"].getString();
           std::filesystem::path model_filename = properties["filename"].getString();
@@ -465,8 +465,7 @@ bool set_scene_from_mitsuba_xml(const std::filesystem::path& path_file,
 
           list_meshes.push_back(std::make_unique<Mesh>(serialized_mesh));
 
-          add_tri_list_to_scene(serialized_mesh, list_surfaces, list_meshes.back().get(),
-                                list_lights);
+          add_tri_list_to_scene(list_surfaces, list_meshes.back().get(), list_lights);
         } else if (obj->pluginType() == "sphere") {
           fmt::println("sphere");
           float radius = properties["radius"].getNumber(1.0f);
@@ -503,7 +502,7 @@ bool set_scene_from_mitsuba_xml(const std::filesystem::path& path_file,
           auto tri_mesh = Mesh(indices, vertices, normals, texcoords, mat_ptr);
           list_meshes.push_back(std::make_unique<Mesh>(tri_mesh));
 
-          add_tri_list_to_scene(tri_mesh, list_surfaces, list_meshes.back().get(), list_lights);
+          add_tri_list_to_scene(list_surfaces, list_meshes.back().get(), list_lights);
         } else {
           fmt::println("shape plugin {} is not supported", obj->pluginType());
         }

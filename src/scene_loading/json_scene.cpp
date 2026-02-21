@@ -349,7 +349,7 @@ bool set_list_of_objects(const nlohmann::json& json_settings,
       Mesh quad_mesh = create_quad_mesh(mat_ptr, surf_xform);
       list_meshes.push_back(std::make_unique<Mesh>(quad_mesh));
 
-      add_tri_list_to_scene(quad_mesh, list_surfaces, list_meshes.back().get(), list_lights);
+      add_tri_list_to_scene(list_surfaces, list_meshes.back().get(), list_lights);
     } else if (surf_data["type"] == "sphere") {
       glm::vec3 center = surf_data["center"].template get<glm::vec3>();
       float radius = surf_data.value("radius", 1.0f);
@@ -380,7 +380,7 @@ bool set_list_of_objects(const nlohmann::json& json_settings,
       auto tri_mesh = Mesh(indices, vertices, normals, texcoords, mat_ptr);
       list_meshes.push_back(std::make_unique<Mesh>(tri_mesh));
 
-      add_tri_list_to_scene(tri_mesh, list_surfaces, list_meshes.back().get(), list_lights);
+      add_tri_list_to_scene(list_surfaces, list_meshes.back().get(), list_lights);
     } else {
       fmt::println("Unknown surface {}", surf_data["type"]);
       return false;
