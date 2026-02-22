@@ -73,6 +73,7 @@ static size_t get_depth(const BVHNode& node, const std::vector<BVHNode>& list_of
   }
 }
 
+/*
 static void combine_minitrees(BVH& BVH_of_mini_trees, const std::vector<BVH>& mini_trees,
                               const size_t total_obj_count) {
   size_t total_nodes = BVH_of_mini_trees.nodes.size();
@@ -222,3 +223,4 @@ BVH BVH::build_bonsai_bvh(const std::vector<AABB>& bboxes, bool prune,
 
   return bvh;
 }
+*/

@@ -3,7 +3,6 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include <bvh.h>
 #include <color_utils.h>
-#include <fmt/chrono.h>
 #include <fmt/core.h>
 #include <geometry/emitters.h>
 #include <geometry/mesh.h>
@@ -117,6 +116,7 @@ int main(int argc, char* argv[]) {
   */
   std::filesystem::path extension = scene_file_path.extension();
   bool scene_load_check = false;
+  auto begin_time = std::chrono::steady_clock::now();
 
   if (extension.string() == ".json") {
     scene_load_check = set_scene_from_json(scene_file_path, rendering_settings, list_objects,
@@ -142,6 +142,10 @@ int main(int argc, char* argv[]) {
         = set_scene_from_gltf(scene_file_path, rendering_settings, list_objects, mat_list,
                               list_lights, list_meshes, texture_list, json_settings);
   }
+
+  auto end_time = std::chrono::steady_clock::now();
+
+  print_time_taken(begin_time, end_time, "scene loading");
 
   if (!scene_load_check) {
     fmt::println("Scene was not loaded");
@@ -176,7 +180,7 @@ int main(int argc, char* argv[]) {
   }
 
   // make bvh
-  auto begin_time = std::chrono::steady_clock::now();
+  begin_time = std::chrono::steady_clock::now();
   BVH bvh;
 
   if (bvh_to_build == 0) {
@@ -193,18 +197,10 @@ int main(int argc, char* argv[]) {
     bvh = BVH::build_bin_bvh(list_bboxes, list_centers, NUM_BINS);
   }
 
-  auto end_time = std::chrono::steady_clock::now();
+  end_time = std::chrono::steady_clock::now();
 
-  auto bvh_duration_ms
-      = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - begin_time);
-
-  auto bvh_duration_secs = std::chrono::duration_cast<std::chrono::seconds>(bvh_duration_ms);
-  bvh_duration_ms -= std::chrono::duration_cast<std::chrono::milliseconds>(bvh_duration_secs);
-  auto bvh_duration_mins = std::chrono::duration_cast<std::chrono::minutes>(bvh_duration_secs);
-  bvh_duration_secs -= std::chrono::duration_cast<std::chrono::seconds>(bvh_duration_mins);
-
-  fmt::println("Scene BVH built. Time taken: {} {} {}. BVH max depth: {}", bvh_duration_mins,
-               bvh_duration_secs, bvh_duration_ms, bvh.max_depth);
+  print_time_taken(begin_time, end_time, "BVH construction");
+  fmt::println("BVH max depth {}\n", bvh.max_depth);
 
   begin_time = std::chrono::steady_clock::now();
   std::vector<glm::vec3> acc_image;
@@ -284,14 +280,8 @@ int main(int argc, char* argv[]) {
   }
 
   end_time = std::chrono::steady_clock::now();
-  auto duration_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - begin_time);
 
-  auto duration_secs = std::chrono::duration_cast<std::chrono::seconds>(duration_ms);
-  duration_ms -= std::chrono::duration_cast<std::chrono::milliseconds>(duration_secs);
-  auto duration_mins = std::chrono::duration_cast<std::chrono::minutes>(duration_secs);
-  duration_secs -= std::chrono::duration_cast<std::chrono::seconds>(duration_mins);
-
-  fmt::print("Render time: {} {} {}\n", duration_mins, duration_secs, duration_ms);
+  print_time_taken(begin_time, end_time, "image rendering");
 
   // apply tonemapper
   switch (tonemapping_func) {

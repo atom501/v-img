@@ -96,6 +96,14 @@ CPMAddPackage(
   VERSION 1.0
 )
 
+set(OpenMP_RUNTIME_MSVC llvm) 
+find_package(OpenMP REQUIRED)
+if(OPENMP_FOUND)
+    message(STATUS "OpenMP found, version ${OpenMP_CXX_VERSION}")
+else()
+    message(FATAL_ERROR "OpenMP not found, compilation cannot proceed")
+endif()
+
 # ---- Add source files ----
 
 # Note: globbing sources is considered bad practice as CMake's generators may not detect new files
@@ -114,4 +122,4 @@ endif()
 
 set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 20 OUTPUT_NAME "v-img")
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_link_libraries(${PROJECT_NAME} fmt::fmt glm nlohmann_json args fastgltf)
+target_link_libraries(${PROJECT_NAME} fmt::fmt glm nlohmann_json args fastgltf OpenMP::OpenMP_CXX)

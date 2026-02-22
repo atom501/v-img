@@ -172,7 +172,8 @@ public:
     std::vector<float> image_luminance(image.size());
 
     constexpr glm::vec3 lum_const = glm::vec3(0.2126f, 0.7152f, 0.0722f);
-    for (size_t y = 0; y < height; y++) {
+
+    for (int y = 0; y < height; y++) {
       float v = (static_cast<float>(y) + 0.5f) / static_cast<float>(height);
       float sin_elevation = std::sin(std::numbers::pi * v);
 
@@ -181,14 +182,16 @@ public:
       }
     }
 
-    std::vector<float> row_integral_vals;
+    std::vector<float> row_integral_vals(height);
+    image_probabilities = std::vector<ArraySampling1D>(height);
 
-    for (size_t h = 0; h < height; h++) {
+    for (int h = 0; h < height; h++) {
       std::span<const float> img_span(image_luminance.data() + (h * width), width);
 
       const ArraySampling1D prob_sampling_of_row = ArraySampling1D(img_span);
-      image_probabilities.push_back(prob_sampling_of_row);
-      row_integral_vals.push_back(prob_sampling_of_row.func_int);
+
+      image_probabilities[h] = prob_sampling_of_row;
+      row_integral_vals[h] = prob_sampling_of_row.func_int;
     }
 
     // using integral values of each row as weights
