@@ -2,7 +2,7 @@
 #include <hit_utils.h>
 #include <ray.h>
 #include <rng/pcg_rand.h>
-#include <texture.h>
+#include <texture/texture_RGB.h>
 
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>

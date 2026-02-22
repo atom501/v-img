@@ -6,7 +6,7 @@
 #include <material/disney_helpers/disney_metal.h>
 #include <material/disney_helpers/disney_sheen.h>
 #include <material/material.h>
-#include <texture.h>
+#include <texture/texture_RGB.h>
 
 #include <algorithm>
 #include <numbers>
@@ -22,7 +22,7 @@ concept MatReturnType = ReturnEval<T> || ReturnPair<T>;
 
 class Principled : public Material {
 private:
-  Texture* tex;
+  TextureRGB* tex;
   float specular_transmission;
   float metallic;
   float subsurface;
@@ -37,7 +37,7 @@ private:
   float eta;
 
 public:
-  Principled(Texture* tex, float specular_transmission, float metallic, float subsurface,
+  Principled(TextureRGB* tex, float specular_transmission, float metallic, float subsurface,
              float specular, float roughness, float specular_tint, float anisotropic, float sheen,
              float sheen_tint, float clearcoat, float clearcoat_gloss, float eta)
       : tex(tex),
@@ -55,7 +55,7 @@ public:
         eta(eta) {}
 
   // when normal map is given
-  Principled(Texture* tex, float specular_transmission, float metallic, float subsurface,
+  Principled(TextureRGB* tex, float specular_transmission, float metallic, float subsurface,
              float specular, float roughness, float specular_tint, float anisotropic, float sheen,
              float sheen_tint, float clearcoat, float clearcoat_gloss, float eta,
              ImageTexture* normal_map)

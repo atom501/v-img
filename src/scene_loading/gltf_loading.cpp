@@ -6,7 +6,7 @@
 #include <omp.h>
 #include <scene_loading/gltf_loading.h>
 #include <scene_loading/json_scene.h>
-#include <texture.h>
+#include <texture/texture_RGB.h>
 
 #include <atomic>
 #include <cstddef>
@@ -116,7 +116,7 @@ static void set_image_type_list(
 // image and img_pair will change
 static void make_texture(unsigned char* char_arr, const glm::ivec2& res, TextureWrappingMode u_mode,
                          TextureWrappingMode v_mode, TextureType tex_type,
-                         std::vector<std::unique_ptr<Texture>>& texture_list, float scale,
+                         std::vector<std::unique_ptr<TextureRGB>>& texture_list, float scale,
                          size_t tex_write_idx) {
   std::vector<glm::vec3> image(res.x * res.y);
 
@@ -184,7 +184,7 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
                          std::vector<std::unique_ptr<Material>>& list_materials,
                          std::vector<Emitter*>& list_lights,
                          std::vector<std::unique_ptr<Mesh>>& list_meshes,
-                         std::vector<std::unique_ptr<Texture>>& texture_list,
+                         std::vector<std::unique_ptr<TextureRGB>>& texture_list,
                          const nlohmann::json& extra_settings) {
   omp_set_max_active_levels(2);
   bool unique_imgs = true;
@@ -404,8 +404,8 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
    * set maximum possible number of textures to avoid lock and push_back. (assumes one image is not
    * used as normal map and also a pbr color)
    */
-  texture_list
-      = std::vector<std::unique_ptr<Texture>>(asset->materials.size() + asset->images.size() + 1);
+  texture_list = std::vector<std::unique_ptr<TextureRGB>>(asset->materials.size()
+                                                          + asset->images.size() + 1);
 
   list_materials = std::vector<std::unique_ptr<Material>>(asset->materials.size());
   set_img_types.join();
@@ -503,7 +503,7 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
 
       // get texture for material
       auto& baseColorTexture = mat.pbrData.baseColorTexture;
-      Texture* img_tex = nullptr;
+      TextureRGB* img_tex = nullptr;
       if (baseColorTexture.has_value()) {
         // add image texture
         auto& texture = asset->textures[baseColorTexture->textureIndex];
@@ -519,7 +519,7 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
         if (tex_type == TextureType::Image) {
           img_tex = texture_list[image_idx].get();
         } else {
-          fmt::println("Texture being loaded is already of type {} not a Image", tex_type);
+          fmt::println("TextureRGB being loaded is already of type {} not a Image", tex_type);
         }
 
       } else {
@@ -551,7 +551,7 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
         if (tex_type == TextureType::Normals) {
           normal_tex = dynamic_cast<ImageTexture*>(texture_list[image_idx].get());
         } else {
-          fmt::println("Texture being loaded is already of type {} not a Normal", tex_type);
+          fmt::println("TextureRGB being loaded is already of type {} not a Normal", tex_type);
         }
       }
 

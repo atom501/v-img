@@ -2,7 +2,7 @@
 
 #include <geometry/mesh.h>
 #include <integrators.h>
-#include <texture.h>
+#include <texture/texture_RGB.h>
 
 #include <nlohmann/json.hpp>
 
@@ -15,5 +15,5 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
                          std::vector<std::unique_ptr<Material>>& list_materials,
                          std::vector<Emitter*>& list_lights,
                          std::vector<std::unique_ptr<Mesh>>& list_meshes,
-                         std::vector<std::unique_ptr<Texture>>& texture_list,
+                         std::vector<std::unique_ptr<TextureRGB>>& texture_list,
                          const nlohmann::json& extra_settings);

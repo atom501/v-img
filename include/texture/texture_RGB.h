@@ -32,17 +32,17 @@ inline auto format_as(TextureType t) {
   return "unknown";
 };
 
-class Texture {
+class TextureRGB {
 public:
-  Texture() = default;
-  virtual ~Texture() = default;
+  TextureRGB() = default;
+  virtual ~TextureRGB() = default;
 
   virtual glm::vec3 col_at_ray_hit(const glm::vec3& ray_in_dir, const RayCone& cone,
                                    const HitInfo& surf_hit) const
       = 0;
 };
 
-class ConstColor : public Texture {
+class ConstColor : public TextureRGB {
 private:
   glm::vec3 albedo;
 
@@ -56,7 +56,7 @@ public:
   }
 };
 
-class Checkerboard : public Texture {
+class Checkerboard : public TextureRGB {
 private:
   uint32_t width;
   uint32_t height;
@@ -80,7 +80,7 @@ public:
   }
 };
 
-class ImageTexture : public Texture {
+class ImageTexture : public TextureRGB {
 public:
   uint32_t width;
   uint32_t height;

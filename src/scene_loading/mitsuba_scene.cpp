@@ -49,10 +49,10 @@ void cube_mesh(std::vector<std::array<uint32_t, 3>>& indices, std::vector<glm::v
 }
 
 // make a texture, using color or something else
-static Texture* make_or_get_texture(
+static TextureRGB* make_or_get_texture(
     const tinyparser_mitsuba::Property& tex_p,
     const std::vector<std::shared_ptr<tinyparser_mitsuba::Object>>& mat_children,
-    std::vector<std::unique_ptr<Texture>>& texture_list,
+    std::vector<std::unique_ptr<TextureRGB>>& texture_list,
     std::unordered_map<std::string, size_t>& id_to_tex) {
   bool result;
   tinyparser_mitsuba::Color reflectance
@@ -64,7 +64,7 @@ static Texture* make_or_get_texture(
 
     return texture_list.back().get();
   } else {
-    Texture* tex_created = nullptr;
+    TextureRGB* tex_created = nullptr;
     std::string tex_id = "";
 
     for (auto& child : mat_children) {
@@ -109,7 +109,7 @@ static Texture* make_or_get_texture(
 }
 
 Material* mat_index_from_obj(std::shared_ptr<tinyparser_mitsuba::Object> mat_obj,
-                             std::vector<std::unique_ptr<Texture>>& texture_list,
+                             std::vector<std::unique_ptr<TextureRGB>>& texture_list,
                              std::vector<std::unique_ptr<Material>>& list_materials,
                              std::unordered_map<std::string, size_t>& id_to_mat,
                              std::unordered_map<std::string, size_t>& id_to_tex) {
@@ -132,7 +132,7 @@ Material* mat_index_from_obj(std::shared_ptr<tinyparser_mitsuba::Object> mat_obj
           tinyparser_mitsuba::Color reflectance
               = properties["reflectance"].getColor(tinyparser_mitsuba::Color(0, 0, 0), &result);
 
-          Texture* mat_tex = make_or_get_texture(
+          TextureRGB* mat_tex = make_or_get_texture(
               properties["reflectance"], mat_obj->getAllChildren(), texture_list, id_to_tex);
 
           list_materials.push_back(std::make_unique<Lambertian>(mat_tex));
@@ -206,7 +206,7 @@ bool set_scene_from_mitsuba_xml(const std::filesystem::path& path_file,
                                 std::vector<std::unique_ptr<Material>>& list_materials,
                                 std::vector<Emitter*>& list_lights,
                                 std::vector<std::unique_ptr<Mesh>>& list_meshes,
-                                std::vector<std::unique_ptr<Texture>>& texture_list) {
+                                std::vector<std::unique_ptr<TextureRGB>>& texture_list) {
   tinyparser_mitsuba::SceneLoader loader;
 
   // got the mitsuba file as scene object

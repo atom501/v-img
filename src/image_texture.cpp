@@ -1,4 +1,4 @@
-#include <texture.h>
+#include <texture/texture_RGB.h>
 #define STB_IMAGE_IMPLEMENTATION
 #include <color_utils.h>
 #include <comptime_settings.h>

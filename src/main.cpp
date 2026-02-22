@@ -13,7 +13,7 @@
 #include <scene_loading/json_scene.h>
 #include <scene_loading/mitsuba_scene.h>
 #include <stb_image_write.h>
-#include <texture.h>
+#include <texture/texture_RGB.h>
 #include <tl_camera.h>
 
 #include <algorithm>
@@ -46,7 +46,7 @@ int main(int argc, char* argv[]) {
   std::vector<std::unique_ptr<Surface>> list_objects;
   std::vector<Emitter*> list_lights;
   std::vector<std::unique_ptr<Mesh>> list_meshes;
-  std::vector<std::unique_ptr<Texture>> texture_list;
+  std::vector<std::unique_ptr<TextureRGB>> texture_list;
 
   std::vector<AABB> list_bboxes;
   std::vector<glm::vec3> list_centers;

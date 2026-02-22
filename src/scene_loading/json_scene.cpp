@@ -8,7 +8,7 @@
 #include <material/lambertian.h>
 #include <material/principled.h>
 #include <scene_loading/json_scene.h>
-#include <texture.h>
+#include <texture/texture_RGB.h>
 
 #include <filesystem>
 #include <fstream>
@@ -234,8 +234,8 @@ bool set_integrator_data(const nlohmann::json& json_settings, integrator_data& i
  * Takes in json as input. Check if object uses a texure already in the list. If not add new one
  * to the list and return pointer
  */
-Texture* json_to_texture(const nlohmann::json& mat_json,
-                         std::vector<std::unique_ptr<Texture>>& texture_list) {
+TextureRGB* json_to_texture(const nlohmann::json& mat_json,
+                            std::vector<std::unique_ptr<TextureRGB>>& texture_list) {
   // if can't find "texture" object assume constant texture
   if (!mat_json.contains("texture")) {
     glm::vec3 albedo = mat_json["albedo"].template get<glm::vec3>();
@@ -273,13 +273,13 @@ Texture* json_to_texture(const nlohmann::json& mat_json,
 bool set_list_of_materials(const nlohmann::json& json_settings,
                            std::vector<std::unique_ptr<Material>>& list_materials,
                            std::unordered_map<std::string, size_t>& name_to_index,
-                           std::vector<std::unique_ptr<Texture>>& texture_list) {
+                           std::vector<std::unique_ptr<TextureRGB>>& texture_list) {
   if (json_settings.contains("materials")) {
     auto json_mat_list = json_settings["materials"];
 
     for (auto& mat_data : json_mat_list) {
       if (mat_data["type"] == "lambertian") {
-        Texture* t = json_to_texture(mat_data, texture_list);
+        TextureRGB* t = json_to_texture(mat_data, texture_list);
 
         list_materials.push_back(std::make_unique<Lambertian>(t));
         name_to_index[mat_data["name"]] = list_materials.size() - 1;
@@ -395,7 +395,7 @@ bool set_scene_from_json(const std::filesystem::path& path_file, integrator_data
                          std::vector<std::unique_ptr<Material>>& list_materials,
                          std::vector<Emitter*>& list_lights,
                          std::vector<std::unique_ptr<Mesh>>& list_meshes,
-                         std::vector<std::unique_ptr<Texture>>& texture_list) {
+                         std::vector<std::unique_ptr<TextureRGB>>& texture_list) {
   // parse json at path_file
   const auto json_string_opt = read_file(path_file);
   std::string json_string;
