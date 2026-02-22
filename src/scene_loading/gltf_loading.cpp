@@ -157,26 +157,41 @@ static void make_texture(unsigned char* char_arr, const glm::ivec2& res, Texture
   }
 }
 
-std::vector<glm::vec2> get_texcoords(size_t texcoord_idx, const fastgltf::Primitive& primitive,
-                                     const fastgltf::Asset& asset) {
-  auto texcoordAttribute = std::string("TEXCOORD_") + std::to_string(texcoord_idx);
-  std::vector<glm::vec2> texcoords;
+uint8_t get_texcoords(size_t texcoord_idx, const fastgltf::Primitive& primitive,
+                      const fastgltf::Asset& asset, std::vector<std::vector<glm::vec2>>& texcoords,
+                      std::unordered_map<uint8_t, uint8_t>& uv_index_to_arr_index) {
+  if (auto findit = uv_index_to_arr_index.find(texcoord_idx);
+      findit != uv_index_to_arr_index.end()) {
+    fmt::println("already found");
+    return findit->second;
+  } else {
+    fmt::println("adding");
+    auto texcoordAttribute = std::string("TEXCOORD_") + std::to_string(texcoord_idx);
+    std::vector<glm::vec2> new_texcoords;
 
-  if (const auto* texcoord_acc = primitive.findAttribute(texcoordAttribute);
-      texcoord_acc != primitive.attributes.end()) {
-    // Tex coord
-    auto& texCoordAccessor = asset.accessors[texcoord_acc->accessorIndex];
-    if (!texCoordAccessor.bufferViewIndex.has_value()) {
-      fmt::println(
-          "texCoordAccessor.bufferViewIndex has no value. skipping "
-          "mesh.primitive");
+    if (const auto* texcoord_acc = primitive.findAttribute(texcoordAttribute);
+        texcoord_acc != primitive.attributes.end()) {
+      // Tex coord
+      auto& texCoordAccessor = asset.accessors[texcoord_acc->accessorIndex];
+      if (!texCoordAccessor.bufferViewIndex.has_value()) {
+        fmt::println(
+            "texCoordAccessor.bufferViewIndex has no value. skipping "
+            "mesh.primitive");
+      }
+
+      fastgltf::iterateAccessor<glm::vec2>(asset, texCoordAccessor,
+                                           [&](glm::vec2 uv) { new_texcoords.push_back(uv); });
+
+      texcoords.push_back(new_texcoords);
+      uint8_t new_coord_idx = texcoords.size() - 1;
+      uv_index_to_arr_index[texcoord_idx] = new_coord_idx;
+
+      return new_coord_idx;
+    } else {
+      fmt::println("no uv attribute found");
+      return MeshConsts::no_uv;
     }
-
-    fastgltf::iterateAccessor<glm::vec2>(asset, texCoordAccessor,
-                                         [&](glm::vec2 uv) { texcoords.push_back(uv); });
   }
-
-  return texcoords;
 }
 
 bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data& integrator_data,
@@ -605,10 +620,16 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
               // data for mesh object
               std::vector<glm::vec3> vertices;
               std::vector<glm::vec3> normals;
-              std::vector<glm::vec2> texcoords;
+              std::vector<std::vector<glm::vec2>> texcoords;
               std::vector<glm::vec2> normal_coords;
 
+              std::unordered_map<uint8_t, uint8_t> uv_index_to_arr_index;
+
               std::vector<std::array<uint32_t, 3>> indices;
+
+              uint8_t color_tex_uv = MeshConsts::no_uv;
+              uint8_t normal_tex_uv = MeshConsts::no_uv;
+              uint8_t roughness_metallic_tex_uv = MeshConsts::no_uv;
 
               auto* positionIt = it->findAttribute("POSITION");
               assert(positionIt != it->attributes.end());  // A mesh primitive is required to hold
@@ -661,7 +682,8 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
                   if (texture.imageIndex.has_value()) {
                     // texture transformation not supported
                     size_t baseColorTexcoordIndex = baseColorTexture->texCoordIndex;
-                    texcoords = get_texcoords(baseColorTexcoordIndex, *it, asset.get());
+                    color_tex_uv = get_texcoords(baseColorTexcoordIndex, *it, asset.get(),
+                                                 texcoords, uv_index_to_arr_index);
                   }
                 }
 
@@ -670,7 +692,8 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
 
                   if (normal_texture.imageIndex.has_value()) {
                     size_t normal_tex_coords_idx = material.normalTexture->texCoordIndex;
-                    normal_coords = get_texcoords(normal_tex_coords_idx, *it, asset.get());
+                    normal_tex_uv = get_texcoords(normal_tex_coords_idx, *it, asset.get(),
+                                                  texcoords, uv_index_to_arr_index);
                   }
                 }
               }
@@ -706,7 +729,8 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
                 continue;
               }
 
-              auto m = Mesh(indices, vertices, normals, texcoords, normal_coords, mat_ptr);
+              auto m = Mesh(indices, vertices, normals, texcoords, mat_ptr, color_tex_uv,
+                            normal_tex_uv, roughness_metallic_tex_uv);
               list_meshes.push_back(std::make_unique<Mesh>(m));
 
               add_tri_list_to_scene(list_surfaces, list_meshes.back().get(), list_lights);

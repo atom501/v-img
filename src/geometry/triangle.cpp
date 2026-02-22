@@ -40,13 +40,13 @@ HitInfo Triangle::hit_info(const Ray& r, const ForHitInfo& pre_calc) {
   }
   const glm::vec3 hit_p = u * p0 + v * p1 + w * p2;
 
-  const auto& texcoords_list = obj_mesh->texcoords;
-  const auto& normalcoords_list = obj_mesh->normal_coords;
-
   glm::vec2 uv = glm::vec2(u, v);
   glm::vec2 diff_uvs[3];
   glm::vec2 uv0 = glm::vec2(0, 0), uv1 = glm::vec2(1, 0), uv2 = glm::vec2(1, 1);
-  if (obj_mesh->texcoords.size() > 0) {
+
+  if (obj_mesh->color_tex_uv != MeshConsts::no_uv) {
+    const auto& texcoords_list = obj_mesh->texcoords[obj_mesh->color_tex_uv];
+
     uv0 = texcoords_list[tri_indices[0]], uv1 = texcoords_list[tri_indices[1]],
     uv2 = texcoords_list[tri_indices[2]];
 
@@ -83,10 +83,14 @@ HitInfo Triangle::hit_info(const Ray& r, const ForHitInfo& pre_calc) {
 
   // use normal map if present
   Material* mat = obj_mesh->mat;
+
   if (mat->normal_map) {
     glm::vec2 n_uv = glm::vec2(u, v);
     glm::vec2 n_uv0 = glm::vec2(0, 0), n_uv1 = glm::vec2(1, 0), n_uv2 = glm::vec2(1, 1);
-    if (normalcoords_list.size() > 0) {
+
+    if (obj_mesh->normal_tex_uv != MeshConsts::no_uv) {
+      const auto& normalcoords_list = obj_mesh->texcoords[obj_mesh->normal_tex_uv];
+
       n_uv0 = normalcoords_list[tri_indices[0]], n_uv1 = normalcoords_list[tri_indices[1]],
       n_uv2 = normalcoords_list[tri_indices[2]];
 
