@@ -1,5 +1,6 @@
 #pragma once
 
+#include <comptime_settings.h>
 #include <geometry/emitters.h>
 #include <ray.h>
 #include <texture.h>
@@ -95,7 +96,7 @@ public:
 
     // calculate mipmap level
     float lambda;
-    if constexpr (DEBUG_MIPMAPS) {
+    if constexpr (CompileConsts::mipmap0) {
       lambda = 0.f;
     } else {
       lambda = std::log2(std::abs(cone.spread_angle) * (image.height / std::numbers::pi));

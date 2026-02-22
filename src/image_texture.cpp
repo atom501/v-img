@@ -1,6 +1,7 @@
 #include <texture.h>
 #define STB_IMAGE_IMPLEMENTATION
 #include <color_utils.h>
+#include <comptime_settings.h>
 #include <stb_image_write.h>
 #include <tinyexr.h>
 
@@ -174,7 +175,7 @@ glm::vec3 ImageTexture::col_at_uv_mipmap(int mipmap_level, const glm::vec2& uv) 
 glm::vec3 ImageTexture::col_at_ray_hit(const glm::vec3& ray_in_dir, const RayCone& cone,
                                        const HitInfo& surf_hit) const {
   float lambda;
-  if constexpr (DEBUG_MIPMAPS) {
+  if constexpr (CompileConsts::mipmap0) {
     lambda = 0;
   } else {
     // calculate mipmap level. subtract so it isn't too aggressive
