@@ -1,6 +1,7 @@
 #pragma once
 
 #include <integrators.h>
+#include <texture/texture_RG.h>
 #include <texture/texture_RGB.h>
 #include <tl_camera.h>
 
@@ -18,6 +19,7 @@ bool set_scene_from_json(const std::filesystem::path& path_file, integrator_data
                          std::vector<std::unique_ptr<Material>>& list_materials,
                          std::vector<Emitter*>& list_lights,
                          std::vector<std::unique_ptr<Mesh>>& list_meshes,
+                         std::vector<std::unique_ptr<TextureRG>>& textureRG_list,
                          std::vector<std::unique_ptr<TextureRGB>>& texture_list);
 
 // set integrator_data from json parsed

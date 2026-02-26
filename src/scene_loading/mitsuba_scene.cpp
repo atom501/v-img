@@ -110,6 +110,7 @@ static TextureRGB* make_or_get_texture(
 
 Material* mat_index_from_obj(std::shared_ptr<tinyparser_mitsuba::Object> mat_obj,
                              std::vector<std::unique_ptr<TextureRGB>>& texture_list,
+                             std::vector<std::unique_ptr<TextureRG>>& textureRG_list,
                              std::vector<std::unique_ptr<Material>>& list_materials,
                              std::unordered_map<std::string, size_t>& id_to_mat,
                              std::unordered_map<std::string, size_t>& id_to_tex) {
@@ -161,8 +162,9 @@ Material* mat_index_from_obj(std::shared_ptr<tinyparser_mitsuba::Object> mat_obj
           texture_list.push_back(std::make_unique<ConstColor>(base_col));
 
           list_materials.push_back(std::make_unique<Principled>(
-              texture_list.back().get(), spec_trans, metallic, subsurface, specular, roughness,
-              spec_tint, anisotropic, sheen, sheen_tint, clearcoat, clearcoat_gloss, eta));
+              texture_list.back().get(), nullptr, glm::vec2(metallic, roughness), spec_trans,
+              subsurface, specular, spec_tint, anisotropic, sheen, sheen_tint, clearcoat,
+              clearcoat_gloss, eta));
         } else {
           fmt::println("plugin type {} is not supported.", plugin_type);
           return nullptr;
@@ -206,6 +208,7 @@ bool set_scene_from_mitsuba_xml(const std::filesystem::path& path_file,
                                 std::vector<std::unique_ptr<Material>>& list_materials,
                                 std::vector<Emitter*>& list_lights,
                                 std::vector<std::unique_ptr<Mesh>>& list_meshes,
+                                std::vector<std::unique_ptr<TextureRG>>& textureRG_list,
                                 std::vector<std::unique_ptr<TextureRGB>>& texture_list) {
   tinyparser_mitsuba::SceneLoader loader;
 
@@ -389,8 +392,8 @@ bool set_scene_from_mitsuba_xml(const std::filesystem::path& path_file,
         if (!mat_ptr) {
           for (const auto& child : obj_children) {
             if (child->type() == tinyparser_mitsuba::OT_EMITTER) {
-              mat_ptr
-                  = mat_index_from_obj(child, texture_list, list_materials, id_to_mat, id_to_tex);
+              mat_ptr = mat_index_from_obj(child, texture_list, textureRG_list, list_materials,
+                                           id_to_mat, id_to_tex);
               break;
             }
           }
@@ -400,8 +403,8 @@ bool set_scene_from_mitsuba_xml(const std::filesystem::path& path_file,
         if (!mat_ptr) {
           for (const auto& child : obj_children) {
             if (child->type() == tinyparser_mitsuba::OT_BSDF) {
-              mat_ptr
-                  = mat_index_from_obj(child, texture_list, list_materials, id_to_mat, id_to_tex);
+              mat_ptr = mat_index_from_obj(child, texture_list, textureRG_list, list_materials,
+                                           id_to_mat, id_to_tex);
               break;
             }
           }

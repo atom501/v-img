@@ -15,7 +15,7 @@
 #include "glm/vec3.hpp"
 
 // None means loaded as r,g,b with each channel 0 to 255. transform according to need
-enum class TextureType { None, Image, Normals };
+enum class TextureType { None, Image, Normals, MetallicRoughness };
 
 // fmt formater for TextureType
 inline auto format_as(TextureType t) {

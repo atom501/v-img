@@ -37,6 +37,7 @@ HitInfo Sphere::hit_info(const Ray& r, const ForHitInfo& pre_calc) {
           normal,
           normal,
           glm::vec2(u, v),
+          glm::vec2(u, v),
           ONB{tangent, glm::normalize(glm::cross(normal, tangent)), normal},
           1.f,
           0.000001f,

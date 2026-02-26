@@ -25,7 +25,7 @@ public:
 
   uint8_t color_tex_uv = MeshConsts::no_uv;
   uint8_t normal_tex_uv = MeshConsts::no_uv;
-  uint8_t roughness_metallic_tex_uv = MeshConsts::no_uv;
+  uint8_t metallic_roughness_tex_uv = MeshConsts::no_uv;
 
   Material* mat;
 
@@ -43,7 +43,7 @@ public:
   Mesh(const std::vector<std::array<uint32_t, 3>>& indices, const std::vector<glm::vec3>& vertices,
        const std::vector<glm::vec3>& normals, const std::vector<std::vector<glm::vec2>>& texcoords,
        Material* mat, uint8_t color_tex_uv, uint8_t normal_tex_uv,
-       uint8_t roughness_metallic_tex_uv)
+       uint8_t metallic_roughness_tex_uv)
       : indices(indices),
         vertices(vertices),
         normals(normals),
@@ -51,7 +51,7 @@ public:
         mat(mat),
         color_tex_uv(color_tex_uv),
         normal_tex_uv(normal_tex_uv),
-        roughness_metallic_tex_uv(roughness_metallic_tex_uv) {}
+        metallic_roughness_tex_uv(metallic_roughness_tex_uv) {}
 
   ~Mesh() = default;
 };

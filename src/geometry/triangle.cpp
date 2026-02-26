@@ -53,6 +53,16 @@ HitInfo Triangle::hit_info(const Ray& r, const ForHitInfo& pre_calc) {
     uv = u * uv0 + v * uv1 + w * uv2;
   }
 
+  glm::vec2 metallic_roughness_uv = uv;
+  if (obj_mesh->metallic_roughness_tex_uv != MeshConsts::no_uv) {
+    const auto& texcoords_list = obj_mesh->texcoords[obj_mesh->metallic_roughness_tex_uv];
+    glm::vec2 uv0, uv1, uv2;
+
+    uv0 = texcoords_list[tri_indices[0]], uv1 = texcoords_list[tri_indices[1]],
+    uv2 = texcoords_list[tri_indices[2]];
+
+    metallic_roughness_uv = u * uv0 + v * uv1 + w * uv2;
+  }
   diff_uvs[0] = uv0;
   diff_uvs[1] = uv1;
   diff_uvs[2] = uv2;
@@ -135,6 +145,7 @@ HitInfo Triangle::hit_info(const Ray& r, const ForHitInfo& pre_calc) {
           shading_normal,
           tri_normal,
           uv,
+          metallic_roughness_uv,
           ONB{tangent, bitangent, shading_normal},
           twice_tri_area,
           uv_area,

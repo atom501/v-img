@@ -273,6 +273,7 @@ TextureRGB* json_to_texture(const nlohmann::json& mat_json,
 bool set_list_of_materials(const nlohmann::json& json_settings,
                            std::vector<std::unique_ptr<Material>>& list_materials,
                            std::unordered_map<std::string, size_t>& name_to_index,
+                           std::vector<std::unique_ptr<TextureRG>>& textureRG_list,
                            std::vector<std::unique_ptr<TextureRGB>>& texture_list) {
   if (json_settings.contains("materials")) {
     auto json_mat_list = json_settings["materials"];
@@ -314,8 +315,9 @@ bool set_list_of_materials(const nlohmann::json& json_settings,
         texture_list.push_back(std::make_unique<ConstColor>(base_col));
 
         list_materials.push_back(std::make_unique<Principled>(
-            texture_list.back().get(), spec_trans, metallic, subsurface, specular, roughness,
-            spec_tint, anisotropic, sheen, sheen_tint, clearcoat, clearcoat_gloss, eta));
+            texture_list.back().get(), nullptr, glm::vec2(metallic, roughness), spec_trans,
+            subsurface, specular, spec_tint, anisotropic, sheen, sheen_tint, clearcoat,
+            clearcoat_gloss, eta));
         name_to_index[mat_data["name"]] = list_materials.size() - 1;
       } else {
         std::string surf_name = mat_data["type"];
@@ -395,6 +397,7 @@ bool set_scene_from_json(const std::filesystem::path& path_file, integrator_data
                          std::vector<std::unique_ptr<Material>>& list_materials,
                          std::vector<Emitter*>& list_lights,
                          std::vector<std::unique_ptr<Mesh>>& list_meshes,
+                         std::vector<std::unique_ptr<TextureRG>>& textureRG_list,
                          std::vector<std::unique_ptr<TextureRGB>>& texture_list) {
   // parse json at path_file
   const auto json_string_opt = read_file(path_file);
@@ -418,7 +421,8 @@ bool set_scene_from_json(const std::filesystem::path& path_file, integrator_data
 
   // set material list and create hashmap for mapping material name to index in list
   std::unordered_map<std::string, size_t> name_to_mat;
-  if (set_list_of_materials(json_settings, list_materials, name_to_mat, texture_list)) {
+  if (set_list_of_materials(json_settings, list_materials, name_to_mat, textureRG_list,
+                            texture_list)) {
     fmt::println("List of materials loaded");
   } else {
     fmt::println("Material loading failed");
