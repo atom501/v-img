@@ -61,11 +61,12 @@ inline ONB init_onb(const glm::vec3& normal_vec) {
 struct HitInfo {
   Material* mat = nullptr;
   const Emitter* obj = nullptr;
-  glm::vec3 hit_p;    // point where hit in world coords
-  glm::vec3 hit_n_s;  // shading Normal where hit in world coords.
-  glm::vec3 hit_n_g;  // geometric Normal where hit in world coords.
-                      // Both normals faces are normalized
-  glm::vec2 uv;       // texture uv coordinates
+  glm::vec3 hit_p;           // point where hit in world coords
+  glm::vec3 hit_n_s;         // shading Normal where hit in world coords.
+  glm::vec3 hit_n_g;         // geometric Normal where hit in world coords.
+                             // Both normals faces are normalized
+  glm::vec2 uv;              // texture uv coordinates
+  glm::vec2 metal_rough_uv;  // for optional metallic-roughness texture
   ONB n_frame;
   float primitive_area;
   float tex_coord_area;

@@ -1,4 +1,5 @@
-#include <texture.h>
+#include <texture/texture_RGB.h>
+#include <texture/texture_common.h>
 #define STB_IMAGE_IMPLEMENTATION
 #include <color_utils.h>
 #include <comptime_settings.h>
@@ -7,19 +8,6 @@
 
 #include "fmt/core.h"
 #include "stb_image.h"
-
-TextureWrappingMode gltf_wrap_convert(const fastgltf::Wrap gltf_wrap) {
-  switch (gltf_wrap) {
-    case fastgltf::Wrap::Repeat:
-      return TextureWrappingMode::Repeat;
-    case fastgltf::Wrap::MirroredRepeat:
-      return TextureWrappingMode::MirroredRepeat;
-    case fastgltf::Wrap::ClampToEdge:
-      return TextureWrappingMode::ClampToEdge;
-    default:
-      return TextureWrappingMode::Repeat;
-  }
-}
 
 // loading image from disk and constructing ImageTexture from it
 ImageTexture load_imagetexture(const std::filesystem::path& ImageTexture_file) {
@@ -277,7 +265,7 @@ void ImageTexture::convert_sRGB_to_linear(std::vector<glm::vec3>& image) {
 void ImageTexture::convert_RGB_to_normal(std::vector<glm::vec3>& image, float scale) {
 #pragma omp parallel for
   for (int normal = 0; normal < image.size(); normal++) {
-    image[normal] = (image[normal] * 127.5f) - glm::vec3(1.f);
+    image[normal] = (image[normal] / 127.5f) - glm::vec3(1.f);
 
     image[normal].x *= scale;
     image[normal].y *= scale;

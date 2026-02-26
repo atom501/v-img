@@ -13,7 +13,8 @@
 #include <scene_loading/json_scene.h>
 #include <scene_loading/mitsuba_scene.h>
 #include <stb_image_write.h>
-#include <texture.h>
+#include <texture/texture_RG.h>
+#include <texture/texture_RGB.h>
 #include <tl_camera.h>
 
 #include <algorithm>
@@ -46,7 +47,8 @@ int main(int argc, char* argv[]) {
   std::vector<std::unique_ptr<Surface>> list_objects;
   std::vector<Emitter*> list_lights;
   std::vector<std::unique_ptr<Mesh>> list_meshes;
-  std::vector<std::unique_ptr<Texture>> texture_list;
+  std::vector<std::unique_ptr<TextureRGB>> texture_list;
+  std::vector<std::unique_ptr<TextureRG>> textureRG_list;
 
   std::vector<AABB> list_bboxes;
   std::vector<glm::vec3> list_centers;
@@ -119,11 +121,13 @@ int main(int argc, char* argv[]) {
   auto begin_time = std::chrono::steady_clock::now();
 
   if (extension.string() == ".json") {
-    scene_load_check = set_scene_from_json(scene_file_path, rendering_settings, list_objects,
-                                           mat_list, list_lights, list_meshes, texture_list);
+    scene_load_check
+        = set_scene_from_json(scene_file_path, rendering_settings, list_objects, mat_list,
+                              list_lights, list_meshes, textureRG_list, texture_list);
   } else if (extension.string() == ".xml") {
-    scene_load_check = set_scene_from_mitsuba_xml(scene_file_path, rendering_settings, list_objects,
-                                                  mat_list, list_lights, list_meshes, texture_list);
+    scene_load_check
+        = set_scene_from_mitsuba_xml(scene_file_path, rendering_settings, list_objects, mat_list,
+                                     list_lights, list_meshes, textureRG_list, texture_list);
   } else if (extension.string() == ".gltf" || extension.string() == ".glb") {
     // load parameters not set for gltf
     std::filesystem::path json_gltf_file = set_jsonfilename ? args::get(set_jsonfilename) : "";
@@ -138,9 +142,9 @@ int main(int argc, char* argv[]) {
       json_settings = nlohmann::json::parse(json_string_opt.value());
     }
 
-    scene_load_check
-        = set_scene_from_gltf(scene_file_path, rendering_settings, list_objects, mat_list,
-                              list_lights, list_meshes, texture_list, json_settings);
+    scene_load_check = set_scene_from_gltf(scene_file_path, rendering_settings, list_objects,
+                                           mat_list, list_lights, list_meshes, textureRG_list,
+                                           texture_list, json_settings);
   }
 
   auto end_time = std::chrono::steady_clock::now();

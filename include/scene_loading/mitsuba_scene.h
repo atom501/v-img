@@ -3,7 +3,8 @@
 #include <geometry/mesh.h>
 #include <integrators.h>
 #include <scene_loading/tinyparser-mitsuba.h>
-#include <texture.h>
+#include <texture/texture_RG.h>
+#include <texture/texture_RGB.h>
 #include <tl_camera.h>
 
 #include <glm/gtx/quaternion.hpp>
@@ -21,6 +22,7 @@ bool set_scene_from_mitsuba_xml(const std::filesystem::path& path_file,
                                 std::vector<std::unique_ptr<Material>>& list_materials,
                                 std::vector<Emitter*>& list_lights,
                                 std::vector<std::unique_ptr<Mesh>>& list_meshes,
-                                std::vector<std::unique_ptr<Texture>>& texture_list);
+                                std::vector<std::unique_ptr<TextureRG>>& textureRG_list,
+                                std::vector<std::unique_ptr<TextureRGB>>& texture_list);
 
 float hfov_deg_to_vfov_deg(float h_fov_deg, int64_t width, int64_t height);

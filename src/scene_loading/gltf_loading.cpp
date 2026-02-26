@@ -6,7 +6,7 @@
 #include <omp.h>
 #include <scene_loading/gltf_loading.h>
 #include <scene_loading/json_scene.h>
-#include <texture.h>
+#include <texture/texture_RGB.h>
 
 #include <atomic>
 #include <cstddef>
@@ -96,6 +96,16 @@ static void set_image_type_list(
       img_found++;
     }
 
+    auto& metallicRoughnessTexture = mat.pbrData.metallicRoughnessTexture;
+    if (metallicRoughnessTexture.has_value()) {
+      auto& texture = asset.textures[metallicRoughnessTexture->textureIndex];
+
+      set_vals(texture.samplerIndex, texture.imageIndex, asset, TextureType::MetallicRoughness,
+               img_type_idx, 0.f);
+
+      img_found++;
+    }
+
     if (mat.normalTexture.has_value()) {
       const auto& normal_tex_info = mat.normalTexture.value();
       auto& normal_texture = asset.textures[normal_tex_info.textureIndex];
@@ -116,7 +126,7 @@ static void set_image_type_list(
 // image and img_pair will change
 static void make_texture(unsigned char* char_arr, const glm::ivec2& res, TextureWrappingMode u_mode,
                          TextureWrappingMode v_mode, TextureType tex_type,
-                         std::vector<std::unique_ptr<Texture>>& texture_list, float scale,
+                         std::vector<std::unique_ptr<TextureRGB>>& texture_list, float scale,
                          size_t tex_write_idx) {
   std::vector<glm::vec3> image(res.x * res.y);
 
@@ -157,26 +167,72 @@ static void make_texture(unsigned char* char_arr, const glm::ivec2& res, Texture
   }
 }
 
-std::vector<glm::vec2> get_texcoords(size_t texcoord_idx, const fastgltf::Primitive& primitive,
-                                     const fastgltf::Asset& asset) {
-  auto texcoordAttribute = std::string("TEXCOORD_") + std::to_string(texcoord_idx);
-  std::vector<glm::vec2> texcoords;
+// load Metallic-Roughness Texture
+static void make_RG_texture(unsigned char* char_arr, const glm::ivec2& res,
+                            TextureWrappingMode u_mode, TextureWrappingMode v_mode,
+                            TextureType tex_type,
+                            std::vector<std::unique_ptr<TextureRG>>& textureRG_list,
+                            size_t tex_write_idx) {
+  std::vector<glm::vec2> image(res.x * res.y);
 
-  if (const auto* texcoord_acc = primitive.findAttribute(texcoordAttribute);
-      texcoord_acc != primitive.attributes.end()) {
-    // Tex coord
-    auto& texCoordAccessor = asset.accessors[texcoord_acc->accessorIndex];
-    if (!texCoordAccessor.bufferViewIndex.has_value()) {
-      fmt::println(
-          "texCoordAccessor.bufferViewIndex has no value. skipping "
-          "mesh.primitive");
-    }
+  for (size_t i = 0; i < image.size(); i++) {
+    // blue channel contains metalness
+    image[i].x = char_arr[i * 3 + 2];
 
-    fastgltf::iterateAccessor<glm::vec2>(asset, texCoordAccessor,
-                                         [&](glm::vec2 uv) { texcoords.push_back(uv); });
+    // green channel contains roughness
+    image[i].y = char_arr[i * 3 + 1];
+
+    image[i] /= 255.f;
   }
 
-  return texcoords;
+  switch (tex_type) {
+    case TextureType::MetallicRoughness: {
+      textureRG_list[tex_write_idx]
+          = std::make_unique<TextureRG>(res.x, res.y, std::move(image), u_mode, v_mode);
+      break;
+    }
+
+    default:
+      fmt::println("Incorrect RG tetxture type");
+      break;
+  }
+}
+
+uint8_t get_texcoords(size_t texcoord_idx, const fastgltf::Primitive& primitive,
+                      const fastgltf::Asset& asset, std::vector<std::vector<glm::vec2>>& texcoords,
+                      std::unordered_map<uint8_t, uint8_t>& uv_index_to_arr_index) {
+  if (auto findit = uv_index_to_arr_index.find(texcoord_idx);
+      findit != uv_index_to_arr_index.end()) {
+    fmt::println("already found");
+    return findit->second;
+  } else {
+    fmt::println("adding");
+    auto texcoordAttribute = std::string("TEXCOORD_") + std::to_string(texcoord_idx);
+    std::vector<glm::vec2> new_texcoords;
+
+    if (const auto* texcoord_acc = primitive.findAttribute(texcoordAttribute);
+        texcoord_acc != primitive.attributes.end()) {
+      // Tex coord
+      auto& texCoordAccessor = asset.accessors[texcoord_acc->accessorIndex];
+      if (!texCoordAccessor.bufferViewIndex.has_value()) {
+        fmt::println(
+            "texCoordAccessor.bufferViewIndex has no value. skipping "
+            "mesh.primitive");
+      }
+
+      fastgltf::iterateAccessor<glm::vec2>(asset, texCoordAccessor,
+                                           [&](glm::vec2 uv) { new_texcoords.push_back(uv); });
+
+      texcoords.push_back(new_texcoords);
+      uint8_t new_coord_idx = texcoords.size() - 1;
+      uv_index_to_arr_index[texcoord_idx] = new_coord_idx;
+
+      return new_coord_idx;
+    } else {
+      fmt::println("no uv attribute found");
+      return MeshConsts::no_uv;
+    }
+  }
 }
 
 bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data& integrator_data,
@@ -184,7 +240,8 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
                          std::vector<std::unique_ptr<Material>>& list_materials,
                          std::vector<Emitter*>& list_lights,
                          std::vector<std::unique_ptr<Mesh>>& list_meshes,
-                         std::vector<std::unique_ptr<Texture>>& texture_list,
+                         std::vector<std::unique_ptr<TextureRG>>& textureRG_list,
+                         std::vector<std::unique_ptr<TextureRGB>>& texture_list,
                          const nlohmann::json& extra_settings) {
   omp_set_max_active_levels(2);
   bool unique_imgs = true;
@@ -404,8 +461,10 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
    * set maximum possible number of textures to avoid lock and push_back. (assumes one image is not
    * used as normal map and also a pbr color)
    */
-  texture_list
-      = std::vector<std::unique_ptr<Texture>>(asset->materials.size() + asset->images.size() + 1);
+  texture_list = std::vector<std::unique_ptr<TextureRGB>>(asset->materials.size()
+                                                          + asset->images.size() + 1);
+
+  textureRG_list = std::vector<std::unique_ptr<TextureRG>>(asset->images.size());
 
   list_materials = std::vector<std::unique_ptr<Material>>(asset->materials.size());
   set_img_types.join();
@@ -431,6 +490,11 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
       case TextureType::Normals: {
         make_texture(image_list[t_idx], image_list_res[t_idx], u_wrap, v_wrap, TextureType::Normals,
                      texture_list, scale, t_idx);
+        break;
+      }
+      case TextureType::MetallicRoughness: {
+        make_RG_texture(image_list[t_idx], image_list_res[t_idx], u_wrap, v_wrap,
+                        TextureType::MetallicRoughness, textureRG_list, t_idx);
         break;
       }
       default:
@@ -503,7 +567,7 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
 
       // get texture for material
       auto& baseColorTexture = mat.pbrData.baseColorTexture;
-      Texture* img_tex = nullptr;
+      TextureRGB* img_tex = nullptr;
       if (baseColorTexture.has_value()) {
         // add image texture
         auto& texture = asset->textures[baseColorTexture->textureIndex];
@@ -519,7 +583,7 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
         if (tex_type == TextureType::Image) {
           img_tex = texture_list[image_idx].get();
         } else {
-          fmt::println("Texture being loaded is already of type {} not a Image", tex_type);
+          fmt::println("TextureRGB being loaded is already of type {} not a Image", tex_type);
         }
 
       } else {
@@ -551,13 +615,35 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
         if (tex_type == TextureType::Normals) {
           normal_tex = dynamic_cast<ImageTexture*>(texture_list[image_idx].get());
         } else {
-          fmt::println("Texture being loaded is already of type {} not a Normal", tex_type);
+          fmt::println("TextureRGB being loaded is already of type {} not a Normal", tex_type);
+        }
+      }
+
+      TextureRG* metallic_roughness_tex = nullptr;
+      auto& MRTexture = mat.pbrData.metallicRoughnessTexture;
+      if (MRTexture.has_value()) {
+        // add MetallicRoughness texture
+        auto& texture = asset->textures[MRTexture->textureIndex];
+        if (!texture.imageIndex.has_value()) {
+          fmt::println("Image texture has no image index");
+        }
+
+        size_t image_idx = texture.imageIndex.value();
+
+        TextureType tex_type;
+        std::tie(tex_type, std::ignore, std::ignore, std::ignore) = img_type_list[image_idx];
+
+        if (tex_type == TextureType::MetallicRoughness) {
+          metallic_roughness_tex = textureRG_list[image_idx].get();
+        } else {
+          fmt::println("TextureRGB being loaded is already of type {} not a Image", tex_type);
         }
       }
 
       list_materials[mat_idx] = std::make_unique<Principled>(
-          img_tex, specular_transmission, metallic, subsurface, specular, roughness, spec_tint,
-          anisotropic, sheen, sheen_tint, clearcoat, clearcoat_gloss, eta, normal_tex);
+          img_tex, metallic_roughness_tex, glm::vec2(metallic, roughness), specular_transmission,
+          subsurface, specular, spec_tint, anisotropic, sheen, sheen_tint, clearcoat,
+          clearcoat_gloss, eta, normal_tex);
     } else {
       glm::vec3 emit
           = glm::vec3(mat.emissiveFactor[0], mat.emissiveFactor[1], mat.emissiveFactor[2]);
@@ -605,10 +691,16 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
               // data for mesh object
               std::vector<glm::vec3> vertices;
               std::vector<glm::vec3> normals;
-              std::vector<glm::vec2> texcoords;
+              std::vector<std::vector<glm::vec2>> texcoords;
               std::vector<glm::vec2> normal_coords;
 
+              std::unordered_map<uint8_t, uint8_t> uv_index_to_arr_index;
+
               std::vector<std::array<uint32_t, 3>> indices;
+
+              uint8_t color_tex_uv = MeshConsts::no_uv;
+              uint8_t normal_tex_uv = MeshConsts::no_uv;
+              uint8_t metallic_roughness_tex_uv = MeshConsts::no_uv;
 
               auto* positionIt = it->findAttribute("POSITION");
               assert(positionIt != it->attributes.end());  // A mesh primitive is required to hold
@@ -661,7 +753,8 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
                   if (texture.imageIndex.has_value()) {
                     // texture transformation not supported
                     size_t baseColorTexcoordIndex = baseColorTexture->texCoordIndex;
-                    texcoords = get_texcoords(baseColorTexcoordIndex, *it, asset.get());
+                    color_tex_uv = get_texcoords(baseColorTexcoordIndex, *it, asset.get(),
+                                                 texcoords, uv_index_to_arr_index);
                   }
                 }
 
@@ -670,7 +763,19 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
 
                   if (normal_texture.imageIndex.has_value()) {
                     size_t normal_tex_coords_idx = material.normalTexture->texCoordIndex;
-                    normal_coords = get_texcoords(normal_tex_coords_idx, *it, asset.get());
+                    normal_tex_uv = get_texcoords(normal_tex_coords_idx, *it, asset.get(),
+                                                  texcoords, uv_index_to_arr_index);
+                  }
+                }
+
+                auto& MRTexture = material.pbrData.metallicRoughnessTexture;
+                if (MRTexture.has_value()) {
+                  auto& texture = asset->textures[MRTexture->textureIndex];
+
+                  if (texture.imageIndex.has_value()) {
+                    size_t metallic_roughness_idx = MRTexture->texCoordIndex;
+                    metallic_roughness_tex_uv = get_texcoords(
+                        metallic_roughness_idx, *it, asset.get(), texcoords, uv_index_to_arr_index);
                   }
                 }
               }
@@ -706,7 +811,8 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
                 continue;
               }
 
-              auto m = Mesh(indices, vertices, normals, texcoords, normal_coords, mat_ptr);
+              auto m = Mesh(indices, vertices, normals, texcoords, mat_ptr, color_tex_uv,
+                            normal_tex_uv, metallic_roughness_tex_uv);
               list_meshes.push_back(std::make_unique<Mesh>(m));
 
               add_tri_list_to_scene(list_surfaces, list_meshes.back().get(), list_lights);

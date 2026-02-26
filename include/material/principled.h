@@ -6,7 +6,8 @@
 #include <material/disney_helpers/disney_metal.h>
 #include <material/disney_helpers/disney_sheen.h>
 #include <material/material.h>
-#include <texture.h>
+#include <texture/texture_RG.h>
+#include <texture/texture_RGB.h>
 
 #include <algorithm>
 #include <numbers>
@@ -22,12 +23,14 @@ concept MatReturnType = ReturnEval<T> || ReturnPair<T>;
 
 class Principled : public Material {
 private:
-  Texture* tex;
+  TextureRGB* tex;
+
+  TextureRG* metallic_roughness;
+  glm::vec2 metallic_roughness_factor;
+
   float specular_transmission;
-  float metallic;
   float subsurface;
   float specular;
-  float roughness;
   float specular_tint;
   float anisotropic;
   float sheen;
@@ -37,15 +40,16 @@ private:
   float eta;
 
 public:
-  Principled(Texture* tex, float specular_transmission, float metallic, float subsurface,
-             float specular, float roughness, float specular_tint, float anisotropic, float sheen,
+  Principled(TextureRGB* tex, TextureRG* metallic_roughness,
+             const glm::vec2& metallic_roughness_factor, float specular_transmission,
+             float subsurface, float specular, float specular_tint, float anisotropic, float sheen,
              float sheen_tint, float clearcoat, float clearcoat_gloss, float eta)
       : tex(tex),
+        metallic_roughness(metallic_roughness),
+        metallic_roughness_factor(metallic_roughness_factor),
         specular_transmission(specular_transmission),
-        metallic(metallic),
         subsurface(subsurface),
         specular(specular),
-        roughness(roughness),
         specular_tint(specular_tint),
         anisotropic(anisotropic),
         sheen(sheen),
@@ -55,17 +59,18 @@ public:
         eta(eta) {}
 
   // when normal map is given
-  Principled(Texture* tex, float specular_transmission, float metallic, float subsurface,
-             float specular, float roughness, float specular_tint, float anisotropic, float sheen,
+  Principled(TextureRGB* tex, TextureRG* metallic_roughness,
+             const glm::vec2& metallic_roughness_factor, float specular_transmission,
+             float subsurface, float specular, float specular_tint, float anisotropic, float sheen,
              float sheen_tint, float clearcoat, float clearcoat_gloss, float eta,
              ImageTexture* normal_map)
       : Material(normal_map),
+        metallic_roughness(metallic_roughness),
+        metallic_roughness_factor(metallic_roughness_factor),
         tex(tex),
         specular_transmission(specular_transmission),
-        metallic(metallic),
         subsurface(subsurface),
         specular(specular),
-        roughness(roughness),
         specular_tint(specular_tint),
         anisotropic(anisotropic),
         sheen(sheen),
@@ -103,6 +108,15 @@ public:
       normal_frame.v = -normal_frame.v;
       normal_frame.w = -normal_frame.w;
     }
+
+    glm::vec2 m_r = glm::vec2(1.f);
+    if (Principled::metallic_roughness) {
+      m_r = Principled::metallic_roughness->get_at_uv(hit.metal_rough_uv);
+    }
+
+    m_r *= metallic_roughness_factor;
+
+    float metallic = m_r[0], roughness = m_r[1];
 
     glm::vec3 base_color = Principled::tex->col_at_ray_hit(wi, cone, hit);
 

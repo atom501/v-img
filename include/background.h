@@ -3,7 +3,7 @@
 #include <comptime_settings.h>
 #include <geometry/emitters.h>
 #include <ray.h>
-#include <texture.h>
+#include <texture/texture_RGB.h>
 
 #include <algorithm>
 #include <numbers>

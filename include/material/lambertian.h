@@ -3,7 +3,7 @@
 #include <fmt/core.h>
 #include <material/material.h>
 #include <rng/sampling.h>
-#include <texture.h>
+#include <texture/texture_RGB.h>
 
 #include <algorithm>
 #include <cmath>
@@ -11,12 +11,12 @@
 
 class Lambertian : public Material {
 private:
-  Texture* tex;
+  TextureRGB* tex;
 
 public:
   Lambertian() { tex = nullptr; }
 
-  Lambertian(Texture* tex) : tex(tex) {}
+  Lambertian(TextureRGB* tex) : tex(tex) {}
 
   ~Lambertian() = default;
 

@@ -1,7 +1,8 @@
 #pragma once
 
 #include <integrators.h>
-#include <texture.h>
+#include <texture/texture_RG.h>
+#include <texture/texture_RGB.h>
 #include <tl_camera.h>
 
 #include <glm/gtx/quaternion.hpp>
@@ -18,7 +19,8 @@ bool set_scene_from_json(const std::filesystem::path& path_file, integrator_data
                          std::vector<std::unique_ptr<Material>>& list_materials,
                          std::vector<Emitter*>& list_lights,
                          std::vector<std::unique_ptr<Mesh>>& list_meshes,
-                         std::vector<std::unique_ptr<Texture>>& texture_list);
+                         std::vector<std::unique_ptr<TextureRG>>& textureRG_list,
+                         std::vector<std::unique_ptr<TextureRGB>>& texture_list);
 
 // set integrator_data from json parsed
 bool set_integrator_data(const nlohmann::json& json_settings, integrator_data& integrator_data);

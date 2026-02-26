@@ -11,6 +11,15 @@ std::optional<ScatterInfo> Principled::sample_mat(const glm::vec3& wi, const Hit
     normal_frame.w = -normal_frame.w;
   }
 
+  glm::vec2 m_r = glm::vec2(1.f);
+  if (Principled::metallic_roughness) {
+    m_r = Principled::metallic_roughness->get_at_uv(hit.metal_rough_uv);
+  }
+
+  m_r *= metallic_roughness_factor;
+
+  float metallic = m_r[0], roughness = m_r[1];
+
   if (glm::dot(hit.hit_n_g, dir_in) < 0) {
     return sample_disney_rough_glass(dir_in, hit, eta, anisotropic, roughness, normal_frame,
                                      pcg_rng, regularize);
@@ -60,6 +69,15 @@ glm::vec3 Principled::eval(const glm::vec3& wi, const glm::vec3& wo, const HitIn
 
   glm::vec3 base_color = Principled::tex->col_at_ray_hit(wi, cone, hit);
 
+  glm::vec2 m_r = glm::vec2(1.f);
+  if (Principled::metallic_roughness) {
+    m_r = Principled::metallic_roughness->get_at_uv(hit.metal_rough_uv);
+  }
+
+  m_r *= metallic_roughness_factor;
+
+  float metallic = m_r[0], roughness = m_r[1];
+
   glm::vec3 half_vector = glm::normalize(dir_in + wo);
   glm::vec3 eval_glass = eval_disney_rough_glass(dir_in, wo, hit, base_color, eta, anisotropic,
                                                  roughness, half_vector, normal_frame);
@@ -96,6 +114,15 @@ float Principled::pdf(const glm::vec3& wi, const glm::vec3& wo, const HitInfo& h
     normal_frame.w = -normal_frame.w;
   }
   glm::vec3 half_vector = glm::normalize(dir_in + wo);
+
+  glm::vec2 m_r = glm::vec2(1.f);
+  if (Principled::metallic_roughness) {
+    m_r = Principled::metallic_roughness->get_at_uv(hit.metal_rough_uv);
+  }
+
+  m_r *= metallic_roughness_factor;
+
+  float metallic = m_r[0], roughness = m_r[1];
 
   float glass_pdf = pdf_disney_rough_glass(dir_in, wo, hit, eta, anisotropic, roughness,
                                            half_vector, normal_frame);
