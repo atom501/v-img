@@ -27,9 +27,11 @@ void setup_for_bvh(const std::vector<std::unique_ptr<Surface>>& list_objects,
                    std::vector<AABB>& bboxes, std::vector<glm::vec3>& centers) {
   for (auto const& obj : list_objects) {
     // get AABB
-    bboxes.push_back(obj->bounds());
+    AABB box = obj->bounds();
+    bboxes.push_back(box);
     // get center
-    centers.push_back(obj->get_center());
+    glm::vec3 center = (box.bboxes[1] + box.bboxes[0]) * 0.5f;
+    centers.push_back(center);
   }
 }
 
