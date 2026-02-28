@@ -4,7 +4,7 @@
 #include <hit_utils.h>
 
 #ifdef __AVX2__
-#include <simd_hit.h>
+#  include <simd_hit.h>
 #endif
 
 #include <array>
@@ -34,7 +34,7 @@ public:
 
 public:
   Bin() = default;
-  Bin(size_t obj_count, AABB aabb) : obj_count(obj_count), aabb(aabb) {}
+  Bin(size_t obj_count, AABB aabb) : aabb(aabb), obj_count(obj_count) {}
 
   ~Bin() = default;
 
@@ -106,7 +106,6 @@ public:
      * check root node first. Since children are always hit checked before being pushed onto the
      * stack, no need to perform hit test again when popping the node (except root node)
      */
-    auto& root_node = nodes[0];
 
 #ifdef __AVX2__
     __m256 ray_dir_inv

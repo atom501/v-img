@@ -340,7 +340,6 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
 
     if (extra_settings.contains("background")) {
       if (extra_settings["background"].is_array()) {
-        const auto& val = extra_settings["background"];
         integrator_data.background = std::make_unique<ConstBackground>(
             ConstBackground(extra_settings["background"].template get<glm::vec3>()));
         list_lights.push_back(static_cast<ConstBackground*>(integrator_data.background.get()));
@@ -412,8 +411,8 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
   }
 
 #pragma omp parallel for
-  for (int img_idx = 0; img_idx < asset->images.size(); img_idx++) {
-    unsigned char* image_loaded;
+  for (size_t img_idx = 0; img_idx < asset->images.size(); img_idx++) {
+    unsigned char* image_loaded = nullptr;
     int width, height, nrChannels;
 
     std::visit(
@@ -516,7 +515,7 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
 
 // load material
 #pragma omp parallel for
-  for (int mat_idx = 0; mat_idx < asset->materials.size(); mat_idx++) {
+  for (size_t mat_idx = 0; mat_idx < asset->materials.size(); mat_idx++) {
     const auto& mat = asset->materials[mat_idx];
 
     // check if material is emissive
@@ -590,9 +589,7 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
         // add constant texture
         auto idx = tex_write_idx.fetch_add(1);
 
-        texture_list[idx] = std::make_unique<ConstColor>(
-            glm::vec3(mat.pbrData.baseColorFactor.x(), mat.pbrData.baseColorFactor.y(),
-                      mat.pbrData.baseColorFactor.z()));
+        texture_list[idx] = std::make_unique<ConstColor>(base_color);
         img_tex = texture_list[idx].get();
       }
 
@@ -707,9 +704,6 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
                                                            // the POSITION attribute.
               assert(it->indicesAccessor.has_value());     // We specify GenerateMeshIndices, so we
                                                            // should always have indices
-
-              // Get the output primitive
-              auto index = std::distance(mesh.primitives.begin(), it);
 
               // loading vertex positions
               auto& positionAccessor = asset->accessors[positionIt->accessorIndex];

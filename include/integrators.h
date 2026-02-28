@@ -185,8 +185,6 @@ template <typename F> glm::vec3 trace_pixel(const integrator_data& render_data, 
   const uint32_t image_width = render_data.resolution[0];
   const uint32_t image_height = render_data.resolution[1];
 
-  const unsigned int total_pixels = image_width * image_height;
-
   pcg32_random_t pcg_state;
 
   // make a stack for each core. instead of one for each bvh hit call

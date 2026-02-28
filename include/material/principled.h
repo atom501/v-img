@@ -65,9 +65,9 @@ public:
              float sheen_tint, float clearcoat, float clearcoat_gloss, float eta,
              ImageTexture* normal_map)
       : Material(normal_map),
+        tex(tex),
         metallic_roughness(metallic_roughness),
         metallic_roughness_factor(metallic_roughness_factor),
-        tex(tex),
         specular_transmission(specular_transmission),
         subsurface(subsurface),
         specular(specular),

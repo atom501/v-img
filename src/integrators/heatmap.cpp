@@ -68,10 +68,10 @@ std::vector<glm::vec3> heatmap_img(const integrator_data& render_data, const BVH
       for (size_t y_start = 0; y_start < image_height; y_start += 8) {
         for (size_t x_start = 8 * c; x_start < image_width; x_start += 8 * num_cores) {
           const auto& bottom_x = x_start;
-          const auto& top_x = std::min(x_start + 7, static_cast<size_t>(image_width - 1));
+          const auto top_x = std::min(x_start + 7, static_cast<size_t>(image_width - 1));
 
           const auto& bottom_y = y_start;
-          const auto& top_y = std::min(y_start + 7, static_cast<size_t>(image_height - 1));
+          const auto top_y = std::min(y_start + 7, static_cast<size_t>(image_height - 1));
 
           for (size_t y = bottom_y; y <= top_y; y++) {
             for (size_t x = bottom_x; x <= top_x; x++) {

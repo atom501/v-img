@@ -94,7 +94,7 @@ inline float rand_float(pcg32_random_t& pcg_state) {
     uint32_t e = 126 - z;                   // compute the biased exponent
     uint32_t m = ((uint32_t)u) & 0x7fffff;  // explict significand bits
     uint32_t float_bits = e << 23 | m;
-    return reinterpret_cast<float&>(float_bits);  // construct the binary32
+    return std::bit_cast<float>(float_bits);  // construct the binary32
   }
 
   // The probabilty of reaching here is 2^-40. There are as many points
@@ -171,9 +171,7 @@ public:
     // make a copy of image with luminance values
     std::vector<float> image_luminance(image.size());
 
-    constexpr glm::vec3 lum_const = glm::vec3(0.2126f, 0.7152f, 0.0722f);
-
-    for (int y = 0; y < height; y++) {
+    for (size_t y = 0; y < height; y++) {
       float v = (static_cast<float>(y) + 0.5f) / static_cast<float>(height);
       float sin_elevation = std::sin(std::numbers::pi * v);
 
@@ -185,7 +183,7 @@ public:
     std::vector<float> row_integral_vals(height);
     image_probabilities = std::vector<ArraySampling1D>(height);
 
-    for (int h = 0; h < height; h++) {
+    for (size_t h = 0; h < height; h++) {
       std::span<const float> img_span(image_luminance.data() + (h * width), width);
 
       const ArraySampling1D prob_sampling_of_row = ArraySampling1D(img_span);

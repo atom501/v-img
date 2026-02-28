@@ -26,6 +26,8 @@ inline auto format_as(TextureType t) {
       return "TextureType::Image";
     case TextureType::Normals:
       return "TextureType::Normals";
+    case TextureType::MetallicRoughness:
+      return "TextureType::MetallicRoughness";
   }
   return "unknown";
 };

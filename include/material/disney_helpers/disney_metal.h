@@ -129,9 +129,6 @@ inline std::pair<glm::vec3, float> eval_pdf_disney_metal(
     return std::make_pair(glm::vec3{0.f, 0.f, 0.f}, 0.f);
   }
 
-  glm::vec3 eval = glm::vec3(0.f);
-  float pdf = 0.f;
-
   float base_lum = luminance(base_col);
   glm::vec3 C_tint = base_lum > 0 ? base_col / base_lum : glm::vec3(1.f);
   glm::vec3 K_s = (glm::vec3(1.f) - glm::vec3(spec_tint)) + spec_tint * C_tint;

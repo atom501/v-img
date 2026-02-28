@@ -48,10 +48,10 @@ public:
         vertices(vertices),
         normals(normals),
         texcoords(texcoords),
-        mat(mat),
         color_tex_uv(color_tex_uv),
         normal_tex_uv(normal_tex_uv),
-        metallic_roughness_tex_uv(metallic_roughness_tex_uv) {}
+        metallic_roughness_tex_uv(metallic_roughness_tex_uv),
+        mat(mat) {}
 
   ~Mesh() = default;
 };

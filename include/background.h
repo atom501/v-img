@@ -135,7 +135,7 @@ public:
                 / (2.f * std::numbers::pi * std::numbers::pi * sin_elevation);
 
     return std::make_pair(image.col_at_uv_mipmap(0, glm::vec2(u_env, v_env)) * radiance_scale,
-                          EmitterInfo{wi, pdf, std::numeric_limits<float>::infinity(), 1.f});
+                          EmitterInfo{wi, pdf, dist, 1.f});
   }
 
   float background_pdf(const glm::vec3& in_dir) const override {

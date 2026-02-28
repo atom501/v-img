@@ -1,8 +1,8 @@
 #pragma once
 
 #ifdef __AVX2__
-#include <hit_utils.h>
-#include <immintrin.h>
+#  include <hit_utils.h>
+#  include <immintrin.h>
 
 // input (x, y, z, y). returns max(x, y, z, t)
 inline float horizontal_max_128(__m128 x) {

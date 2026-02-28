@@ -77,7 +77,6 @@ static void build_sweep_recursive(BVH& bvh, size_t node_index, size_t bb_index,
                                   uint32_t& max_depth, const uint32_t max_node_prims,
                                   std::vector<uint8_t>& is_left_mask) {
   auto& curr_node = bvh.nodes[node_index];
-  size_t total_objs = bboxes.size();
   size_t curr_node_objs = prim_axis_sort[0].size();
   bool left_aabb_reuse = true;
 
