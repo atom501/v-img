@@ -176,7 +176,7 @@ glm::vec3 mis_integrator(Ray& input_ray, std::vector<size_t>& thread_stack, cons
 
 std::vector<glm::vec3> heatmap_img(const integrator_data& render_data, const BVH& bvh,
                                    const std::vector<std::unique_ptr<Surface>>& prims,
-                                   const int max_count);
+                                   float factor);
 
 template <typename F> glm::vec3 trace_pixel(const integrator_data& render_data, BVH& bvh,
                                             const std::vector<std::unique_ptr<Surface>>& prims,

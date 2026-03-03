@@ -41,7 +41,7 @@ int main(int argc, char* argv[]) {
   constexpr uint32_t NUM_BINS = 16;
   integrator_data rendering_settings;
 
-  int heatmap_max = -1;
+  float heatmap_max = -1;
   int16_t num_threads = -1;
   tonemapper tonemapping_func = tonemapper::clamp;
 
@@ -59,10 +59,10 @@ int main(int argc, char* argv[]) {
   args::ArgumentParser parser("CPU raytracer", "");
   args::HelpFlag help(parser, "help", "Display this help menu", {'h', "help"});
   args::ValueFlag<std::string> filename(parser, "file", "Scene filename", {'f'});
-  args::ValueFlag<int> heatmap(
-      parser, "heatmap",
-      "Enable heatmap mode. Number of primitives to set as the max. 0 uses maximum from scene",
-      {'m'});
+  args::ValueFlag<float> heatmap(parser, "heatmap",
+                                 "Enable heatmap mode. Set factor for the color, lower factor "
+                                 "makes areas being hit redder. Setting to 0 defaults to factor 20",
+                                 {'m'});
   args::ValueFlag<int16_t> numthreads(parser, "threads", "Number of threads to be used", {'t'});
   args::ValueFlag<int16_t> set_tonemapper(
       parser, "tonemapper",

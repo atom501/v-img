@@ -80,11 +80,10 @@ public:
    * bvh checking for hit and getting surface information. If output is set to uint32_t it will
    * be used to make the heatmap. Only the total number of primitives hit by the ray are needed.
    */
-  template <typename T,
-            std::enable_if_t<std::is_same_v<T, std::optional<HitInfo>>
-                                 || std::is_same_v<T, uint32_t> || std::is_same_v<T, bool>,
-                             bool>
-            = true>
+  template <typename T, std::enable_if_t<std::is_same_v<T, std::optional<HitInfo>>
+                                             || std::is_same_v<T, float> || std::is_same_v<T, bool>,
+                                         bool>
+                        = true>
   T hit(Ray& ray, std::vector<size_t>& thread_stack,
         const std::vector<std::unique_ptr<Surface>>& prims) const {
     T return_variable;
@@ -92,8 +91,8 @@ public:
 
     if constexpr (std::is_same_v<T, std::optional<HitInfo>>) {
       return_variable = std::nullopt;
-    } else if constexpr (std::is_same_v<T, uint32_t>) {
-      return_variable = 0;
+    } else if constexpr (std::is_same_v<T, float>) {
+      return_variable = 0.f;
     } else if constexpr (std::is_same_v<T, bool>) {
       return_variable = false;
     }
@@ -126,11 +125,16 @@ public:
         = slab_intersect_aabb_array(ray, ray_inv_dir, BB_mins_maxes[0], BB_mins_maxes[2]);
 #endif
 
+    // root cost for heatmap
+    if constexpr (std::is_same_v<T, float>) {
+      return_variable += BVHConst::traversal_cost;
+    }
+
     if (std::isinf(root_hit)) {
       if constexpr (std::is_same_v<T, std::optional<HitInfo>>) {
         return std::nullopt;
-      } else if constexpr (std::is_same_v<T, uint32_t>) {
-        return static_cast<uint32_t>(0);
+      } else if constexpr (std::is_same_v<T, float>) {
+        return return_variable;
       } else if constexpr (std::is_same_v<T, bool>) {
         return false;
       }
@@ -152,10 +156,10 @@ public:
             const auto hit_temp = prims[prim_index]->hit_surface(ray);
             // if ray hit the object replace the last hit_final
             if (hit_temp.has_value()) intermediate_hit = hit_temp;
-          } else if constexpr (std::is_same_v<T, uint32_t>) {
+          } else if constexpr (std::is_same_v<T, float>) {
             prims[prim_index]->hit_check(ray);
             // increment whenever a hit test is done on a primitive
-            ++return_variable;
+            return_variable += BVHConst::intersection_cost;
           } else if constexpr (std::is_same_v<T, bool>) {
             const auto hit_surf_ptr = prims[prim_index]->hit_check(ray);
             // exit on first hit
@@ -182,6 +186,10 @@ public:
                                                   BB_mins_maxes[bb_left_max]);
         float bb_hit2 = slab_intersect_aabb_array(ray, ray_inv_dir, BB_mins_maxes[bb_right_min],
                                                   BB_mins_maxes[bb_right_max]);
+        // siblings cost for heatmap
+        if constexpr (std::is_same_v<T, float>) {
+          return_variable += BVHConst::traversal_cost * 2.f;
+        }
 #endif
 
         if constexpr (std::is_same_v<T, bool>) {
