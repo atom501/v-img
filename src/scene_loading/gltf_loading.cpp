@@ -21,6 +21,9 @@
 #include "fastgltf/types.hpp"
 #include "stb_image.h"
 
+typedef std::tuple<size_t, TextureWrappingMode, TextureWrappingMode, float> tex_create_data;
+typedef std::pair<size_t, TextureType> img_idx_type;
+
 static inline glm::mat4 get_mat_transform(
     std::variant<fastgltf::TRS, fastgltf::math::fmat4x4>& gltf_xform) {
   glm::mat4 glm_xform = glm::mat4(1.0f);
@@ -56,32 +59,48 @@ static inline glm::mat4 get_mat_transform(
 static inline void set_vals(
     fastgltf::Optional<size_t> sampler_idx, fastgltf::Optional<size_t> image_idx,
     const fastgltf::Asset& asset, TextureType type,
-    std::vector<std::tuple<TextureType, TextureWrappingMode, TextureWrappingMode, float>>&
-        img_type_idx,
-    float scale) {
+    std::unordered_map<img_idx_type, tex_create_data, PairHash>& img_type_idx, float scale,
+    size_t& RGB_tex_num, size_t& RG_tex_num) {
   if (!image_idx.has_value()) {
     fmt::println("Image texture has no image index");
   }
 
+  TextureWrappingMode u_mode = TextureWrappingMode::Repeat;
+  TextureWrappingMode v_mode = TextureWrappingMode::Repeat;
+
   if (sampler_idx) {
     auto sampler_info = asset.samplers[sampler_idx.value()];
 
-    get<1>(img_type_idx[image_idx.value()]) = gltf_wrap_convert(sampler_info.wrapS);
-    get<2>(img_type_idx[image_idx.value()]) = gltf_wrap_convert(sampler_info.wrapT);
+    u_mode = gltf_wrap_convert(sampler_info.wrapS);
+    v_mode = gltf_wrap_convert(sampler_info.wrapT);
   }
 
-  get<0>(img_type_idx[image_idx.value()]) = type;
-  get<3>(img_type_idx[image_idx.value()]) = scale;
+  if (type == TextureType::MetallicRoughness) {
+    auto key = std::make_pair(image_idx.value(), type);
+    auto value = std::make_tuple(RG_tex_num, u_mode, v_mode, scale);
+
+    img_type_idx[key] = value;
+
+    RG_tex_num++;
+  } else if (type == TextureType::Image || type == TextureType::Normals) {
+    auto key = std::make_pair(image_idx.value(), type);
+    auto value = std::make_tuple(RGB_tex_num, u_mode, v_mode, scale);
+
+    img_type_idx[key] = value;
+
+    RGB_tex_num++;
+  } else {
+    fmt::println("Error image type None found");
+  }
 }
 
 static void set_image_type_list(
-    std::vector<std::tuple<TextureType, TextureWrappingMode, TextureWrappingMode, float>>&
-        img_type_idx,
-    const fastgltf::Asset& asset, bool& unique_imgs) {
-  size_t total_images = img_type_idx.size();
-  size_t img_found = 0;
+    std::unordered_map<img_idx_type, tex_create_data, PairHash>& img_type_idx,
+    const fastgltf::Asset& asset, size_t& RGB_tex_num, size_t& RG_tex_num) {
+  RGB_tex_num = 0;
+  RG_tex_num = 0;
 
-  if (total_images == 0) {
+  if (asset.images.size() == 0) {
     return;
   }
 
@@ -91,9 +110,7 @@ static void set_image_type_list(
       auto& texture = asset.textures[baseColorTexture->textureIndex];
 
       set_vals(texture.samplerIndex, texture.imageIndex, asset, TextureType::Image, img_type_idx,
-               0.f);
-
-      img_found++;
+               0.f, RGB_tex_num, RG_tex_num);
     }
 
     auto& metallicRoughnessTexture = mat.pbrData.metallicRoughnessTexture;
@@ -101,9 +118,7 @@ static void set_image_type_list(
       auto& texture = asset.textures[metallicRoughnessTexture->textureIndex];
 
       set_vals(texture.samplerIndex, texture.imageIndex, asset, TextureType::MetallicRoughness,
-               img_type_idx, 0.f);
-
-      img_found++;
+               img_type_idx, 0.f, RGB_tex_num, RG_tex_num);
     }
 
     if (mat.normalTexture.has_value()) {
@@ -111,15 +126,8 @@ static void set_image_type_list(
       auto& normal_texture = asset.textures[normal_tex_info.textureIndex];
 
       set_vals(normal_texture.samplerIndex, normal_texture.imageIndex, asset, TextureType::Normals,
-               img_type_idx, normal_tex_info.scale);
-
-      img_found++;
+               img_type_idx, normal_tex_info.scale, RGB_tex_num, RG_tex_num);
     }
-  }
-
-  if (img_found > total_images) {
-    fmt::println("Error one image is being used for as a texture and a normalmap");
-    unique_imgs = false;
   }
 }
 
@@ -203,10 +211,8 @@ uint8_t get_texcoords(size_t texcoord_idx, const fastgltf::Primitive& primitive,
                       std::unordered_map<uint8_t, uint8_t>& uv_index_to_arr_index) {
   if (auto findit = uv_index_to_arr_index.find(texcoord_idx);
       findit != uv_index_to_arr_index.end()) {
-    fmt::println("already found");
     return findit->second;
   } else {
-    fmt::println("adding");
     auto texcoordAttribute = std::string("TEXCOORD_") + std::to_string(texcoord_idx);
     std::vector<glm::vec2> new_texcoords;
 
@@ -232,6 +238,17 @@ uint8_t get_texcoords(size_t texcoord_idx, const fastgltf::Primitive& primitive,
       fmt::println("no uv attribute found");
       return MeshConsts::no_uv;
     }
+  }
+}
+
+std::optional<tex_create_data> get_hashmap_val(
+    img_idx_type key, std::unordered_map<img_idx_type, tex_create_data, PairHash>& img_type_list) {
+  auto find = img_type_list.find(key);
+
+  if (find != img_type_list.end()) {
+    return find->second;
+  } else {
+    return std::nullopt;
   }
 }
 
@@ -374,13 +391,14 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
     }
   });
 
-  std::vector<std::tuple<TextureType, TextureWrappingMode, TextureWrappingMode, float>>
-      img_type_list(asset->images.size(),
-                    std::make_tuple(TextureType::None, TextureWrappingMode::Repeat,
-                                    TextureWrappingMode::Repeat, 0.f));
+  // (img_idx in asset, TextureType) -> (idx in tex array, u_warp, v_wrap, scale)
+  std::unordered_map<img_idx_type, tex_create_data, PairHash> img_type_list;
 
-  std::thread set_img_types = std::thread(set_image_type_list, std::ref(img_type_list),
-                                          std::ref(asset.get()), std::ref(unique_imgs));
+  size_t RGB_tex_list_counter = 0, RG_tex_list_counter = 0;
+
+  std::thread set_img_types
+      = std::thread(set_image_type_list, std::ref(img_type_list), std::ref(asset.get()),
+                    std::ref(RGB_tex_list_counter), std::ref(RG_tex_list_counter));
 
   // use the passed in vertical resolution and aspect ratio
   integrator_data.resolution.y = extra_settings.value("yres", 768);
@@ -460,10 +478,10 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
    * set maximum possible number of textures to avoid lock and push_back. (assumes one image is not
    * used as normal map and also a pbr color)
    */
-  texture_list = std::vector<std::unique_ptr<TextureRGB>>(asset->materials.size()
-                                                          + asset->images.size() + 1);
+  texture_list
+      = std::vector<std::unique_ptr<TextureRGB>>(asset->materials.size() + RGB_tex_list_counter);
 
-  textureRG_list = std::vector<std::unique_ptr<TextureRG>>(asset->images.size());
+  textureRG_list = std::vector<std::unique_ptr<TextureRG>>(RG_tex_list_counter);
 
   list_materials = std::vector<std::unique_ptr<Material>>(asset->materials.size());
   set_img_types.join();
@@ -477,27 +495,39 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
     begin_time = std::chrono::steady_clock::now();
   }
 
-#pragma omp parallel for
-  for (size_t t_idx = 0; t_idx < img_type_list.size(); t_idx++) {
-    auto [tex_type, u_wrap, v_wrap, scale] = img_type_list[t_idx];
-    switch (tex_type) {
-      case TextureType::Image: {
-        make_texture(image_list[t_idx], image_list_res[t_idx], u_wrap, v_wrap, TextureType::Image,
-                     texture_list, 0.f, t_idx);
-        break;
+#pragma omp parallel
+  {
+#pragma omp single
+    {
+      for (const auto hash : img_type_list) {
+        size_t img_idx;
+        TextureType tex_type;
+        std::tie(img_idx, tex_type) = hash.first;
+
+        size_t tex_idx;
+        TextureWrappingMode u_wrap, v_wrap;
+        float scale;
+
+        std::tie(tex_idx, u_wrap, v_wrap, scale) = hash.second;
+
+        switch (tex_type) {
+          case TextureType::Image:
+          case TextureType::Normals: {
+#pragma omp task
+            make_texture(image_list[img_idx], image_list_res[img_idx], u_wrap, v_wrap, tex_type,
+                         texture_list, scale, tex_idx);
+            break;
+          }
+          case TextureType::MetallicRoughness: {
+#pragma omp task
+            make_RG_texture(image_list[img_idx], image_list_res[img_idx], u_wrap, v_wrap,
+                            TextureType::MetallicRoughness, textureRG_list, tex_idx);
+            break;
+          }
+          default:
+            break;
+        }
       }
-      case TextureType::Normals: {
-        make_texture(image_list[t_idx], image_list_res[t_idx], u_wrap, v_wrap, TextureType::Normals,
-                     texture_list, scale, t_idx);
-        break;
-      }
-      case TextureType::MetallicRoughness: {
-        make_RG_texture(image_list[t_idx], image_list_res[t_idx], u_wrap, v_wrap,
-                        TextureType::MetallicRoughness, textureRG_list, t_idx);
-        break;
-      }
-      default:
-        break;
     }
   }
 
@@ -507,7 +537,7 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
   }
 
   // idx where new texture is to be written. start adding consts after imgs
-  std::atomic<unsigned int> tex_write_idx = img_type_list.size();
+  std::atomic<unsigned int> tex_write_idx = RGB_tex_list_counter;
 
   if constexpr (CompileConsts::profile_gltf) {
     begin_time = std::chrono::steady_clock::now();
@@ -576,15 +606,17 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
 
         size_t image_idx = texture.imageIndex.value();
 
-        TextureType tex_type;
-        std::tie(tex_type, std::ignore, std::ignore, std::ignore) = img_type_list[image_idx];
+        auto val = get_hashmap_val(std::make_pair(image_idx, TextureType::Image), img_type_list);
 
-        if (tex_type == TextureType::Image) {
-          img_tex = texture_list[image_idx].get();
-        } else {
-          fmt::println("TextureRGB being loaded is already of type {} not a Image", tex_type);
+        if (!val.has_value()) {
+          fmt::println("Could not find value in hasmap for key ({}, {})", image_idx,
+                       TextureType::Image);
         }
+        size_t tex_idx;
 
+        std::tie(tex_idx, std::ignore, std::ignore, std::ignore) = val.value();
+
+        img_tex = texture_list[tex_idx].get();
       } else {
         // add constant texture
         auto idx = tex_write_idx.fetch_add(1);
@@ -606,14 +638,17 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
         }
         size_t image_idx = normal_texture.imageIndex.value();
 
-        TextureType tex_type;
-        std::tie(tex_type, std::ignore, std::ignore, std::ignore) = img_type_list[image_idx];
+        auto val = get_hashmap_val(std::make_pair(image_idx, TextureType::Normals), img_type_list);
 
-        if (tex_type == TextureType::Normals) {
-          normal_tex = dynamic_cast<ImageTexture*>(texture_list[image_idx].get());
-        } else {
-          fmt::println("TextureRGB being loaded is already of type {} not a Normal", tex_type);
+        if (!val.has_value()) {
+          fmt::println("Could not find value in hasmap for key ({}, {})", image_idx,
+                       TextureType::Normals);
         }
+
+        size_t tex_idx;
+        std::tie(tex_idx, std::ignore, std::ignore, std::ignore) = val.value();
+
+        normal_tex = dynamic_cast<ImageTexture*>(texture_list[tex_idx].get());
       }
 
       TextureRG* metallic_roughness_tex = nullptr;
@@ -627,14 +662,18 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
 
         size_t image_idx = texture.imageIndex.value();
 
-        TextureType tex_type;
-        std::tie(tex_type, std::ignore, std::ignore, std::ignore) = img_type_list[image_idx];
+        auto val = get_hashmap_val(std::make_pair(image_idx, TextureType::MetallicRoughness),
+                                   img_type_list);
 
-        if (tex_type == TextureType::MetallicRoughness) {
-          metallic_roughness_tex = textureRG_list[image_idx].get();
-        } else {
-          fmt::println("TextureRGB being loaded is already of type {} not a Image", tex_type);
+        if (!val.has_value()) {
+          fmt::println("Could not find value in hasmap for key ({}, {})", image_idx,
+                       TextureType::MetallicRoughness);
         }
+
+        size_t tex_idx;
+        std::tie(tex_idx, std::ignore, std::ignore, std::ignore) = val.value();
+
+        metallic_roughness_tex = textureRG_list[tex_idx].get();
       }
 
       list_materials[mat_idx] = std::make_unique<Principled>(
