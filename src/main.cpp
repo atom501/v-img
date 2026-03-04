@@ -219,11 +219,19 @@ int main(int argc, char* argv[]) {
       switch (rendering_settings.func) {
         case integrator_func::s_normal:
           fmt::println("Running shading normal integrator");
+          fmt::println("Spp fixed to 4, Tonemapper set to clamp for debugging");
+          rendering_settings.samples = 4;
+          tonemapping_func = tonemapper::clamp;
+
           acc_image = scene_integrator(rendering_settings, bvh, list_objects, lights,
                                        shading_normal_integrator);
           break;
         case integrator_func::g_normal:
           fmt::println("Running geometric normal integrator");
+          fmt::println("Spp fixed to 4, Tonemapper set to clamp for debugging");
+          rendering_settings.samples = 4;
+          tonemapping_func = tonemapper::clamp;
+
           acc_image = scene_integrator(rendering_settings, bvh, list_objects, lights,
                                        geometric_normal_integrator);
           break;
@@ -240,6 +248,10 @@ int main(int argc, char* argv[]) {
       }
     } else {
       fmt::println("Creating Heatmap for ray intersection");
+      fmt::println("Spp fixed to 4, Tonemapper set to clamp for debugging");
+      rendering_settings.samples = 4;
+      tonemapping_func = tonemapper::clamp;
+
       acc_image = heatmap_img(rendering_settings, bvh, list_objects, heatmap_max);
     }
   } else {

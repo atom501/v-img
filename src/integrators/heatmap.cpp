@@ -38,10 +38,6 @@ glm::vec3 turbo_colormap(float x) {
 std::vector<glm::vec3> heatmap_img(const integrator_data& render_data, const BVH& bvh,
                                    const std::vector<std::unique_ptr<Surface>>& prims,
                                    float factor) {
-  constexpr int spp = 4;
-
-  fmt::println("Heatmap spp fixed to {}", spp);
-
   const uint32_t image_width = render_data.resolution[0];
   const uint32_t image_height = render_data.resolution[1];
 
@@ -104,7 +100,7 @@ std::vector<glm::vec3> heatmap_img(const integrator_data& render_data, const BVH
               pcg32_srandom_r(&pcg_state, image_index, 0);
 
               // spp fixed for heatmap
-              for (size_t s = 0; s < spp; s++) {
+              for (size_t s = 0; s < render_data.samples; s++) {
                 glm::vec2 pixel_offset = random_x_y_r2(image_seq_start + s);
 
                 // make ray with random offset
@@ -118,7 +114,7 @@ std::vector<glm::vec3> heatmap_img(const integrator_data& render_data, const BVH
 
               // average final sum
               num_hits_accumulated[image_index]
-                  = static_cast<uint32_t>(pixel_hit_accumulator / spp);
+                  = static_cast<uint32_t>(pixel_hit_accumulator / render_data.samples);
 
               ++pixels_done;
             }
