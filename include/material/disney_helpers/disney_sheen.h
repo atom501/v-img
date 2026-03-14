@@ -22,7 +22,7 @@ inline glm::vec3 eval_disney_sheen(const glm::vec3& dir_in, const glm::vec3& dir
   glm::vec3 C_sheen
       = (glm::vec3(1.f) - glm::vec3(sheen_tint, sheen_tint, sheen_tint)) + sheen_tint * C_tint;
 
-  return C_sheen * std::pow((1.f - std::max(glm::dot(half_vec, dir_out), 0.f)), 5.f)
+  return C_sheen * raise_to_power_5(1.f - std::max(glm::dot(half_vec, dir_out), 0.f))
          * std::max(glm::dot(normal_frame.w, dir_out), 0.f);
 }
 
@@ -53,7 +53,7 @@ inline std::pair<glm::vec3, float> eval_pdf_disney_sheen(
 
   float normal_dirout_dot_lim = std::max(glm::dot(normal_frame.w, dir_out), 0.f);
 
-  return std::make_pair(C_sheen * std::pow((1.f - std::max(glm::dot(half_vec, dir_out), 0.f)), 5.f)
+  return std::make_pair(C_sheen * raise_to_power_5(1.f - std::max(glm::dot(half_vec, dir_out), 0.f))
                             * normal_dirout_dot_lim,
                         normal_dirout_dot_lim * std::numbers::inv_pi_v<float>);
 }

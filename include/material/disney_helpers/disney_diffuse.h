@@ -7,7 +7,7 @@
 #include <numbers>
 
 inline float FD(const glm::vec3& n, const glm::vec3& w, const float FD_90) {
-  return 1.f + (FD_90 - 1.f) * std::pow(1.f - std::max(glm::dot(n, w), 0.f), 5.0f);
+  return 1.f + (FD_90 - 1.f) * raise_to_power_5(1.f - std::max(glm::dot(n, w), 0.f));
 }
 
 inline glm::vec3 eval_disney_diffuse(const glm::vec3& dir_in, const glm::vec3& dir_out,

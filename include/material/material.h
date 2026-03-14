@@ -70,3 +70,6 @@ public:
   // return true if mat pdf is a delta function
   virtual bool is_delta() const { return true; }
 };
+
+// useful for Fresenl
+inline float raise_to_power_5(const float base) { return base * base * base * base * base; }

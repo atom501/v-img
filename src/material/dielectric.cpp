@@ -10,7 +10,7 @@ static inline glm::vec3 reflect_dir(const glm::vec3& wi, const glm::vec3& hit_p,
 static inline float schlick_apprx(const float cosine, const float in_ior, const float out_ior) {
   auto r0 = (in_ior - out_ior) / (in_ior + out_ior);
   r0 = r0 * r0;
-  return r0 + (1.f - r0) * std::powf((1.f - cosine), 5.f);
+  return r0 + (1.f - r0) * raise_to_power_5(1.f - cosine);
 }
 
 // return refracted direction. Assumption is that hit_n is normalized

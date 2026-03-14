@@ -22,7 +22,7 @@ inline glm::vec3 eval_disney_metal(const glm::vec3& dir_in, const glm::vec3& dir
   glm::vec3 C_0 = (specular * R0 * (1.f - metallic)) * K_s + metallic * base_col;
 
   glm::vec3 Fresnel
-      = C_0 + (glm::vec3(1.f) - C_0) * std::pow((1.f - glm::dot(half_vec, dir_out)), 5.f);
+      = C_0 + (glm::vec3(1.f) - C_0) * raise_to_power_5(1.f - glm::dot(half_vec, dir_out));
 
   // get normal distribution or D
   constexpr float alpha_min = 0.0001;
@@ -137,7 +137,7 @@ inline std::pair<glm::vec3, float> eval_pdf_disney_metal(
   glm::vec3 C_0 = (specular * R0 * (1.f - metallic)) * K_s + metallic * base_col;
 
   glm::vec3 Fresnel
-      = C_0 + (glm::vec3(1.f) - C_0) * std::pow((1.f - glm::dot(half_vec, dir_out)), 5.f);
+      = C_0 + (glm::vec3(1.f) - C_0) * raise_to_power_5(1.f - glm::dot(half_vec, dir_out));
 
   const glm::vec3 local_H = project_onto_onb(normal_frame, half_vec);
 

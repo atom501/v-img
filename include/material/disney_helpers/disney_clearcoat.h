@@ -18,7 +18,7 @@ inline glm::vec3 eval_disney_clearcoat(const glm::vec3& dir_in, const glm::vec3&
   // index refraction with ior 1.5 fixed
   constexpr float R0 = ((1.5f - 1.f) * (1.5f - 1.f)) / ((1.5f + 1.f) * (1.5f + 1.f));
 
-  float Fresenl = R0 + (1. - R0) * std::pow(1.f - std::abs(glm::dot(half_vec, dir_out)), 5.f);
+  float Fresenl = R0 + (1. - R0) * raise_to_power_5(1.f - std::abs(glm::dot(half_vec, dir_out)));
 
   float G = G_w(dir_in, 0.25, 0.25, normal_frame) * G_w(dir_out, 0.25, 0.25, normal_frame);
 
@@ -120,7 +120,7 @@ inline std::pair<glm::vec3, float> eval_pdf_disney_clearcoat(
 
   float h_dirout_dot = std::abs(glm::dot(half_vec, dir_out));
 
-  float Fresenl = R0 + (1. - R0) * std::pow(1.f - h_dirout_dot, 5.f);
+  float Fresenl = R0 + (1. - R0) * raise_to_power_5(1.f - h_dirout_dot);
 
   float G = G_w(dir_in, 0.25, 0.25, normal_frame) * G_w(dir_out, 0.25, 0.25, normal_frame);
 
