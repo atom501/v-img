@@ -29,23 +29,22 @@ inline glm::vec3 anisotropic_sample_visible_normals(const glm::vec3& local_dir_i
   glm::vec3 hemi_dir_in = glm::normalize(
       glm::vec3{alphax * local_dir_in_top.x, alphay * local_dir_in_top.y, local_dir_in_top.z});
 
-  float randx = rand_float(pcg_rng);
-  float randy = rand_float(pcg_rng);
-  // Parameterization of the projected area of a hemisphere.
-  // First, sample a disk.
-  float r = std::sqrt(randx);
-  float phi = 2 * std::numbers::pi * randy;
-  float t1 = r * cos(phi);
-  float t2 = r * sin(phi);
-  // Vertically scale the position of a sample to account for the projection.
-  float s = (1 + hemi_dir_in.z) / 2;
-  t2 = (1 - s) * sqrt(1 - t1 * t1) + s * t2;
-  // Point in the disk space
-  glm::vec3 disk_N{t1, t2, std::sqrt(std::max(0.f, 1 - t1 * t1 - t2 * t2))};
+  float rand_x = rand_float(pcg_rng);
+  float rand_y = rand_float(pcg_rng);
 
-  // Reprojection onto hemisphere -- we get our sampled normal in hemisphere space.
-  ONB hemi_frame = init_onb(hemi_dir_in);
-  glm::vec3 hemi_N = xform_with_onb(hemi_frame, disk_N);
+  // Sampling Visible GGX Normals with Spherical Caps. source:
+  // https://www.intel.com/content/www/us/en/developer/articles/technical/sampling-visible-ggx-normals.html
+
+  float phi = 2 * std::numbers::pi * rand_x;
+
+  float z = std::fma((1.0f - rand_y), (1.0f + hemi_dir_in.z), -hemi_dir_in.z);
+  float sinTheta = std::sqrt(std::clamp(1.0f - z * z, 0.0f, 1.0f));
+
+  float x = sinTheta * cos(phi);
+  float y = sinTheta * sin(phi);
+
+  const glm::vec3 c = {x, y, z};
+  const glm::vec3 hemi_N = c + hemi_dir_in;
 
   // Transforming the normal back to the ellipsoid configuration
   return sign
