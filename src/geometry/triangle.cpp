@@ -5,13 +5,125 @@
 
 #include <glm/gtx/norm.hpp>
 
-std::optional<ForHitInfo> Triangle::hit_surface(Ray& ray) {
-  return tri_hit_template<std::optional<ForHitInfo>>(ray);
+/*
+ * watertight ray triangle intersection. Source is pbrt and "Watertight Ray/Triangle Intersection"
+ * paper
+ */
+template <
+    typename T,
+    std::enable_if_t<std::is_same_v<T, std::optional<ForHitInfo>> || std::is_same_v<T, bool>, bool>
+    = true>
+inline T tri_hit_template(Ray& ray, const Triangle* tri) {
+  const auto& tri_indices = tri->obj_mesh->indices[tri->tri_index];
+  const auto& vertices_list = tri->obj_mesh->vertices;
+
+  glm::vec3 p0 = vertices_list[tri_indices[0]], p1 = vertices_list[tri_indices[1]],
+            p2 = vertices_list[tri_indices[2]];
+
+  auto edge1 = p1 - p0;
+  auto edge2 = p2 - p0;
+
+  if (glm::length2(glm::cross(edge2, edge1)) == 0.f) {
+    if constexpr (std::is_same_v<T, std::optional<ForHitInfo>>) {
+      return std::nullopt;
+    } else if constexpr (std::is_same_v<T, bool>) {
+      return false;
+    }
+  }
+
+  // translate points
+  glm::vec3 p0t = p0 - ray.o;
+  glm::vec3 p1t = p1 - ray.o;
+  glm::vec3 p2t = p2 - ray.o;
+
+  // permute componenets based on ray direction axis with the largest absolute value.
+  // make z-axis the one with the largest value
+  int kz = max_componenet_index(ray.dir);
+  int kx = kz + 1;
+  if (kx == 3) kx = 0;
+  int ky = kx + 1;
+  if (ky == 3) ky = 0;
+
+  glm::ivec3 indexes = glm::ivec3(kx, ky, kz);
+  glm::vec3 d = permute_points(ray.dir, indexes);
+  p0t = permute_points(p0t, indexes);
+  p1t = permute_points(p1t, indexes);
+  p2t = permute_points(p2t, indexes);
+
+  // apply shear
+  float Sx = -d.x / d.z;
+  float Sy = -d.y / d.z;
+  float Sz = 1.f / d.z;
+  p0t.x += Sx * p0t.z;
+  p0t.y += Sy * p0t.z;
+  p1t.x += Sx * p1t.z;
+  p1t.y += Sy * p1t.z;
+  p2t.x += Sx * p2t.z;
+  p2t.y += Sy * p2t.z;
+
+  float e0 = difference_of_products(p1t.x, p2t.y, p1t.y, p2t.x);
+  float e1 = difference_of_products(p2t.x, p0t.y, p2t.y, p0t.x);
+  float e2 = difference_of_products(p0t.x, p1t.y, p0t.y, p1t.x);
+
+  if (e0 == 0.f || e1 == 0.f || e2 == 0.f) {
+    e0 = static_cast<float>(difference_of_products_double(p1t.x, p2t.y, p1t.y, p2t.x));
+    e1 = static_cast<float>(difference_of_products_double(p2t.x, p0t.y, p2t.y, p0t.x));
+    e2 = static_cast<float>(difference_of_products_double(p0t.x, p1t.y, p0t.y, p1t.x));
+  }
+
+  if ((e0 < 0 || e1 < 0 || e2 < 0) && (e0 > 0 || e1 > 0 || e2 > 0)) {
+    if constexpr (std::is_same_v<T, std::optional<ForHitInfo>>) {
+      return std::nullopt;
+    } else if constexpr (std::is_same_v<T, bool>) {
+      return false;
+    }
+  }
+
+  float det = e0 + e1 + e2;
+  if (det == 0) {
+    if constexpr (std::is_same_v<T, std::optional<ForHitInfo>>) {
+      return std::nullopt;
+    } else if constexpr (std::is_same_v<T, bool>) {
+      return false;
+    }
+  }
+
+  p0t.z *= Sz;
+  p1t.z *= Sz;
+  p2t.z *= Sz;
+  float tScaled = e0 * p0t.z + e1 * p1t.z + e2 * p2t.z;
+  if (det < 0 && (tScaled >= 0 || tScaled < ray.maxT * det || tScaled > ray.minT * det)) {
+    if constexpr (std::is_same_v<T, std::optional<ForHitInfo>>) {
+      return std::nullopt;
+    } else if constexpr (std::is_same_v<T, bool>) {
+      return false;
+    }
+  } else if (det > 0 && (tScaled <= 0 || tScaled > ray.maxT * det || tScaled < ray.minT * det)) {
+    if constexpr (std::is_same_v<T, std::optional<ForHitInfo>>) {
+      return std::nullopt;
+    } else if constexpr (std::is_same_v<T, bool>) {
+      return false;
+    }
+  }
+
+  float invDet = 1.f / det;
+  float t = tScaled * invDet;
+  ray.maxT = t;
+
+  if constexpr (std::is_same_v<T, bool>) {
+    return true;
+  } else if constexpr (std::is_same_v<T, std::optional<ForHitInfo>>) {
+    return ForHitInfo{e0, e1, e2, invDet, tri};
+  }
 }
 
-bool Triangle::hit_check(Ray& ray) { return tri_hit_template<bool>(ray); }
+std::optional<ForHitInfo> Triangle::hit_surface(Ray& ray) const {
+  return tri_hit_template<std::optional<ForHitInfo>>(ray, this);
+}
 
-HitInfo Triangle::hit_info(const Ray& r, const ForHitInfo& pre_calc) {
+bool Triangle::hit_check(Ray& ray) const { return tri_hit_template<bool>(ray, this); }
+
+HitInfo Triangle::hit_info(const Ray& r, const ForHitInfo& pre_calc) const {
   const auto& tri_indices = obj_mesh->indices[tri_index];
   const auto& vertices_list = obj_mesh->vertices;
 

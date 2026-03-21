@@ -70,7 +70,7 @@ struct ForHitInfo {
   float e1;
   float e2;
   float invDet;
-  Surface* prim;
+  const Surface* prim;
 };
 
 // Axis-aligned bounding box

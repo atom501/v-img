@@ -1,4 +1,5 @@
 #include <color_utils.h>
+#include <geometry/emitters.h>
 #include <rng/sampling.h>
 
 #include <algorithm>
@@ -89,4 +90,23 @@ std::tuple<float, float, float> ArraySampling2D::sample(float r1, float r2) cons
   float pdf = pdf_y * pdf_x;
 
   return std::make_tuple(u, v, pdf);
+}
+
+std::pair<glm::vec3, EmitterInfo> GroupOfEmitters::sample(const glm::vec3& look_from,
+                                                          pcg32_random_t& pcg_rng) const {
+  float rand = rand_float(pcg_rng);
+
+  // choose random light object
+  float sx = rand * list_of_emitters.size();
+  const int index_obj = std::clamp((int)sx, 0, (int)list_of_emitters.size() - 1);
+
+  // probability of choosing the light object
+  const float prob_obj = 1.f / list_of_emitters.size();
+
+  auto emitCol_emitInfo = list_of_emitters[index_obj]->sample(look_from, pcg_rng);
+
+  // pdf of child sampled and probability of choosing the light
+  emitCol_emitInfo.second.pdf *= prob_obj;
+
+  return emitCol_emitInfo;
 }

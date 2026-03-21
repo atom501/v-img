@@ -22,20 +22,19 @@ static inline void solveQuadratic(const float& discriminant, const float& a, con
 }
 
 class Sphere : public Surface, public Emitter {
-private:
+public:
   glm::vec3 center = glm::vec3(0.0f);
   float radius = 1.0f;
   Material* mat;
 
-public:
   Sphere(const glm::vec3& center, float r, Material* mat_ptr)
       : center(center), radius(r), mat(mat_ptr) {}
 
   ~Sphere() = default;
 
-  std::optional<ForHitInfo> hit_surface(Ray& r) override;
-  bool hit_check(Ray& r) override;
-  HitInfo hit_info(const Ray& r, const ForHitInfo& pre_calc) override;
+  std::optional<ForHitInfo> hit_surface(Ray& r) const override;
+  bool hit_check(Ray& r) const override;
+  HitInfo hit_info(const Ray& r, const ForHitInfo& pre_calc) const override;
 
   AABB bounds() const override;
   glm::vec3 get_center() const override;
@@ -45,54 +44,4 @@ public:
 
   float surf_pdf(const glm::vec3& look_from, const glm::vec3& look_at,
                  const glm::vec3& dir) const override;
-
-private:
-  // intersection test from ray tracing gems 1, chapter 7
-  template <typename T,
-            std::enable_if_t<
-                std::is_same_v<T, std::optional<ForHitInfo>> || std::is_same_v<T, bool>, bool>
-            = true>
-  inline T sphere_hit_template(Ray& r) {
-    float t0, t1;
-    const float radius_squared = radius * radius;
-
-    glm::vec3 f = r.o - center;
-    const float a = glm::dot(r.dir, r.dir);
-    const float b_prime = glm::dot(-1.0f * f, r.dir);
-    const float c = glm::dot(f, f) - radius_squared;
-
-    const glm::vec3 temp = f + (b_prime / a) * r.dir;
-    const float discriminant = radius_squared - (glm::dot(temp, temp));
-
-    if (discriminant < 0) {
-      if constexpr (std::is_same_v<T, bool>) {
-        return false;
-      } else if constexpr (std::is_same_v<T, std::optional<ForHitInfo>>) {
-        return std::nullopt;
-      }
-    }
-
-    // get point of ray sphere intersection t0 and t1
-    solveQuadratic(discriminant, a, b_prime, c, t0, t1);
-
-    if (t0 < r.minT || t0 > r.maxT) {
-      t0 = t1;
-      if (t0 < r.minT || t0 > r.maxT) {
-        if constexpr (std::is_same_v<T, bool>) {
-          return false;
-        } else if constexpr (std::is_same_v<T, std::optional<ForHitInfo>>) {
-          return std::nullopt;
-        }
-      }
-    }
-
-    // if hit update the maxT for the ray
-    r.maxT = t0;
-
-    if constexpr (std::is_same_v<T, bool>) {
-      return true;
-    } else if constexpr (std::is_same_v<T, std::optional<ForHitInfo>>) {
-      return ForHitInfo{0.f, 0.f, 0.f, 0.f, this};
-    }
-  }
 };
