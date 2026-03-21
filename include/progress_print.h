@@ -10,9 +10,9 @@
 struct timer_killer {
   // std::unique_lock<std::mutex> should release lock when going out of scope automatically
   // returns false if killed:
-  template <class R, class P> bool wait_for(std::chrono::duration<R, P> const& time) const {
+  bool wait_for() const {
     std::unique_lock<std::mutex> lock(m);
-    return !cv.wait_for(lock, time, [&] { return terminate; });
+    return !cv.wait_for(lock, std::chrono::milliseconds(800), [&] { return terminate; });
   }
   void kill() {
     std::unique_lock<std::mutex> lock(m);
@@ -47,14 +47,18 @@ inline void print_time_taken(const std::chrono::steady_clock::time_point& start_
   auto duration_min = std::chrono::duration_cast<std::chrono::minutes>(duration_sec);
   duration_sec %= std::chrono::minutes(1);
 
+  std::string out_time_string = "";
+
+  int64_t min_c = duration_min.count(), sec_c = duration_sec.count(), ms_c = duration_ms.count(),
+          micro_c = duration_micro.count();
+
   if (duration_min.count() > 0) {
-    fmt::println("Time take by {}: {} {} {} {}", activity, duration_min, duration_sec, duration_ms,
-                 duration_micro);
+    fmt::println("Time take by {}: {}min {}sec {}ms {}us", activity, min_c, sec_c, ms_c, micro_c);
   } else if (duration_sec.count() > 0) {
-    fmt::println("Time take by {}: {} {} {}", activity, duration_sec, duration_ms, duration_micro);
+    fmt::println("Time take by {}: {}sec {}ms {}us", activity, sec_c, ms_c, micro_c);
   } else if (duration_ms.count() > 0) {
-    fmt::println("Time take by {}: {} {}", activity, duration_ms, duration_micro);
+    fmt::println("Time take by {}: {}ms {}us", activity, ms_c, micro_c);
   } else {
-    fmt::println("Time take by {}: {}", activity, duration_micro);
+    fmt::println("Time take by {}: {}us", activity, micro_c);
   }
 }

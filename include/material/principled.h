@@ -5,12 +5,8 @@
 #include <material/disney_helpers/disney_glass.h>
 #include <material/disney_helpers/disney_metal.h>
 #include <material/disney_helpers/disney_sheen.h>
-#include <material/material.h>
 #include <texture/texture_RG.h>
 #include <texture/texture_RGB.h>
-
-#include <algorithm>
-#include <numbers>
 
 template <typename T>
 concept ReturnPair = std::is_same_v<T, std::pair<glm::vec3, float>>;

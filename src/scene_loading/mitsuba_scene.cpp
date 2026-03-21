@@ -2,11 +2,13 @@
 #include <geometry/mesh.h>
 #include <geometry/sphere.h>
 #include <geometry/triangle.h>
+#include <integrator_info.h>
 #include <material/diffuse_light.h>
 #include <material/lambertian.h>
 #include <material/principled.h>
 #include <scene_loading/mitsuba_scene.h>
 #include <scene_loading/serialized_file.h>
+#include <scene_loading/tinyparser-mitsuba.h>
 #include <tinyexr.h>
 
 #include <numbers>

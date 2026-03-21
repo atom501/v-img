@@ -4,6 +4,7 @@
 #include <material/diffuse_light.h>
 #include <material/principled.h>
 #include <omp.h>
+#include <progress_print.h>
 #include <scene_loading/gltf_loading.h>
 #include <scene_loading/json_scene.h>
 #include <texture/texture_RGB.h>
@@ -14,6 +15,7 @@
 #include <fastgltf/tools.hpp>
 #include <glm/gtx/quaternion.hpp>
 #include <glm/gtx/transform.hpp>
+#include <thread>
 #include <variant>
 
 #include "fastgltf/glm_element_traits.hpp"

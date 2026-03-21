@@ -5,9 +5,6 @@
 #include <hit_utils.h>
 #include <ray.h>
 
-#include <numbers>
-#include <optional>
-
 #include "glm/vec3.hpp"
 
 static inline void solveQuadratic(const float& discriminant, const float& a, const float& b_prime,

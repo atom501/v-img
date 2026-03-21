@@ -1,17 +1,4 @@
 #pragma once
-
-#include <geometry/mesh.h>
-#include <integrators.h>
-#include <scene_loading/tinyparser-mitsuba.h>
-#include <texture/texture_RG.h>
-#include <texture/texture_RGB.h>
-#include <tl_camera.h>
-
-#include <glm/gtx/quaternion.hpp>
-#include <nlohmann/json.hpp>
-#include <string>
-#include <unordered_map>
-
 /*
     takes file path as input and sets the scene. Returns true if parsed,
     else returns false and print error

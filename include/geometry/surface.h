@@ -1,7 +1,6 @@
 #pragma once
 
 #include <hit_utils.h>
-#include <material/material.h>
 
 #include <glm/mat4x4.hpp>
 #include <optional>

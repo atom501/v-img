@@ -8,18 +8,10 @@
 #include <optional>
 
 #include "glm/glm.hpp"
-#include "glm/vec3.hpp"
 
 class Material;
 class Emitter;
 class Surface;
-
-struct EmitterInfo {
-  glm::vec3 wi;  // direction vector from look_from to point on surface
-  float pdf;     // pdf of sampling point on light in area measure
-  float dist;    // distance to point on light surface
-  float G;       // geometry term for point on light
-};
 
 // ONB for transforming ray directions. All are unit vectors
 struct ONB {

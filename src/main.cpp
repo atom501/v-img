@@ -1,5 +1,3 @@
-#include <chrono>
-
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include <bvh.h>
 #include <color_utils.h>
@@ -17,10 +15,8 @@
 #include <texture/texture_RGB.h>
 #include <tl_camera.h>
 
-#include <algorithm>
 #include <args.hxx>
 #include <filesystem>
-#include <glm/glm.hpp>
 #include <glm/gtx/transform.hpp>
 
 void setup_for_bvh(const std::vector<std::unique_ptr<Surface>>& list_objects,

@@ -3,9 +3,6 @@
 #include <color_utils.h>
 #include <material/disney_helpers/disney_common.h>
 
-#include <algorithm>
-#include <numbers>
-
 inline glm::vec3 eval_disney_metal(const glm::vec3& dir_in, const glm::vec3& dir_out,
                                    const HitInfo& hit, const glm::vec3& base_col, float spec_tint,
                                    float specular, float eta, float metallic, float roughness,

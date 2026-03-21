@@ -1,7 +1,5 @@
 #include <color_utils.h>
 
-#include <algorithm>
-
 static inline glm::vec3 rtt_and_odt_fit(glm::vec3 v) {
   glm::vec3 a = v * (v + 0.0245786f) - 0.000090537f;
   glm::vec3 b = v * (0.983729f * v + 0.4329510f) + 0.238081f;

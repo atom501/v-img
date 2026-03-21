@@ -1,7 +1,6 @@
 #pragma once
 
 #include <bvh.h>
-#include <geometry/surface.h>
 #include <hit_utils.h>
 
 #include <cstdint>

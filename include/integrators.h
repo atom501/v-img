@@ -1,37 +1,21 @@
 #pragma once
 
-#include <background.h>
 #include <bvh.h>
 #include <fmt/core.h>
 #include <geometry/emitters.h>
 #include <geometry/surface.h>
+#include <integrator_info.h>
 #include <progress_print.h>
-#include <rng/pcg_rand.h>
 #include <rng/sampling.h>
 #include <stdio.h>
 #include <tl_camera.h>
 
-#include <algorithm>
 #include <atomic>
-#include <chrono>
 #include <cstdint>
-#include <functional>
 #include <glm/glm.hpp>
 #include <thread>
 #include <utility>
 #include <vector>
-
-enum class integrator_func { s_normal, g_normal, material, mis, COUNT };
-
-struct integrator_data {
-  integrator_func func;
-  glm::ivec2 resolution;
-  uint32_t samples;
-  uint32_t depth;
-  std::unique_ptr<Background> background;
-  TLCam camera;
-  int16_t num_threads;
-};
 
 template <typename F>
 std::vector<glm::vec3> scene_integrator(const integrator_data& render_data, BVH& bvh,
@@ -76,7 +60,7 @@ std::vector<glm::vec3> scene_integrator(const integrator_data& render_data, BVH&
     fmt::print("\r0 % done");
     fflush(stdout);
 
-    while (progress_bar.wait_for(std::chrono::milliseconds(800))) {
+    while (progress_bar.wait_for()) {
       pixels_done_copy = pixels_done.load();
       progress = (static_cast<float>(pixels_done_copy) / total_pixels) * 100.0f;
 

@@ -1,10 +1,6 @@
 #pragma once
 
-#include <fmt/core.h>
 #include <material/disney_helpers/disney_common.h>
-
-#include <algorithm>
-#include <numbers>
 
 inline float FD(const glm::vec3& n, const glm::vec3& w, const float FD_90) {
   return 1.f + (FD_90 - 1.f) * raise_to_power_5(1.f - std::max(glm::dot(n, w), 0.f));

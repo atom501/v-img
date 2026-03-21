@@ -1,7 +1,4 @@
 #include <color_utils.h>
-#include <fmt/core.h>
-
-#include <cmath>
 
 static inline glm::vec3 agxDefaultContrastApprox(glm::vec3 x) {
   glm::vec3 x2 = x * x;

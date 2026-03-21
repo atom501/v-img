@@ -2,6 +2,7 @@
 #include <geometry/mesh.h>
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <geometry/triangle.h>
+#include <material/material.h>
 #include <tiny_obj_loader.h>
 
 #include <glm/matrix.hpp>

@@ -1,4 +1,5 @@
 #include <geometry/sphere.h>
+#include <material/material.h>
 #include <rng/sampling.h>
 
 #include <glm/gtx/norm.hpp>

@@ -3,9 +3,6 @@
 #include <material/disney_helpers/disney_common.h>
 #include <material/disney_helpers/disney_diffuse.h>
 
-#include <algorithm>
-#include <numbers>
-
 inline glm::vec3 eval_disney_clearcoat(const glm::vec3& dir_in, const glm::vec3& dir_out,
                                        const HitInfo& hit, const glm::vec3& base_col,
                                        float clearcoat_gloss, const glm::vec3& half_vec,

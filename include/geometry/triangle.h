@@ -3,7 +3,6 @@
 #include <geometry/emitters.h>
 #include <geometry/mesh.h>
 #include <geometry/surface.h>
-#include <hit_utils.h>
 
 #include <cstdint>
 #include <glm/gtx/norm.hpp>

@@ -1,5 +1,6 @@
 #include <geometry/mesh.h>
 #include <geometry/triangle.h>
+#include <material/material.h>
 #include <rng/sampling.h>
 
 #include <glm/gtx/norm.hpp>

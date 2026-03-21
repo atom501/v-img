@@ -1,4 +1,5 @@
 #include <integrators.h>
+#include <material/material.h>
 
 // returns color produced by a ray from the camera. color value is [0,1]
 glm::vec3 material_integrator(Ray& input_ray, std::vector<size_t>& thread_stack, const BVH& bvh,

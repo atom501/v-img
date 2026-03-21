@@ -1,6 +1,6 @@
 #pragma once
 
-#include <integrators.h>
+#include <integrator_info.h>
 #include <texture/texture_RG.h>
 #include <texture/texture_RGB.h>
 #include <tl_camera.h>

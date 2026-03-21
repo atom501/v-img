@@ -1,7 +1,7 @@
 #pragma once
 
 #include <geometry/mesh.h>
-#include <integrators.h>
+#include <integrator_info.h>
 #include <texture/texture_RG.h>
 #include <texture/texture_RGB.h>
 

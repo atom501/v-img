@@ -1,4 +1,5 @@
 #include <integrators.h>
+#include <material/material.h>
 
 #include <glm/gtx/norm.hpp>
 

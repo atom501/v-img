@@ -60,7 +60,7 @@ std::vector<glm::vec3> heatmap_img(const integrator_data& render_data, const BVH
     fmt::print("\r0 % done");
     fflush(stdout);
 
-    while (progress_bar.wait_for(std::chrono::milliseconds(800))) {
+    while (progress_bar.wait_for()) {
       pixels_done_copy = pixels_done.load();
       progress = (static_cast<float>(pixels_done_copy) / total_pixels) * 100.0f;
 

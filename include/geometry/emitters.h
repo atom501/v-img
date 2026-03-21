@@ -1,10 +1,16 @@
 #pragma once
 
-#include <geometry/surface.h>
 #include <rng/sampling.h>
 
 #include <algorithm>
 #include <vector>
+
+struct EmitterInfo {
+  glm::vec3 wi;  // direction vector from look_from to point on surface
+  float pdf;     // pdf of sampling point on light in area measure
+  float dist;    // distance to point on light surface
+  float G;       // geometry term for point on light
+};
 
 class Emitter {
 public:
