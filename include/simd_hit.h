@@ -77,7 +77,7 @@ inline __m256 insert_float_min_max(__m256 v, float x) {
  * input (x1, y1, z1, minT, x2, y2, z2, minT). returns max(x1, y1, z1, minT),
  * max(x2, y2, z2, minT)
  */
-inline std::pair<float, float> horizontal_max_128_lane(__m256 x) {
+inline __m256 horizontal_max_128_lane(__m256 x) {
   // shuffle each lane to (z, minT, x, x)
   __m256 shuffle1 = _mm256_shuffle_ps(x, x, _MM_SHUFFLE(0, 0, 3, 2));
 
@@ -88,14 +88,7 @@ inline std::pair<float, float> horizontal_max_128_lane(__m256 x) {
   __m256 shuffle2 = _mm256_shuffle_ps(max1, max1, _MM_SHUFFLE(0, 0, 0, 1));
 
   // each lane's least significant element will be max(m0, m1). i.e max(max(x,z), max(y, t))
-  __m256 max2 = _mm256_max_ps(max1, shuffle2);
-
-  // get max for ray 1
-  float tBoxMin1 = _mm256_cvtss_f32(max2);
-  // get max for ray 2
-  float tBoxMin2 = _mm_cvtss_f32(_mm256_extractf128_ps(max2, 1));
-
-  return std::make_pair(tBoxMin1, tBoxMin2);
+  return _mm256_max_ps(max1, shuffle2);
 }
 
 /*
@@ -103,16 +96,11 @@ inline std::pair<float, float> horizontal_max_128_lane(__m256 x) {
  * min(x2, y2, z2, maxT)
  * same logic as horizontal_max_128_lane just using min operations
  */
-inline std::pair<float, float> horizontal_min_128_lane(__m256 x) {
+inline __m256 horizontal_min_128_lane(__m256 x) {
   __m256 shuffle1 = _mm256_shuffle_ps(x, x, _MM_SHUFFLE(0, 0, 3, 2));
   __m256 min1 = _mm256_min_ps(x, shuffle1);
   __m256 shuffle2 = _mm256_shuffle_ps(min1, min1, _MM_SHUFFLE(0, 0, 0, 1));
-  __m256 min2 = _mm256_min_ps(min1, shuffle2);
-
-  float tBoxMax1 = _mm256_cvtss_f32(min2);
-  float tBoxMax2 = _mm_cvtss_f32(_mm256_extractf128_ps(min2, 1));
-
-  return std::make_pair(tBoxMax1, tBoxMax2);
+  return _mm256_min_ps(min1, shuffle2);
 }
 
 // aabb mins and maxes are given array of floats. Result is given in t1 and t2
@@ -123,13 +111,11 @@ inline std::pair<float, float> ray_2aabb_slab(const float* mins, const float* ma
                                               const Ray& r) {
   // (bboxes_mins - ray.origin) * invRayDir
   __m256 bbox_min_vals = _mm256_loadu_ps(mins);
-  bbox_min_vals = _mm256_permutevar8x32_ps(bbox_min_vals, _mm256_set_epi32(6, 5, 4, 3, 7, 2, 1, 0));
 
   bbox_min_vals = _mm256_mul_ps(_mm256_sub_ps(bbox_min_vals, ray_o), ray_dir_inv);
 
   // (bboxes_maxes - ray.origin) * invRayDir
   __m256 bbox_max_vals = _mm256_loadu_ps(maxs);
-  bbox_max_vals = _mm256_permutevar8x32_ps(bbox_max_vals, _mm256_set_epi32(6, 5, 4, 3, 7, 2, 1, 0));
 
   bbox_max_vals = _mm256_mul_ps(_mm256_sub_ps(bbox_max_vals, ray_o), ray_dir_inv);
 
@@ -140,18 +126,23 @@ inline std::pair<float, float> ray_2aabb_slab(const float* mins, const float* ma
   // insert minT to min_elements
   min_elements = insert_float_min_max(min_elements, r.minT);
 
-  // get tBoxMin for ray 1 and 2
-  auto [tBoxMin1, tBoxMin2] = horizontal_max_128_lane(min_elements);
+  // get tBoxMin for ray 1 and 2. In position 0 and 4 respectively
+  min_elements = horizontal_max_128_lane(min_elements);
 
   // insert minT to min_elements
   max_elements = insert_float_min_max(max_elements, r.maxT);
 
-  // get tBoxMin for ray 1 and 2
-  auto [tBoxMax1, tBoxMax2] = horizontal_min_128_lane(max_elements);
+  // get tBoxMin for ray 1 and 2. In position 0 and 4 respectively
+  max_elements = horizontal_min_128_lane(max_elements);
 
-  float t1 = (tBoxMin1 <= tBoxMax1) ? tBoxMin1 : std::numeric_limits<float>::infinity();
-  float t2 = (tBoxMin2 <= tBoxMax2) ? tBoxMin2 : std::numeric_limits<float>::infinity();
+  // tBoxMin <= tBoxMax comparison
+  __m256 compare_bool = _mm256_cmp_ps(min_elements, max_elements, _CMP_LE_OQ);
 
-  return std::make_pair(t1, t2);
+  // if compare_bool true set min_elements else infinite
+  __m256 answer = _mm256_blendv_ps(_mm256_set1_ps(std::numeric_limits<float>::infinity()),
+                                   min_elements, compare_bool);
+
+  // extract final values
+  return std::make_pair(_mm256_cvtss_f32(answer), _mm_cvtss_f32(_mm256_extractf128_ps(answer, 1)));
 }
 #endif

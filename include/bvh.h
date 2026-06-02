@@ -51,7 +51,7 @@ struct Split {
 class BVH {
 public:
   std::vector<BVHNode> nodes;
-  std::vector<std::array<float, 3>> BB_mins_maxes;
+  std::vector<std::array<float, 4>> BB_mins_maxes;
   std::vector<size_t> obj_indices;  // indices pointing to original object list
 
   uint32_t max_depth;
@@ -82,8 +82,7 @@ public:
    */
   template <typename T, std::enable_if_t<std::is_same_v<T, std::optional<HitInfo>>
                                              || std::is_same_v<T, float> || std::is_same_v<T, bool>,
-                                         bool>
-                        = true>
+                                         bool> = true>
   T hit(Ray& ray, std::vector<size_t>& thread_stack,
         const std::vector<std::unique_ptr<Surface>>& prims) const {
     T return_variable;
