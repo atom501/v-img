@@ -500,32 +500,33 @@ bool set_scene_from_gltf(const std::filesystem::path& path_file, integrator_data
 #pragma omp single
     {
       for (const auto hash : img_type_list) {
-        size_t img_idx;
-        TextureType tex_type;
-        std::tie(img_idx, tex_type) = hash.first;
+#pragma omp task firstprivate(hash)
+        {
+          size_t img_idx;
+          TextureType tex_type;
+          std::tie(img_idx, tex_type) = hash.first;
 
-        size_t tex_idx;
-        TextureWrappingMode u_wrap, v_wrap;
-        float scale;
+          size_t tex_idx;
+          TextureWrappingMode u_wrap, v_wrap;
+          float scale;
 
-        std::tie(tex_idx, u_wrap, v_wrap, scale) = hash.second;
+          std::tie(tex_idx, u_wrap, v_wrap, scale) = hash.second;
 
-        switch (tex_type) {
-          case TextureType::Image:
-          case TextureType::Normals: {
-#pragma omp task
-            make_texture(image_list[img_idx], image_list_res[img_idx], u_wrap, v_wrap, tex_type,
-                         texture_list, scale, tex_idx);
-            break;
+          switch (tex_type) {
+            case TextureType::Image:
+            case TextureType::Normals: {
+              make_texture(image_list[img_idx], image_list_res[img_idx], u_wrap, v_wrap, tex_type,
+                           texture_list, scale, tex_idx);
+              break;
+            }
+            case TextureType::MetallicRoughness: {
+              make_RG_texture(image_list[img_idx], image_list_res[img_idx], u_wrap, v_wrap,
+                              TextureType::MetallicRoughness, textureRG_list, tex_idx);
+              break;
+            }
+            default:
+              break;
           }
-          case TextureType::MetallicRoughness: {
-#pragma omp task
-            make_RG_texture(image_list[img_idx], image_list_res[img_idx], u_wrap, v_wrap,
-                            TextureType::MetallicRoughness, textureRG_list, tex_idx);
-            break;
-          }
-          default:
-            break;
         }
       }
     }
