@@ -34,11 +34,11 @@ public:
     float pixel_v = handle_wrapping(uv[1], TextureRG::v_wrapping_mode) * TextureRG::height;
 
     // get pixel value using sampling
-    int curr_x = std::clamp(static_cast<int>(pixel_u), 0, static_cast<int>(TextureRG::width) - 1);
-    int curr_y = std::clamp(static_cast<int>(pixel_v), 0, static_cast<int>(TextureRG::height) - 1);
+    int curr_x = fast_clampi(static_cast<int>(pixel_u), 0, static_cast<int>(TextureRG::width) - 1);
+    int curr_y = fast_clampi(static_cast<int>(pixel_v), 0, static_cast<int>(TextureRG::height) - 1);
 
-    int next_x = std::clamp(curr_x + 1, 0, static_cast<int>(TextureRG::width) - 1);
-    int next_y = std::clamp(curr_y + 1, 0, static_cast<int>(TextureRG::height) - 1);
+    int next_x = std::min(curr_x + 1, static_cast<int>(TextureRG::width) - 1);
+    int next_y = std::min(curr_y + 1, static_cast<int>(TextureRG::height) - 1);
 
     float x_fraction = pixel_u - curr_x;
     float y_fraction = pixel_v - curr_y;

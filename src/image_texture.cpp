@@ -138,11 +138,11 @@ glm::vec3 ImageTexture::col_at_uv_mipmap(int mipmap_level, const glm::vec2& uv) 
   float pixel_v = handle_wrapping(uv[1], ImageTexture::v_wrapping_mode) * mip_h;
 
   // get pixel value using sampling
-  int curr_x = std::clamp(static_cast<int>(pixel_u), 0, static_cast<int>(mip_w) - 1);
-  int curr_y = std::clamp(static_cast<int>(pixel_v), 0, static_cast<int>(mip_h) - 1);
+  int curr_x = fast_clampi(static_cast<int>(pixel_u), 0, static_cast<int>(mip_w) - 1);
+  int curr_y = fast_clampi(static_cast<int>(pixel_v), 0, static_cast<int>(mip_h) - 1);
 
-  int next_x = std::clamp(curr_x + 1, 0, static_cast<int>(mip_w) - 1);
-  int next_y = std::clamp(curr_y + 1, 0, static_cast<int>(mip_h) - 1);
+  int next_x = std::min(curr_x + 1, static_cast<int>(mip_w) - 1);
+  int next_y = std::min(curr_y + 1, static_cast<int>(mip_h) - 1);
 
   float x_fraction = pixel_u - curr_x;
   float y_fraction = pixel_v - curr_y;
@@ -174,13 +174,13 @@ glm::vec3 ImageTexture::col_at_ray_hit(const glm::vec3& ray_in_dir, const RayCon
 }
 
 glm::vec3 ImageTexture::col_mipmap_interpolate(float lambda, const glm::vec2& uv) const {
-  lambda = std::clamp(lambda, 0.f, static_cast<float>(mipmap.size() - 1));
-  int mipmap_level0 = std::clamp(static_cast<int>(std::floor(lambda)), static_cast<int>(0),
-                                 static_cast<int>(mipmap.size() - 1));
+  lambda = fast_clampf(lambda, 0.f, static_cast<float>(mipmap.size() - 1));
+  int mipmap_level0 = fast_clampi(static_cast<int>(std::floor(lambda)), static_cast<int>(0),
+                                  static_cast<int>(mipmap.size() - 1));
   int mipmap_level1
-      = std::clamp(mipmap_level0 + 1, static_cast<int>(0), static_cast<int>(mipmap.size() - 1));
+      = fast_clampi(mipmap_level0 + 1, static_cast<int>(0), static_cast<int>(mipmap.size() - 1));
 
-  float fraction = lambda - std::floor(lambda);
+  float fraction = lambda - static_cast<int>(lambda);
 
   glm::vec3 col0 = col_at_uv_mipmap(mipmap_level0, uv);
   glm::vec3 col1 = col_at_uv_mipmap(mipmap_level1, uv);
