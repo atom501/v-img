@@ -48,6 +48,10 @@ struct Split {
   AABB left_aabb;
 };
 
+template <typename T>
+concept BVHHitTypes = std::is_same_v<T, std::optional<HitInfo>> || std::is_same_v<T, float>
+                      || std::is_same_v<T, bool>;
+
 class BVH {
 public:
   std::vector<BVHNode> nodes;
@@ -80,12 +84,8 @@ public:
    * bvh checking for hit and getting surface information. If output is set to uint32_t it will
    * be used to make the heatmap. Only the total number of primitives hit by the ray are needed.
    */
-  template <typename T, std::enable_if_t<std::is_same_v<T, std::optional<HitInfo>>
-                                             || std::is_same_v<T, float> || std::is_same_v<T, bool>,
-                                         bool>
-                        = true>
-  T hit(Ray& ray, std::vector<size_t>& thread_stack,
-        const std::vector<std::unique_ptr<Surface>>& prims) const {
+  template <BVHHitTypes T> T hit(Ray& ray, std::vector<size_t>& thread_stack,
+                                 const std::vector<std::unique_ptr<Surface>>& prims) const {
     T return_variable;
     std::optional<ForHitInfo> intermediate_hit = std::nullopt;
 

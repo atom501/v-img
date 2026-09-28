@@ -149,3 +149,6 @@ inline float slab_intersect_aabb_array(const Ray& ray, const glm::vec3& ray_inv_
   else
     return std::numeric_limits<float>::infinity();
 }
+
+template <typename T>
+concept PrimHitTypes = std::is_same_v<T, std::optional<ForHitInfo>> || std::is_same_v<T, bool>;

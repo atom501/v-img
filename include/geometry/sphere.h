@@ -51,11 +51,7 @@ public:
 
 private:
   // intersection test from ray tracing gems 1, chapter 7
-  template <typename T,
-            std::enable_if_t<
-                std::is_same_v<T, std::optional<ForHitInfo>> || std::is_same_v<T, bool>, bool>
-            = true>
-  inline T sphere_hit_template(Ray& r) {
+  template <PrimHitTypes T> inline T sphere_hit_template(Ray& r) {
     float t0, t1;
     const float radius_squared = radius * radius;
 

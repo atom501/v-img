@@ -71,11 +71,7 @@ private:
    * watertight ray triangle intersection. Source is pbrt and "Watertight Ray/Triangle Intersection"
    * paper
    */
-  template <typename T,
-            std::enable_if_t<
-                std::is_same_v<T, std::optional<ForHitInfo>> || std::is_same_v<T, bool>, bool>
-            = true>
-  inline T tri_hit_template(Ray& ray) {
+  template <PrimHitTypes T> inline T tri_hit_template(Ray& ray) {
     const auto& tri_indices = obj_mesh->indices[tri_index];
     const auto& vertices_list = obj_mesh->vertices;
 
